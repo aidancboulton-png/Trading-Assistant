@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(pkill -f \"python3 app.py\")",
+      "Bash(pkill -f \"uvicorn web.app\")",
+      "Bash(xargs kill:*)",
+      "Bash(curl -s http://localhost:8000/api/snapshot)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

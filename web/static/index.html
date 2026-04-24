@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header id="header">
+  <h1>⚡ <span>TRADING</span> DASHBOARD</h1>
+  <div id="header-right">
+    <span id="clock">--:--:-- ET</span>
+    <div id="ws-status">
+      <div id="ws-dot"></div>
+      <span id="ws-status-text">CONNECTING</span>
+    </div>
+    <button id="notif-btn">🔔 Enable Alerts</button>
+  </div>
+</header>
+
+<!-- ── Ticker bar ── -->
+<div id="ticker-bar">
+  <div id="ticker-inner">Loading prices…</div>
+</div>
+
+<!-- ── Main grid ── -->
+<div id="main">
+
+  <!-- LEFT: Price cards + indicators -->
+  <div class="panel" id="left-panel">
+    <div class="panel-title">Market Overview</div>
+    <div id="price-cards"></div>
+  </div>
+
+  <!-- CENTER: News feed -->
+  <div class="panel" id="center-panel">
+    <div class="panel-title">News &amp; Intelligence</div>
+    <div id="news-tabs">
+      <div class="tab active" data-cat="all">All</div>
+      <div class="tab" data-cat="general">Market</div>
+      <div class="tab" data-cat="crypto">Crypto</div>
+      <div class="tab" data-cat="forex">Forex</div>
+      <div class="tab" data-cat="merger">M&amp;A / Gossip</div>
+    </div>
+    <div id="news-list"></div>
+  </div>
+
+  <!-- RIGHT: Sentiment + Alerts -->
+  <div class="panel" id="right-panel">
+    <div class="panel-title">Sentiment &amp; Alerts</div>
+
+    <!-- Fear & Greed -->
+    <div id="fg-wrap">
+      <h3>Fear &amp; Greed Index</h3>
+      <canvas id="fg-canvas" width="220" height="120"></canvas>
+      <div id="fg-value">—</div>
+      <div id="fg-label">Loading…</div>
+    </div>
+
+    <!-- Social Sentiment -->
+    <div id="social-wrap">
+      <h3>Social Sentiment (SPY)</h3>
+      <div class="social-row">
+        <span class="label">Reddit r/stocks</span>
+        <span class="val" id="social-reddit-val">…</span>
+      </div>
+      <div class="social-bar-wrap">
+        <div class="social-bar" id="social-reddit-bar" style="width:50%"></div>
+      </div>
+      <div style="height:6px"></div>
+      <div class="social-row">
+        <span class="label">Twitter / X</span>
+        <span class="val" id="social-twitter-val">…</span>
+      </div>
+      <div class="social-bar-wrap">
+        <div class="social-bar" id="social-twitter-bar" style="width:50%"></div>
+      </div>
+    </div>
+
+    <!-- Alert history -->
+    <div id="alerts-wrap">
+      <h3>Price Alerts</h3>
+      <div id="alerts-list">
+        <div id="no-alerts">No alerts yet</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Toast container ── -->
+<div id="toast-container"></div>
+
+<!-- ── Last updated bar ── -->
+<div id="last-updated">Connecting…</div>
+
+<script src="app.js"></script>
+</body>
+</html>

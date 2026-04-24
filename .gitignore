@@ -1,0 +1,8 @@
+config.json
+.last_prices.json
+.alerts_history.json
+*.log
+__pycache__/
+*.pyc
+.env
+.DS_Store
