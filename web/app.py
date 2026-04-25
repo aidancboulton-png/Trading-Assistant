@@ -14,12 +14,29 @@ ALERTS_PATH = os.path.expanduser("~/trading-assistant/.alerts_history.json")
 LAST_PATH   = os.path.expanduser("~/trading-assistant/.last_prices.json")
 
 WATCHLIST = {
-    "CL":  {"name": "Crude Oil", "finnhub": "USO",             "alert_pct": 0.8,  "type": "commodity"},
-    "ES":  {"name": "S&P 500",   "finnhub": "SPY",             "alert_pct": 0.4,  "type": "index"},
-    "NQ":  {"name": "Nasdaq",    "finnhub": "QQQ",             "alert_pct": 0.5,  "type": "index"},
-    "GC":  {"name": "Gold",      "finnhub": "GLD",             "alert_pct": 0.5,  "type": "commodity"},
-    "BTC": {"name": "Bitcoin",   "finnhub": "BINANCE:BTCUSDT", "alert_pct": 2.0,  "type": "crypto"},
-    "DXY": {"name": "USD Index", "finnhub": "UUP",             "alert_pct": 0.3,  "type": "forex"},
+    # ── Indices ──────────────────────────────────────────────────────────────
+    "ES":   {"name": "S&P 500",      "finnhub": "SPY",              "alert_pct": 0.4,  "type": "index"},
+    "NQ":   {"name": "Nasdaq",       "finnhub": "QQQ",              "alert_pct": 0.5,  "type": "index"},
+    "DJI":  {"name": "Dow Jones",    "finnhub": "DIA",              "alert_pct": 0.4,  "type": "index"},
+    "RUT":  {"name": "Russell 2000", "finnhub": "IWM",              "alert_pct": 0.6,  "type": "index"},
+    "VIX":  {"name": "Volatility",   "finnhub": "VIXY",             "alert_pct": 5.0,  "type": "index"},
+    # ── Commodities ──────────────────────────────────────────────────────────
+    "CL":   {"name": "Crude Oil",    "finnhub": "USO",              "alert_pct": 0.8,  "type": "commodity"},
+    "GC":   {"name": "Gold",         "finnhub": "GLD",              "alert_pct": 0.5,  "type": "commodity"},
+    "DXY":  {"name": "USD Index",    "finnhub": "UUP",              "alert_pct": 0.3,  "type": "forex"},
+    # ── Crypto ───────────────────────────────────────────────────────────────
+    "BTC":  {"name": "Bitcoin",      "finnhub": "BINANCE:BTCUSDT",  "alert_pct": 2.0,  "type": "crypto"},
+    "ETH":  {"name": "Ethereum",     "finnhub": "BINANCE:ETHUSDT",  "alert_pct": 2.5,  "type": "crypto"},
+    "SOL":  {"name": "Solana",       "finnhub": "BINANCE:SOLUSDT",  "alert_pct": 3.0,  "type": "crypto"},
+    # ── Key Stocks ───────────────────────────────────────────────────────────
+    "NVDA": {"name": "Nvidia",       "finnhub": "NVDA",             "alert_pct": 1.5,  "type": "stock"},
+    "AAPL": {"name": "Apple",        "finnhub": "AAPL",             "alert_pct": 1.0,  "type": "stock"},
+    "TSLA": {"name": "Tesla",        "finnhub": "TSLA",             "alert_pct": 2.0,  "type": "stock"},
+    "META": {"name": "Meta",         "finnhub": "META",             "alert_pct": 1.5,  "type": "stock"},
+    "AMZN": {"name": "Amazon",       "finnhub": "AMZN",             "alert_pct": 1.2,  "type": "stock"},
+    "MSFT": {"name": "Microsoft",    "finnhub": "MSFT",             "alert_pct": 1.0,  "type": "stock"},
+    "JPM":  {"name": "JPMorgan",     "finnhub": "JPM",              "alert_pct": 1.2,  "type": "stock"},
+    "XOM":  {"name": "ExxonMobil",   "finnhub": "XOM",              "alert_pct": 1.0,  "type": "stock"},
 }
 
 # Read API key from env var (Railway) or fall back to config.json (local dev)
@@ -48,32 +65,31 @@ def get_quote(symbol: str) -> dict:
     except:
         return {"current": 0, "prev_close": 0, "high": 0, "low": 0, "change_pct": 0}
 
-def get_btc() -> dict:
-    try:
-        r = requests.get("https://api.coingecko.com/api/v3/simple/price",
-            params={"ids": "bitcoin", "vs_currencies": "usd", "include_24hr_change": "true"}, timeout=12)
-        d = r.json().get("bitcoin", {})
-        price = d.get("usd", 0)
-        chg   = d.get("usd_24h_change", 0)
-        prev  = round(price / (1 + chg / 100), 2) if chg else price
-        return {"current": price, "prev_close": prev, "high": 0, "low": 0, "change_pct": round(chg, 2)}
-    except:
-        return {"current": 0, "prev_close": 0, "high": 0, "low": 0, "change_pct": 0}
-
 def build_snapshot() -> dict:
     snap = {}
     for k, info in WATCHLIST.items():
-        q = get_btc() if k == "BTC" else get_quote(info["finnhub"])
+        q = get_quote(info["finnhub"])
         snap[k] = {**info, **q}
         time.sleep(0.2)
     return snap
 
-def get_candles(symbol: str, count: int = 35) -> list:
+_YAHOO_SYMBOL_MAP = {
+    "USO": "USO", "SPY": "SPY", "QQQ": "QQQ", "DIA": "DIA", "IWM": "IWM",
+    "VIXY": "VIXY", "GLD": "GLD", "UUP": "UUP",
+    "NVDA": "NVDA", "AAPL": "AAPL", "TSLA": "TSLA", "META": "META",
+    "AMZN": "AMZN", "MSFT": "MSFT", "JPM": "JPM", "XOM": "XOM",
+}
+
+def get_candles(symbol: str, count: int = 220) -> list:
+    """Fetch daily closes from Yahoo Finance (free, no API key needed)."""
+    ticker = _YAHOO_SYMBOL_MAP.get(symbol, symbol)
     try:
-        to = int(time.time())
-        fr = to - count * 24 * 3600
-        d  = fh("/stock/candle", {"symbol": symbol, "resolution": "D", "from": fr, "to": to})
-        return d.get("c", []) if d.get("s") == "ok" else []
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+        r = requests.get(url, params={"interval": "1d", "range": "1y"},
+                         headers={"User-Agent": "Mozilla/5.0"}, timeout=12)
+        d = r.json()
+        closes = d["chart"]["result"][0]["indicators"]["quote"][0]["close"]
+        return [c for c in closes if c is not None]
     except:
         return []
 
@@ -88,10 +104,41 @@ def compute_rsi(closes: list, period: int = 14) -> float | None:
         return 100.0
     return round(100 - 100 / (1 + ag / al), 1)
 
+def compute_ema(closes: list, period: int) -> float | None:
+    if len(closes) < period:
+        return None
+    k = 2.0 / (period + 1)
+    ema = sum(closes[:period]) / period
+    for p in closes[period:]:
+        ema = p * k + ema * (1 - k)
+    return round(ema, 4)
+
+def compute_macd(closes: list) -> dict:
+    if len(closes) < 26:
+        return {"macd": None, "trend": "neutral"}
+    ema12 = compute_ema(closes, 12)
+    ema26 = compute_ema(closes, 26)
+    if not ema12 or not ema26:
+        return {"macd": None, "trend": "neutral"}
+    macd = ema12 - ema26
+    return {"macd": round(macd, 4), "trend": "bullish" if macd > 0 else "bearish"}
+
+def compute_bollinger(closes: list, period: int = 20) -> dict:
+    if len(closes) < period:
+        return {"signal": "neutral", "position": None}
+    recent = closes[-period:]
+    mean   = sum(recent) / period
+    std    = (sum((c - mean) ** 2 for c in recent) / period) ** 0.5
+    upper, lower = mean + 2 * std, mean - 2 * std
+    price  = closes[-1]
+    pos    = round((price - lower) / (upper - lower), 2) if upper != lower else 0.5
+    return {"upper": round(upper, 4), "lower": round(lower, 4), "middle": round(mean, 4),
+            "position": pos, "signal": "overbought" if pos > 0.8 else "oversold" if pos < 0.2 else "neutral"}
+
 def get_rsi_all() -> dict:
     result = {}
     for sym, info in WATCHLIST.items():
-        if sym == "BTC":
+        if info["type"] == "crypto":
             result[sym] = {"rsi": None, "signal": "n/a", "name": info["name"]}
             continue
         closes = get_candles(info["finnhub"])
@@ -101,50 +148,399 @@ def get_rsi_all() -> dict:
         time.sleep(0.3)
     return result
 
+def get_technicals_all() -> dict:
+    result = {}
+    for sym, info in WATCHLIST.items():
+        if info["type"] == "crypto":
+            result[sym] = {"name": info["name"], "type": info["type"], "available": False}
+            continue
+        closes = get_candles(info["finnhub"], count=220)
+        if len(closes) < 20:
+            result[sym] = {"name": info["name"], "type": info["type"], "available": False}
+            time.sleep(0.3)
+            continue
+        price  = closes[-1]
+        rsi    = compute_rsi(closes)
+        macd   = compute_macd(closes)
+        bb     = compute_bollinger(closes)
+        sma20  = round(sum(closes[-20:]) / 20, 4)
+        sma50  = round(sum(closes[-50:]) / 50, 4) if len(closes) >= 50 else None
+        sma200 = round(sum(closes[-200:]) / 200, 4) if len(closes) >= 200 else None
+        vs50   = ("above" if price > sma50  else "below") if sma50  else None
+        vs200  = ("above" if price > sma200 else "below") if sma200 else None
+        golden = (sma50 > sma200) if (sma50 and sma200) else None
+        # score out of 6
+        pts = sum([
+            rsi is not None and 40 < rsi < 70,
+            vs50  == "above",
+            vs200 == "above",
+            golden is True,
+            macd.get("trend") == "bullish",
+            bb.get("signal") == "neutral",
+        ])
+        overall = "bullish" if pts >= 4 else "bearish" if pts <= 1 else "neutral"
+        result[sym] = {
+            "name": info["name"], "type": info["type"], "available": True,
+            "rsi": rsi,
+            "rsi_signal": "overbought" if rsi and rsi > 70 else "oversold" if rsi and rsi < 30 else "neutral",
+            "sma50": sma50, "sma200": sma200,
+            "vs_sma50": vs50, "vs_sma200": vs200,
+            "golden_cross": golden,
+            "macd_trend": macd.get("trend"),
+            "bb_signal": bb.get("signal"),
+            "bb_position": bb.get("position"),
+            "overall": overall,
+        }
+        time.sleep(0.3)
+    return result
+
+def get_analyst_recs() -> dict:
+    result = {}
+    stocks = [s for s, i in WATCHLIST.items() if i["type"] == "stock"]
+    for sym in stocks:
+        try:
+            d = fh("/stock/recommendation", {"symbol": sym})
+            if d:
+                latest = d[0]
+                total  = sum([latest.get("strongBuy",0), latest.get("buy",0),
+                               latest.get("hold",0), latest.get("sell",0), latest.get("strongSell",0)])
+                buys   = latest.get("strongBuy",0) + latest.get("buy",0)
+                sells  = latest.get("sell",0) + latest.get("strongSell",0)
+                consensus = "buy" if buys > sells and buys > total*0.4 else \
+                            "sell" if sells > buys and sells > total*0.4 else "hold"
+                result[sym] = {
+                    "strongBuy": latest.get("strongBuy",0), "buy": latest.get("buy",0),
+                    "hold": latest.get("hold",0), "sell": latest.get("sell",0),
+                    "strongSell": latest.get("strongSell",0),
+                    "total": total, "consensus": consensus,
+                    "period": latest.get("period",""),
+                }
+            time.sleep(0.3)
+        except:
+            pass
+    return result
+
+def generate_analysis(snap: dict, fear_greed: dict, news: list) -> dict:
+    es  = snap.get("ES",  {}); nq  = snap.get("NQ",  {})
+    vix = snap.get("VIX", {}); btc = snap.get("BTC", {})
+    cl  = snap.get("CL",  {}); gc  = snap.get("GC",  {})
+    dxy = snap.get("DXY", {}); nvda = snap.get("NVDA",{})
+    jpm = snap.get("JPM", {})
+
+    es_chg  = es.get("change_pct",  0); nq_chg  = nq.get("change_pct",  0)
+    vix_val = vix.get("current",   20); btc_chg = btc.get("change_pct", 0)
+    cl_chg  = cl.get("change_pct",  0); gc_chg  = gc.get("change_pct",  0)
+    dxy_chg = dxy.get("change_pct", 0); fg_val  = fear_greed.get("value", 50)
+
+    up_count = sum(1 for d in snap.values() if d.get("change_pct", 0) > 0)
+    total    = len(snap)
+
+    # Mood
+    if es_chg > 0.8 and vix_val < 22:
+        mood, mood_color = "RISK ON 🚀", "green"
+        mood_desc = "Markets rallying with low fear. Investors are confident and buying risk assets."
+    elif es_chg < -0.8 and vix_val > 22:
+        mood, mood_color = "RISK OFF 🛡️", "red"
+        mood_desc = "Stocks falling while fear rises. Investors are protecting capital and avoiding risk."
+    elif vix_val > 30:
+        mood, mood_color = "HIGH FEAR ⚠️", "red"
+        mood_desc = f"VIX at {vix_val:.0f} — extreme volatility. The market is scared. Expect large swings."
+    elif abs(es_chg) < 0.25:
+        mood, mood_color = "FLAT ↔️", "yellow"
+        mood_desc = "Markets have no clear direction today. Traders waiting for a catalyst."
+    elif es_chg > 0:
+        mood, mood_color = "BULLISH 📈", "green"
+        mood_desc = "Stocks are climbing. More buyers than sellers in the market right now."
+    else:
+        mood, mood_color = "BEARISH 📉", "red"
+        mood_desc = "Stocks under pressure. Sellers are in control today."
+
+    # Plain English summary
+    sp_word = f"rose {es_chg:.1f}%" if es_chg > 0 else f"fell {abs(es_chg):.1f}%"
+    lines = [f"The S&P 500 {sp_word} today, with {up_count} of {total} tracked assets positive."]
+    if vix_val > 25:
+        lines.append(f"The fear gauge (VIX) sits at {vix_val:.0f}, meaning markets are nervous and volatile.")
+    if abs(btc_chg) > 1.5:
+        lines.append(f"Bitcoin {'surged' if btc_chg > 0 else 'fell'} {abs(btc_chg):.1f}%, {'amplifying' if btc_chg * es_chg > 0 else 'diverging from'} the stock trend.")
+    if abs(cl_chg) > 1.5:
+        lines.append(f"Oil {'jumped' if cl_chg > 0 else 'dropped'} {abs(cl_chg):.1f}%, which {'pushes inflation up' if cl_chg > 0 else 'relieves inflation pressure'}.")
+
+    signals = []
+
+    # VIX
+    if vix_val > 30:
+        signals.append({"icon": "🚨", "title": "Market in Panic Mode", "type": "danger",
+            "plain": f"VIX at {vix_val:.0f} is panic territory. Markets can swing wildly. Don't make rushed decisions.",
+            "expert": f"VIX {vix_val:.1f} → implied daily SPX move ~{vix_val/16:.1f}%. Vol term structure likely inverted. Short-vol strategies at max risk."})
+    elif vix_val > 20:
+        signals.append({"icon": "⚠️", "title": "Volatility is Elevated", "type": "warning",
+            "plain": f"The fear index is at {vix_val:.0f}. Markets are jittery. Be careful with large bets.",
+            "expert": f"VIX {vix_val:.1f} above 20 threshold. Dealer hedging pressure elevated. Expect gap risk and wider spreads."})
+    elif vix_val < 13:
+        signals.append({"icon": "😴", "title": "Markets Are Too Calm", "type": "info",
+            "plain": f"VIX at {vix_val:.0f} — markets feel very safe. But extreme calm often comes before a storm.",
+            "expert": f"VIX {vix_val:.1f} near complacency levels. Low vol regime risk. Tail hedges are cheap — consider adding protection."})
+
+    # Fear & Greed
+    if fg_val <= 25:
+        signals.append({"icon": "🔴", "title": "Extreme Fear = Buying Opportunity?", "type": "opportunity",
+            "plain": f"Fear & Greed index at {fg_val}/100. Historically, when everyone is scared, prices are low and smart money buys.",
+            "expert": f"CNN F&G {fg_val} (Extreme Fear). Contrarian long signal. Check if fundamental catalyst justifies fear or if this is sentiment overshoot."})
+    elif fg_val >= 75:
+        signals.append({"icon": "🟡", "title": "Extreme Greed — Be Cautious", "type": "warning",
+            "plain": f"Fear & Greed at {fg_val}/100. Everyone is greedy — this is when bubbles form. Markets may be stretched.",
+            "expert": f"CNN F&G {fg_val} (Extreme Greed). Sentiment overbought. Mean reversion risk elevated. Trim overweight positions."})
+
+    # DXY vs Gold
+    if dxy_chg > 0.4 and gc_chg < -0.3:
+        signals.append({"icon": "💵", "title": "Strong Dollar, Weak Gold", "type": "info",
+            "plain": "The US Dollar is gaining strength while Gold falls. Investors trust the US economy and want dollars over safe havens.",
+            "expert": f"DXY proxy +{dxy_chg:.2f}% / GLD {gc_chg:.2f}%. Real rate pickup likely. Dollar strength negative for commodities and EM assets."})
+    elif dxy_chg < -0.4 and gc_chg > 0.3:
+        signals.append({"icon": "🥇", "title": "Dollar Weakening, Gold Rising", "type": "warning",
+            "plain": "The dollar is falling and gold is rising — a classic signal that investors are worried about inflation or economic instability.",
+            "expert": f"DXY proxy {dxy_chg:.2f}% / GLD +{gc_chg:.2f}%. Real rates pressured lower. Dollar weakness supportive of commodities and risk assets."})
+
+    # Oil
+    if cl_chg > 2.5:
+        signals.append({"icon": "🛢️", "title": "Oil Spiking — Watch Inflation", "type": "danger",
+            "plain": f"Crude oil is up {cl_chg:.1f}% today. Higher oil means higher gas prices and more inflation — bad for most consumers, great for energy stocks like XOM.",
+            "expert": f"USO +{cl_chg:.2f}%. Energy sector should outperform. Negative for growth/tech via rate expectations. Monitor TIPS breakevens."})
+    elif cl_chg < -2.5:
+        signals.append({"icon": "🛢️", "title": "Oil Dropping — Inflation Relief", "type": "opportunity",
+            "plain": f"Crude oil fell {abs(cl_chg):.1f}%. Cheaper oil means cheaper gas and less inflation — a positive for the overall economy and consumer stocks.",
+            "expert": f"USO {cl_chg:.2f}%. Disinflationary input cost signal. Positive for margin expansion in industrials and consumer discretionary."})
+
+    # BTC risk barometer
+    if btc_chg > 4 and es_chg > 0:
+        signals.append({"icon": "🚀", "title": "Crypto + Stocks Both Surging", "type": "bullish",
+            "plain": f"Bitcoin up {btc_chg:.1f}% alongside stocks — maximum 'risk-on' signal. Investors are in full buying mode across all markets.",
+            "expert": "Cross-asset risk appetite elevated. BTC/equity correlation positive. Rotate into high-beta: growth tech, small caps, crypto alts."})
+    elif btc_chg < -4 and es_chg < 0:
+        signals.append({"icon": "📉", "title": "Crypto + Stocks Both Falling", "type": "danger",
+            "plain": f"Bitcoin down {abs(btc_chg):.1f}% with stocks also falling — everything selling off at once. Classic de-risking.",
+            "expert": "Macro deleveraging event. BTC leading risk-off. Watch high-yield credit spreads and USD/JPY for confirmation of severity."})
+
+    # NVDA / AI signal
+    if nvda.get("change_pct", 0) > 3:
+        signals.append({"icon": "🤖", "title": "AI Stocks Leading the Market", "type": "bullish",
+            "plain": f"NVDA up {nvda.get('change_pct',0):.1f}%. AI/tech names are the strongest performers today — the market believes in the AI trade.",
+            "expert": "Mega-cap AI outperforming. Semis acting as risk-on leading indicator. Watch SOX index for sustainability."})
+    elif nvda.get("change_pct", 0) < -3:
+        signals.append({"icon": "💻", "title": "Tech/AI Stocks Under Pressure", "type": "warning",
+            "plain": f"NVDA down {abs(nvda.get('change_pct',0)):.1f}%. Tech is lagging — could signal rotation away from growth into value.",
+            "expert": "Semis underperforming. Growth/duration risk-off. Check 10yr yield — if rising, that explains the tech pressure."})
+
+    # Banks
+    if abs(jpm.get("change_pct", 0)) > 1.5:
+        up = jpm.get("change_pct", 0) > 0
+        signals.append({"icon": "🏦", "title": f"Banking Sector {'Rallying' if up else 'Selling Off'}", "type": "bullish" if up else "warning",
+            "plain": f"JPMorgan {'up' if up else 'down'} {abs(jpm.get('change_pct',0)):.1f}%. Banks are a barometer of economic health. {'Positive signal' if up else 'Watch for broader credit stress'}.",
+            "expert": f"JPM {jpm.get('change_pct',0):.2f}%. {'Yield curve steepening / credit expansion signal.' if up else 'Potential NIM compression or credit risk concerns. Watch CDS spreads.'}"})
+
+    # Geopolitical news
+    geo = [n for n in news if n.get("category") == "geopolitical"][:1]
+    if geo:
+        signals.append({"icon": "🌍", "title": "Geopolitical Event in the News", "type": "warning",
+            "plain": f"{geo[0]['headline'][:120]}. Geopolitical events can cause sudden, sharp moves — especially in oil and defense stocks.",
+            "expert": "Active geo risk. Monitor: crude oil, USD, defense sector (LMT/RTX/NOC/GD), safe havens (GLD, TLT). Tail risk elevated."})
+
+    # Top movers
+    movers = sorted(
+        [(s, d) for s, d in snap.items() if d.get("change_pct")],
+        key=lambda x: abs(x[1].get("change_pct", 0)), reverse=True
+    )[:6]
+
+    return {
+        "mood": mood, "mood_color": mood_color, "mood_desc": mood_desc,
+        "simple_summary": " ".join(lines),
+        "signals": signals,
+        "top_movers": [{"symbol": s, "name": d.get("name", s), "change_pct": d.get("change_pct", 0),
+                        "current": d.get("current", 0), "type": d.get("type", "")} for s, d in movers],
+        "stats": {"up_count": up_count, "down_count": total - up_count, "total": total,
+                  "vix": round(vix_val, 2), "fear_greed": fg_val},
+        "timestamp": int(time.time()),
+    }
+
+# Keywords used to tag geopolitical / macro / earnings news from general feed
+_GEO_KEYWORDS   = ["iran","war","strike","attack","military","sanction","missile",
+                    "conflict","ukraine","russia","china","taiwan","middle east",
+                    "opec","oil supply","troops","nato","pentagon","nuclear","tariff",
+                    "trade war","embargo"]
+_MACRO_KEYWORDS = ["fed","federal reserve","rate","inflation","cpi","gdp","recession",
+                    "treasury","yield","powell","interest rate","jobs report","payroll",
+                    "fomc","deficit","debt ceiling","stimulus","fiscal","monetary"]
+_EARNINGS_KEYWORDS = ["earnings","revenue","profit","beat","miss","guidance","eps",
+                       "quarterly","results","outlook","forecast","raised","lowered"]
+
+def _tag_category(headline: str, summary: str, base_cat: str) -> str:
+    text = (headline + " " + summary).lower()
+    if any(k in text for k in _GEO_KEYWORDS):
+        return "geopolitical"
+    if any(k in text for k in _MACRO_KEYWORDS):
+        return "macro"
+    if any(k in text for k in _EARNINGS_KEYWORDS):
+        return "earnings"
+    return base_cat
+
 def get_news() -> list:
     news = []
+    seen = set()
+
+    # Finnhub market categories
     for cat in ("general", "crypto", "forex", "merger"):
         try:
             items = fh("/news", {"category": cat, "minId": 0})
-            for n in items[:15]:
+            for n in items[:20]:
+                nid = n.get("id", 0)
+                if nid in seen:
+                    continue
+                seen.add(nid)
+                headline = n.get("headline", "")
+                summary  = (n.get("summary") or "")[:220]
+                tagged   = _tag_category(headline, summary, cat)
                 news.append({
-                    "id":       n.get("id", 0),
-                    "headline": n.get("headline", ""),
-                    "summary":  (n.get("summary") or "")[:220],
+                    "id":       nid,
+                    "headline": headline,
+                    "summary":  summary,
                     "source":   n.get("source", ""),
                     "url":      n.get("url", ""),
                     "datetime": n.get("datetime", 0),
-                    "category": cat,
+                    "category": tagged,
                     "image":    n.get("image", ""),
                     "related":  n.get("related", ""),
                 })
         except:
             pass
+
+    # Company news for major S&P movers (earnings, guidance leaks, etc.)
+    for sym in ("AAPL", "NVDA", "MSFT", "META", "AMZN", "TSLA", "JPM", "XOM"):
+        try:
+            fr = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+            to = datetime.now().strftime("%Y-%m-%d")
+            items = fh(f"/company-news", {"symbol": sym, "from": fr, "to": to})
+            for n in items[:4]:
+                nid = n.get("id", 0)
+                if nid in seen:
+                    continue
+                seen.add(nid)
+                headline = n.get("headline", "")
+                summary  = (n.get("summary") or "")[:220]
+                tagged   = _tag_category(headline, summary, "earnings")
+                news.append({
+                    "id":       nid,
+                    "headline": headline,
+                    "summary":  summary,
+                    "source":   n.get("source", sym),
+                    "url":      n.get("url", ""),
+                    "datetime": n.get("datetime", 0),
+                    "category": tagged,
+                    "image":    n.get("image", ""),
+                    "related":  sym,
+                })
+            time.sleep(0.15)
+        except:
+            pass
+
     news.sort(key=lambda x: x["datetime"], reverse=True)
-    return news[:50]
+    return news[:80]
 
 def get_fear_greed() -> dict:
     try:
-        r = requests.get("https://api.alternative.me/fng/?limit=1", timeout=10)
-        d = r.json()["data"][0]
-        return {"value": int(d["value"]), "label": d["value_classification"]}
-    except:
-        return {"value": 50, "label": "Neutral"}
-
-def get_social_sentiment(symbol: str) -> dict:
-    try:
-        fr = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-        d  = fh("/stock/social-sentiment", {"symbol": symbol, "from": fr})
-        reddit  = d.get("reddit",  [])[-5:]
-        twitter = d.get("twitter", [])[-5:]
+        r = requests.get("https://api.alternative.me/fng/?limit=8", timeout=10)
+        data = r.json()["data"]
+        current = data[0]
+        history = [{"value": int(d["value"]), "label": d["value_classification"],
+                    "timestamp": int(d["timestamp"])} for d in data]
+        val = int(current["value"])
+        prev_val = int(data[1]["value"]) if len(data) > 1 else val
+        change = val - prev_val
+        zone = ("Extreme Fear" if val <= 25 else "Fear" if val <= 45
+                else "Neutral" if val <= 55 else "Greed" if val <= 75 else "Extreme Greed")
+        advice = {
+            "Extreme Fear": "Historically a buying opportunity — markets are oversold on emotion.",
+            "Fear":         "Caution in the market. Good time to look for undervalued assets.",
+            "Neutral":      "Balanced market. No extreme bias either way.",
+            "Greed":        "Markets leaning bullish but getting stretched. Be selective.",
+            "Extreme Greed":"Warning: euphoria mode. Corrections often follow extreme greed.",
+        }
         return {
-            "reddit_score":    round(sum(x.get("score", 0) for x in reddit) / max(len(reddit), 1), 3),
-            "twitter_score":   round(sum(x.get("score", 0) for x in twitter) / max(len(twitter), 1), 3),
-            "reddit_mentions": sum(x.get("mention", 0) for x in reddit),
-            "twitter_mentions": sum(x.get("mention", 0) for x in twitter),
+            "value": val, "label": current["value_classification"],
+            "zone": zone, "change_1d": change,
+            "advice": advice.get(zone, ""),
+            "history": history[:7],
+            "prev_value": prev_val,
         }
     except:
-        return {"reddit_score": 0, "twitter_score": 0, "reddit_mentions": 0, "twitter_mentions": 0}
+        return {"value": 50, "label": "Neutral", "zone": "Neutral", "change_1d": 0,
+                "advice": "", "history": [], "prev_value": 50}
+
+def get_insider_trades_all() -> list:
+    """
+    SEC Form 4 insider transactions for key stocks.
+    Buys = insiders loading up (bullish signal).
+    Sells = insiders cashing out (bearish / neutral signal).
+    """
+    results = []
+    stocks = ["NVDA", "AAPL", "TSLA", "META", "AMZN", "MSFT", "JPM", "XOM"]
+    fr = (datetime.now() - timedelta(days=45)).strftime("%Y-%m-%d")
+    to = datetime.now().strftime("%Y-%m-%d")
+    CODE_LABELS = {
+        "P": "BUY", "S": "SELL", "A": "AWARD", "M": "EXERCISE",
+        "G": "GIFT", "F": "TAX", "D": "SELL", "I": "INDIRECT",
+    }
+    for sym in stocks:
+        try:
+            d = fh("/stock/insider-transactions", {"symbol": sym, "from": fr, "to": to})
+            txns = [t for t in d.get("data", []) if t.get("transactionCode") in ("P", "S")]
+            buys  = [t for t in txns if t.get("transactionCode") == "P"]
+            sells = [t for t in txns if t.get("transactionCode") == "S"]
+            buy_val  = sum(abs(t.get("change", 0)) * (t.get("transactionPrice") or 0) for t in buys)
+            sell_val = sum(abs(t.get("change", 0)) * (t.get("transactionPrice") or 0) for t in sells)
+            signal = "bullish" if buy_val > sell_val * 2 else \
+                     "bearish" if sell_val > buy_val * 2 else "neutral"
+            recent = sorted(txns, key=lambda x: x.get("transactionDate",""), reverse=True)[:3]
+            results.append({
+                "symbol": sym,
+                "buy_count":  len(buys),  "sell_count": len(sells),
+                "buy_value":  round(buy_val / 1e6, 2),
+                "sell_value": round(sell_val / 1e6, 2),
+                "signal": signal,
+                "recent": [{"name": t.get("name",""), "action": CODE_LABELS.get(t.get("transactionCode",""),"?"),
+                             "shares": abs(t.get("change",0)),
+                             "price": t.get("transactionPrice", 0),
+                             "date": t.get("transactionDate","")} for t in recent],
+            })
+            time.sleep(0.25)
+        except:
+            results.append({"symbol": sym, "buy_count": 0, "sell_count": 0,
+                            "buy_value": 0, "sell_value": 0, "signal": "neutral", "recent": []})
+    return results
+
+def get_earnings_calendar() -> list:
+    """Upcoming + recent earnings for major stocks — beat/miss signals."""
+    try:
+        today = datetime.now().strftime("%Y-%m-%d")
+        in7   = (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d")
+        d = fh("/calendar/earnings", {"from": today, "to": in7})
+        watchsyms = set(WATCHLIST.keys()) | {"AAPL","NVDA","MSFT","META","AMZN","TSLA","JPM","XOM","GOOGL","NFLX"}
+        events = [e for e in d.get("earningsCalendar", []) if e.get("symbol") in watchsyms]
+        events.sort(key=lambda x: x.get("date",""))
+        return [{"symbol": e["symbol"], "date": e["date"], "hour": e.get("hour",""),
+                 "epsEstimate": e.get("epsEstimate"), "revenueEstimate": e.get("revenueEstimate"),
+                 "epsActual": e.get("epsActual"), "revenueActual": e.get("revenueActual")} for e in events[:20]]
+    except:
+        return []
+
+def get_upgrade_downgrades() -> list:
+    """Disabled — requires Finnhub premium tier."""
+    return []
+
+def get_social_sentiment_all() -> dict:
+    return {}
+
+def get_social_sentiment(symbol: str) -> dict:
+    return {}
 
 def get_insider_activity(symbol: str) -> list:
     try:
@@ -169,6 +565,29 @@ def save_last(snap: dict):
     with open(LAST_PATH, "w") as f:
         json.dump({k: v.get("current", 0) for k, v in snap.items()}, f)
 
+_ALERT_CONTEXT = {
+    "VIX": {
+        "UP":   "Volatility spike — fear is entering the market. Risk assets may sell off.",
+        "DOWN": "Volatility falling — fear is easing. Markets calming down.",
+    },
+    "BTC": {
+        "UP":   "Bitcoin surging — risk appetite is high. Watch crypto alts for follow-through.",
+        "DOWN": "Bitcoin selling off — crypto risk-off. May bleed into tech stocks.",
+    },
+    "GC": {
+        "UP":   "Gold rising — safe haven demand. Investors hedging against uncertainty.",
+        "DOWN": "Gold falling — risk-on mode. Investors moving out of safe havens.",
+    },
+    "CL": {
+        "UP":   "Oil spiking — inflation risk rises. Energy stocks benefit, consumer hit.",
+        "DOWN": "Oil dropping — inflation relief. Good for consumers and growth stocks.",
+    },
+    "DXY": {
+        "UP":   "Dollar strengthening — bad for commodities and emerging markets.",
+        "DOWN": "Dollar weakening — supportive of gold, oil, and international stocks.",
+    },
+}
+
 def check_alerts(snap: dict) -> list:
     last = load_last()
     hits = []
@@ -177,10 +596,18 @@ def check_alerts(snap: dict) -> list:
         if not cur or not prv: continue
         pct = abs((cur - prv) / prv) * 100
         if pct >= d.get("alert_pct", 0.5):
-            hits.append({"symbol": k, "name": d.get("name", k),
-                         "direction": "UP" if cur > prv else "DOWN",
-                         "pct": round(pct, 2), "current": cur,
-                         "threshold": d.get("alert_pct"), "timestamp": int(time.time())})
+            direction = "UP" if cur > prv else "DOWN"
+            ctx = _ALERT_CONTEXT.get(k, {}).get(direction, f"{d.get('name',k)} made a significant move.")
+            hits.append({
+                "symbol": k, "name": d.get("name", k),
+                "direction": direction,
+                "pct": round(pct, 2), "current": cur,
+                "prev": prv,
+                "threshold": d.get("alert_pct"),
+                "context": ctx,
+                "type": d.get("type", ""),
+                "timestamp": int(time.time()),
+            })
     save_last(snap)
     return hits
 
@@ -201,7 +628,9 @@ def load_alerts() -> list:
 
 _cache: dict = {}
 _cache_ts: dict = {}
-TTL = {"snapshot": 30, "news": 300, "fear_greed": 3600, "rsi": 3600, "social": 1800}
+TTL = {"snapshot": 30, "news": 300, "fear_greed": 3600, "rsi": 3600,
+       "social": 1800, "technicals": 7200, "analyst_recs": 7200, "analysis": 300,
+       "insider_trades": 3600, "earnings_cal": 1800, "upgrades": 3600}
 
 def cached(key: str, fn, *args):
     if key not in _cache or time.time() - _cache_ts.get(key, 0) > TTL.get(key, 60):
@@ -274,8 +703,17 @@ async def api_news():
 @app.get("/api/sentiment")
 async def api_sentiment():
     return {"fear_greed": cached("fear_greed", get_fear_greed),
-            "social": cached("social_SPY", get_social_sentiment, "SPY"),
+            "social": {},
             "ts": int(time.time())}
+
+@app.get("/api/structural")
+async def api_structural():
+    return {
+        "insider_trades":    await asyncio.to_thread(lambda: cached("insider_trades", get_insider_trades_all)),
+        "earnings_calendar": await asyncio.to_thread(lambda: cached("earnings_cal",   get_earnings_calendar)),
+        "upgrades":          await asyncio.to_thread(lambda: cached("upgrades",        get_upgrade_downgrades)),
+        "ts": int(time.time()),
+    }
 
 @app.get("/api/rsi")
 async def api_rsi():
@@ -288,6 +726,26 @@ async def api_alerts():
 @app.get("/api/insider/{symbol}")
 async def api_insider(symbol: str):
     return {"data": await asyncio.to_thread(get_insider_activity, symbol.upper())}
+
+@app.get("/api/technicals")
+async def api_technicals():
+    return {"data": await asyncio.to_thread(lambda: cached("technicals", get_technicals_all)),
+            "ts": int(time.time())}
+
+@app.get("/api/analyst-recs")
+async def api_analyst_recs():
+    return {"data": await asyncio.to_thread(lambda: cached("analyst_recs", get_analyst_recs)),
+            "ts": int(time.time())}
+
+@app.get("/api/analysis")
+async def api_analysis():
+    snap = cached("snapshot", build_snapshot)
+    fg   = cached("fear_greed", get_fear_greed)
+    news = cached("news", get_news)
+    key  = f"analysis_{int(time.time())//300}"
+    if key not in _cache:
+        _cache[key] = generate_analysis(snap, fg, news)
+    return {"data": _cache[key], "ts": int(time.time())}
 
 _static_dir = Path(__file__).parent / "static"
 app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")

@@ -3,99 +3,262 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trading Dashboard</title>
+  <title>Aidan's Market Intel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- ── Header ── -->
-<header id="header">
-  <h1>⚡ <span>TRADING</span> DASHBOARD</h1>
-  <div id="header-right">
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo">⚡ AIDAN'S MARKET INTEL</div>
+  <div class="nav-links">
+    <a href="#hero">Overview</a>
+    <a href="#intelligence">Intelligence</a>
+    <a href="#prices">Prices</a>
+    <a href="#technicals">Technicals</a>
+    <a href="#sentiment">Sentiment</a>
+    <a href="#news">News</a>
+    <a href="#alerts">Alerts</a>
+  </div>
+  <div class="nav-right">
     <span id="clock">--:--:-- ET</span>
-    <div id="ws-status">
-      <div id="ws-dot"></div>
-      <span id="ws-status-text">CONNECTING</span>
-    </div>
-    <button id="notif-btn">🔔 Enable Alerts</button>
+    <div id="ws-status"><div id="ws-dot"></div><span id="ws-status-text">CONNECTING</span></div>
+    <button id="notif-btn">🔔 Alerts</button>
   </div>
-</header>
+</nav>
 
-<!-- ── Ticker bar ── -->
-<div id="ticker-bar">
-  <div id="ticker-inner">Loading prices…</div>
-</div>
+<!-- TICKER TAPE -->
+<div id="ticker-bar"><div id="ticker-inner">Loading…</div></div>
 
-<!-- ── Main grid ── -->
-<div id="main">
+<main>
 
-  <!-- LEFT: Price cards + indicators -->
-  <div class="panel" id="left-panel">
-    <div class="panel-title">Market Overview</div>
-    <div id="price-cards"></div>
-  </div>
+  <!-- ── HERO ── -->
+  <section id="hero">
+    <div class="hero-grid">
 
-  <!-- CENTER: News feed -->
-  <div class="panel" id="center-panel">
-    <div class="panel-title">News &amp; Intelligence</div>
-    <div id="news-tabs">
-      <div class="tab active" data-cat="all">All</div>
-      <div class="tab" data-cat="general">Market</div>
-      <div class="tab" data-cat="crypto">Crypto</div>
-      <div class="tab" data-cat="forex">Forex</div>
-      <div class="tab" data-cat="merger">M&amp;A / Gossip</div>
+      <div class="hero-mood-card" id="hero-mood-card">
+        <div class="mood-label">Market Status</div>
+        <div class="mood-badge" id="mood-badge">LOADING…</div>
+        <div class="mood-desc" id="mood-desc">Gathering market data…</div>
+        <div class="mood-ts" id="mood-ts"></div>
+      </div>
+
+      <div class="hero-summary-card">
+        <div class="summary-label">Today in Plain English</div>
+        <div class="summary-text" id="summary-text">Connecting to live data feeds…</div>
+      </div>
+
+      <div class="hero-stats-card">
+        <div class="stats-label">Snapshot</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-val up" id="stat-up">—</div>
+            <div class="stat-key">Assets Up</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val dn" id="stat-down">—</div>
+            <div class="stat-key">Assets Down</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-vix">—</div>
+            <div class="stat-key">VIX</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-fg">—</div>
+            <div class="stat-key">Fear &amp; Greed</div>
+          </div>
+        </div>
+      </div>
+
     </div>
-    <div id="news-list"></div>
-  </div>
+  </section>
 
-  <!-- RIGHT: Sentiment + Alerts -->
-  <div class="panel" id="right-panel">
-    <div class="panel-title">Sentiment &amp; Alerts</div>
-
-    <!-- Fear & Greed -->
-    <div id="fg-wrap">
-      <h3>Fear &amp; Greed Index</h3>
-      <canvas id="fg-canvas" width="220" height="120"></canvas>
-      <div id="fg-value">—</div>
-      <div id="fg-label">Loading…</div>
-    </div>
-
-    <!-- Social Sentiment -->
-    <div id="social-wrap">
-      <h3>Social Sentiment (SPY)</h3>
-      <div class="social-row">
-        <span class="label">Reddit r/stocks</span>
-        <span class="val" id="social-reddit-val">…</span>
+  <!-- ── INTELLIGENCE ── -->
+  <section id="intelligence">
+    <div class="section-header">
+      <div>
+        <h2>Market Intelligence</h2>
+        <p class="section-sub">Live signals from price, macro, geopolitical &amp; sentiment data</p>
       </div>
-      <div class="social-bar-wrap">
-        <div class="social-bar" id="social-reddit-bar" style="width:50%"></div>
-      </div>
-      <div style="height:6px"></div>
-      <div class="social-row">
-        <span class="label">Twitter / X</span>
-        <span class="val" id="social-twitter-val">…</span>
-      </div>
-      <div class="social-bar-wrap">
-        <div class="social-bar" id="social-twitter-bar" style="width:50%"></div>
-      </div>
-    </div>
-
-    <!-- Alert history -->
-    <div id="alerts-wrap">
-      <h3>Price Alerts</h3>
-      <div id="alerts-list">
-        <div id="no-alerts">No alerts yet</div>
+      <div class="view-toggle">
+        <button class="vtog active" data-mode="simple">Plain English</button>
+        <button class="vtog" data-mode="expert">Pro / Expert</button>
       </div>
     </div>
+    <div id="signal-grid"></div>
+    <div class="movers-header">Top Movers Right Now</div>
+    <div id="movers-row"></div>
+  </section>
 
-  </div>
-</div>
+  <!-- ── PRICES ── -->
+  <section id="prices">
+    <div class="section-header">
+      <div>
+        <h2>Live Prices</h2>
+        <p class="section-sub">Real-time quotes with day range and momentum</p>
+      </div>
+      <div id="asset-tabs" class="tab-row">
+        <button class="atab active" data-type="all">All</button>
+        <button class="atab" data-type="index">Indices</button>
+        <button class="atab" data-type="stock">Stocks</button>
+        <button class="atab" data-type="crypto">Crypto</button>
+        <button class="atab" data-type="commodity">Commodities</button>
+      </div>
+    </div>
+    <div id="price-grid"></div>
+  </section>
 
-<!-- ── Toast container ── -->
+  <!-- ── TECHNICALS ── -->
+  <section id="technicals">
+    <div class="section-header">
+      <div>
+        <h2>Technical Analysis</h2>
+        <p class="section-sub">RSI, Moving Averages, MACD &amp; Bollinger Bands — traffic-light signals</p>
+      </div>
+    </div>
+    <div class="tech-table-wrap">
+      <table id="tech-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Type</th>
+            <th>RSI</th>
+            <th>vs 50-Day MA</th>
+            <th>vs 200-Day MA</th>
+            <th>Golden Cross</th>
+            <th>MACD</th>
+            <th>Bollinger</th>
+            <th>Overall Signal</th>
+          </tr>
+        </thead>
+        <tbody id="tech-tbody">
+          <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Loading technicals…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tech-legend">
+      <span class="leg bull">🟢 Bullish</span>
+      <span class="leg bear">🔴 Bearish</span>
+      <span class="leg neut">🟡 Neutral</span>
+      <span class="leg na">— Not available (crypto/insufficient data)</span>
+    </div>
+  </section>
+
+  <!-- ── SENTIMENT ── -->
+  <section id="sentiment">
+    <div class="section-header">
+      <div>
+        <h2>Sentiment Dashboard</h2>
+        <p class="section-sub">Fear &amp; Greed history · Social buzz per stock · Analyst ratings · Market breadth</p>
+      </div>
+    </div>
+    <div class="sentiment-grid">
+
+      <!-- Fear & Greed expanded -->
+      <div class="sent-card fg-big-card" id="fg-card">
+        <div class="sent-card-title">Fear &amp; Greed Index</div>
+        <canvas id="fg-canvas" width="200" height="110"></canvas>
+        <div id="fg-value" class="fg-val">—</div>
+        <div id="fg-label" class="fg-lbl">Loading…</div>
+        <div id="fg-change" class="fg-change"></div>
+        <div id="fg-advice" class="fg-advice"></div>
+        <div class="fg-history-label">7-Day History</div>
+        <div id="fg-history"></div>
+        <div class="fg-zones">
+          <span style="color:#ff3d5a">■ 0–25 Extreme Fear</span>
+          <span style="color:#ff7043">■ 25–45 Fear</span>
+          <span style="color:#ffc107">■ 45–55 Neutral</span>
+          <span style="color:#aed581">■ 55–75 Greed</span>
+          <span style="color:#00e676">■ 75–100 Extreme Greed</span>
+        </div>
+      </div>
+
+      <!-- Market Breadth -->
+      <div class="sent-card" id="breadth-card">
+        <div class="sent-card-title">Market Breadth</div>
+        <div id="breadth-bar-wrap">
+          <div id="breadth-bar-up"></div>
+          <div id="breadth-bar-dn"></div>
+        </div>
+        <div id="breadth-labels"></div>
+        <div class="breadth-note" id="breadth-note">How many of your tracked assets are up vs down</div>
+        <div id="breadth-breakdown"></div>
+      </div>
+
+      <!-- SEC Insider Trades -->
+      <div class="sent-card social-big-card" id="insider-card">
+        <div class="sent-card-title">🏛 SEC Insider Transactions (Form 4)</div>
+        <div class="sent-card-sub">Executives &amp; directors buying/selling their own stock — the most reliable signal on Wall Street</div>
+        <div id="insider-list"></div>
+      </div>
+
+      <!-- Analyst Ratings -->
+      <div class="sent-card" id="analyst-card">
+        <div class="sent-card-title">📊 Wall Street Analyst Ratings</div>
+        <div id="analyst-list"></div>
+        <div class="social-note" style="margin-top:8px">Buy/Hold/Sell consensus from all covering analysts</div>
+      </div>
+
+      <!-- Upcoming Earnings -->
+      <div class="sent-card" id="earnings-card">
+        <div class="sent-card-title">📅 Upcoming Earnings (Next 10 Days)</div>
+        <div class="sent-card-sub">When companies report — big price moves expected on these dates</div>
+        <div id="earnings-list"></div>
+      </div>
+
+      <!-- Analyst Upgrades/Downgrades -->
+      <div class="sent-card" id="upgrades-card">
+        <div class="sent-card-title">⬆️ Upgrades &amp; Downgrades (14 Days)</div>
+        <div class="sent-card-sub">When a big bank changes their rating, institutions follow</div>
+        <div id="upgrades-list"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── NEWS ── -->
+  <section id="news">
+    <div class="section-header">
+      <div>
+        <h2>News Intelligence</h2>
+        <p class="section-sub">Auto-categorised: War &amp; Geopolitical · Macro/Fed · Earnings · Crypto · Forex · M&amp;A</p>
+      </div>
+      <div id="news-tabs" class="tab-row">
+        <button class="ntab active" data-cat="all">All</button>
+        <button class="ntab" data-cat="geopolitical">🌍 War &amp; Geo</button>
+        <button class="ntab" data-cat="macro">📊 Macro</button>
+        <button class="ntab" data-cat="earnings">💰 Earnings</button>
+        <button class="ntab" data-cat="crypto">₿ Crypto</button>
+        <button class="ntab" data-cat="forex">💱 Forex</button>
+        <button class="ntab" data-cat="merger">🤝 M&amp;A</button>
+      </div>
+    </div>
+    <div id="news-grid"></div>
+  </section>
+
+  <!-- ── ALERTS ── -->
+  <section id="alerts">
+    <div class="section-header">
+      <div>
+        <h2>Price Alerts</h2>
+        <p class="section-sub">Fires when an asset moves past its threshold — with plain-English context on what it means</p>
+      </div>
+      <div id="alert-thresholds" class="thresh-info">
+        <span>Thresholds: VIX 5% · BTC/SOL 2–3% · Stocks 1–2% · Indices 0.4–0.6%</span>
+      </div>
+    </div>
+    <div id="alerts-grid"></div>
+  </section>
+
+</main>
+
+<footer>
+  <span id="last-updated">Connecting…</span>
+  <span>Aidan's Market Intel · Data: Finnhub · Fear &amp; Greed: Alternative.me</span>
+</footer>
+
 <div id="toast-container"></div>
-
-<!-- ── Last updated bar ── -->
-<div id="last-updated">Connecting…</div>
 
 <script src="app.js"></script>
 </body>

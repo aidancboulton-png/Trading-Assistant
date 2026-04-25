@@ -1,416 +1,554 @@
 'use strict';
 
-// ── state ─────────────────────────────────────────────────────────────────────
-const state = {
-  snapshot:   {},
-  rsi:        {},
-  newsFilter: 'all',
-  news:       [],
-  alerts:     [],
+// ── state ────────────────────────────────────────────────────────────────────
+const S = {
+  snapshot:    {},
+  rsi:         {},
+  technicals:  {},
+  analysis:    {},
+  analystRecs: {},
+  news:        [],
+  alerts:      [],
+  newsFilter:  'all',
+  assetFilter: 'all',
+  viewMode:    'simple',  // 'simple' | 'expert'
 };
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+// ── helpers ──────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const fmt = (n, decimals = 2) => {
-  if (!n && n !== 0) return '—';
-  return Number(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-};
+const fmt = (n, d = 2) => n == null ? '—' : Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const relTime = ts => {
-  const diff = Date.now() / 1000 - ts;
-  if (diff < 60)   return `${Math.floor(diff)}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  const s = Date.now() / 1000 - ts;
+  if (s < 60)    return `${Math.floor(s)}s ago`;
+  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return new Date(ts * 1000).toLocaleDateString();
 };
+const sent = text => {
+  const t = (text||'').toLowerCase();
+  const b = ['surge','rally','gain','bull','record','profit','beat','strong','jump','soar','rise','growth'].filter(w => t.includes(w)).length;
+  const r = ['crash','fall','drop','bear','loss','miss','weak','recession','risk','sell','decline','plunge','fear','crisis'].filter(w => t.includes(w)).length;
+  return b > r ? 'pos' : r > b ? 'neg' : 'neu';
+};
 
-// ── sentiment tag ─────────────────────────────────────────────────────────────
-const BULL = ['surge','rally','gain','bull','record','profit','beat','strong','rise','jump','soar','growth','boom','buy','upgrade'];
-const BEAR = ['crash','fall','drop','bear','loss','miss','weak','recession','inflation','risk','sell','downgrade','concern','fear','crisis','decline','plunge'];
-function sentimentClass(text) {
-  const t = (text || '').toLowerCase();
-  const b = BULL.filter(w => t.includes(w)).length;
-  const r = BEAR.filter(w => t.includes(w)).length;
-  if (b > r) return 'sentiment-positive';
-  if (r > b) return 'sentiment-negative';
-  return 'sentiment-neutral';
-}
+// ── clock ────────────────────────────────────────────────────────────────────
+setInterval(() => {
+  $('clock').textContent = new Date().toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York', hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  }) + ' ET';
+}, 1000);
 
-// ── clock ──────────────────────────────────────────────────────────────────────
-function startClock() {
-  const update = () => {
-    const now = new Date();
-    $('clock').textContent = now.toLocaleTimeString('en-US', {
-      timeZone: 'America/New_York',
-      hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
-    }) + ' ET';
-  };
-  update();
-  setInterval(update, 1000);
-}
-
-// ── ticker bar ────────────────────────────────────────────────────────────────
+// ── ticker ───────────────────────────────────────────────────────────────────
 function renderTicker(snap) {
   const items = Object.entries(snap).map(([sym, d]) => {
     const cls = d.change_pct >= 0 ? 'up' : 'dn';
-    const arrow = d.change_pct >= 0 ? '▲' : '▼';
+    const arr = d.change_pct >= 0 ? '▲' : '▼';
+    const price = sym === 'BTC' || sym === 'ETH' ? fmt(d.current, 0) : fmt(d.current);
     return `<span class="tick-item">
-      <span class="sym">${sym}</span>
-      <span class="prc">${fmt(d.current)}</span>
-      <span class="${cls}">${arrow} ${Math.abs(d.change_pct).toFixed(2)}%</span>
+      <span class="tsym">${sym}</span>
+      <span class="tprc">${price}</span>
+      <span class="${cls}">${arr} ${Math.abs(d.change_pct).toFixed(2)}%</span>
     </span>`;
   }).join('');
-  // Duplicate for seamless loop
   $('ticker-inner').innerHTML = items + items;
 }
 
+// ── hero ─────────────────────────────────────────────────────────────────────
+function renderHero(analysis) {
+  if (!analysis || !analysis.mood) return;
+  const mb = $('mood-badge');
+  mb.textContent = analysis.mood;
+  mb.className   = 'mood-badge ' + (analysis.mood_color || 'yellow');
+  $('mood-desc').textContent    = analysis.mood_desc;
+  $('mood-ts').textContent      = 'Updated ' + relTime(analysis.timestamp);
+  $('summary-text').textContent = analysis.simple_summary;
+
+  const st = analysis.stats || {};
+  $('stat-up').textContent   = st.up_count   ?? '—';
+  $('stat-down').textContent = st.down_count  ?? '—';
+  $('stat-vix').textContent  = st.vix != null ? st.vix.toFixed(1) : '—';
+
+  const fgEl = $('stat-fg');
+  fgEl.textContent = st.fear_greed ?? '—';
+  fgEl.style.color = st.fear_greed < 30 ? 'var(--dn)' : st.fear_greed > 70 ? 'var(--gold)' : 'var(--up)';
+}
+
+// ── intelligence signals ──────────────────────────────────────────────────────
+function renderSignals(analysis) {
+  if (!analysis || !analysis.signals) return;
+
+  // Signals
+  $('signal-grid').innerHTML = (analysis.signals || []).map(sig => `
+    <div class="signal-card ${sig.type || 'info'}">
+      <div class="sig-header">
+        <span class="sig-icon">${sig.icon}</span>
+        <span class="sig-title">${sig.title}</span>
+      </div>
+      <div class="sig-text">${S.viewMode === 'expert' ? sig.expert : sig.plain}</div>
+    </div>`).join('') || '<p style="color:var(--muted)">Loading intelligence signals…</p>';
+
+  // Top movers
+  $('movers-row').innerHTML = (analysis.top_movers || []).map(m => {
+    const cls = m.change_pct >= 0 ? 'up' : 'dn';
+    const arr = m.change_pct >= 0 ? '▲' : '▼';
+    return `<div class="mover-chip">
+      <span class="mover-sym">${m.symbol}</span>
+      <span class="mover-name">${m.name}</span>
+      <span class="mover-chg ${cls}">${arr} ${Math.abs(m.change_pct).toFixed(2)}%</span>
+    </div>`;
+  }).join('');
+}
+
 // ── price cards ───────────────────────────────────────────────────────────────
-function renderPriceCards(snap, rsi) {
-  const container = $('price-cards');
-  Object.entries(snap).forEach(([sym, d]) => {
-    const existing = container.querySelector(`[data-sym="${sym}"]`);
-    const cls  = d.change_pct >= 0 ? 'up' : 'dn';
-    const arrow = d.change_pct >= 0 ? '▲' : '▼';
+function renderPrices(snap, rsi) {
+  const grid = $('price-grid');
+  const entries = Object.entries(snap).filter(([, d]) =>
+    S.assetFilter === 'all' || d.type === S.assetFilter
+  );
+
+  // Hide/show existing cards
+  grid.querySelectorAll('.price-card').forEach(el => {
+    const d = snap[el.dataset.sym];
+    el.style.display = (S.assetFilter === 'all' || (d && d.type === S.assetFilter)) ? '' : 'none';
+  });
+
+  entries.forEach(([sym, d]) => {
+    const isUp   = d.change_pct >= 0;
+    const cls    = isUp ? 'up' : 'dn';
+    const arr    = isUp ? '▲' : '▼';
     const rsiInfo = rsi[sym] || {};
     const rsiVal  = rsiInfo.rsi;
-    const rsiSig  = rsiInfo.signal || 'neutral';
-    const rsiColor = rsiVal > 70 ? '#ff3d5a' : rsiVal < 30 ? '#00e676' : '#4fc3f7';
+    const rsiColor = rsiVal > 70 ? 'var(--dn)' : rsiVal < 30 ? 'var(--up)' : 'var(--blue)';
     const rsiPct   = rsiVal ? Math.min(rsiVal, 100) : 50;
+    const isCrypto = sym === 'BTC' || sym === 'ETH';
+    const price    = isCrypto ? '$' + fmt(d.current, 0) : '$' + fmt(d.current);
 
-    const priceStr = sym === 'BTC' ? fmt(d.current, 0) : fmt(d.current);
-    const html = `
-      <div class="pc-header">
+    // Day range bar
+    const h = d.high, l = d.low, c = d.current;
+    const rangePos = (h > l) ? Math.round(((c - l) / (h - l)) * 100) : 50;
+
+    const inner = `
+      <div class="pc-top">
         <span class="pc-sym">${sym}</span>
-        <span class="pc-type">${d.type || ''}</span>
+        <span class="pc-type ${d.type || ''}">${d.type || ''}</span>
       </div>
-      <div class="pc-price">${sym === 'BTC' ? '$' : ''}${priceStr}</div>
-      <div class="pc-footer">
-        <span class="pc-chg ${cls}">${arrow} ${Math.abs(d.change_pct).toFixed(2)}%</span>
-        <div style="display:flex;align-items:center;gap:4px;">
-          <div class="rsi-bar"><div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
-          <span class="rsi-label">${rsiVal ? 'RSI ' + rsiVal : 'RSI —'}</span>
-        </div>
+      <div class="pc-price">${price}</div>
+      <div class="pc-chg ${cls}">${arr} ${Math.abs(d.change_pct).toFixed(2)}%</div>
+      <div class="pc-name">${d.name}</div>
+      ${h && l ? `
+      <div class="pc-range">
+        <div class="pc-range-bar"><div class="pc-range-fill" style="width:${rangePos}%"></div></div>
+        <div class="pc-range-labels"><span>L $${fmt(l)}</span><span>H $${fmt(h)}</span></div>
+      </div>` : ''}
+      <div class="pc-rsi">
+        <div class="rsi-bar"><div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
+        <span class="rsi-txt">${rsiVal ? 'RSI ' + rsiVal : 'RSI —'}</span>
       </div>`;
 
-    if (existing) {
-      const old = parseFloat(existing.dataset.price);
-      if (d.current !== old) {
-        existing.classList.remove('flash-up', 'flash-down');
-        void existing.offsetWidth;
-        existing.classList.add(d.current > old ? 'flash-up' : 'flash-down');
+    let card = grid.querySelector(`[data-sym="${sym}"]`);
+    if (card) {
+      const oldPrice = parseFloat(card.dataset.price);
+      if (d.current !== oldPrice) {
+        card.classList.remove('flash-up', 'flash-dn');
+        void card.offsetWidth;
+        card.classList.add(d.current > oldPrice ? 'flash-up' : 'flash-dn');
       }
-      existing.innerHTML = html;
-      existing.dataset.price = d.current;
-    } else {
-      const card = document.createElement('div');
-      card.className = 'price-card';
-      card.dataset.sym = sym;
+      card.innerHTML = inner;
       card.dataset.price = d.current;
-      card.innerHTML = html;
-      container.appendChild(card);
+    } else {
+      card = document.createElement('div');
+      card.className    = 'price-card';
+      card.dataset.sym  = sym;
+      card.dataset.price = d.current;
+      card.innerHTML    = inner;
+      grid.appendChild(card);
     }
   });
 }
 
-// ── news ──────────────────────────────────────────────────────────────────────
-function renderNews() {
-  const list = $('news-list');
-  const filtered = state.newsFilter === 'all'
-    ? state.news
-    : state.news.filter(n => n.category === state.newsFilter);
-
-  list.innerHTML = filtered.slice(0, 30).map(n => {
-    const sent = sentimentClass(n.headline + ' ' + n.summary);
-    const sentIcon = sent === 'sentiment-positive' ? '🟢' : sent === 'sentiment-negative' ? '🔴' : '⚪';
-    return `<a class="news-item ${sent}" href="${n.url}" target="_blank" rel="noopener">
-      <div class="ni-header">
-        <span class="ni-source">${n.source || 'News'}</span>
-        <span class="ni-cat ${n.category}">${n.category}</span>
-        <span class="ni-time">${relTime(n.datetime)}</span>
-      </div>
-      <div class="ni-headline">${sentIcon} ${n.headline}</div>
-      ${n.summary ? `<div class="ni-summary">${n.summary}</div>` : ''}
-    </a>`;
-  }).join('');
-
-  if (!filtered.length) {
-    list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">No news yet…</div>';
-  }
+// ── technicals table ──────────────────────────────────────────────────────────
+function pill(val, opts) {
+  const cls = opts[val] || 'na';
+  const label = val || '—';
+  return `<span class="sig-pill ${cls}">${label}</span>`;
+}
+function renderTechnicals(tech) {
+  const tbody = $('tech-tbody');
+  const rows = Object.entries(tech).map(([sym, d]) => {
+    if (!d.available) {
+      return `<tr>
+        <td><strong>${sym}</strong></td>
+        <td>${d.type}</td>
+        <td colspan="7"><span class="sig-pill na">— ${d.type === 'crypto' ? 'Crypto — candles not supported' : 'Insufficient data'}</span></td>
+      </tr>`;
+    }
+    const rsiPill  = d.rsi ? `<span class="sig-pill ${d.rsi_signal === 'overbought' ? 'bear' : d.rsi_signal === 'oversold' ? 'bull' : 'neut'}">${d.rsi}</span>` : '<span class="sig-pill na">—</span>';
+    const vs50Pill = pill(d.vs_sma50,  { above: 'bull', below: 'bear' });
+    const vs200Pill= pill(d.vs_sma200, { above: 'bull', below: 'bear' });
+    const gcPill   = d.golden_cross == null ? '<span class="sig-pill na">—</span>'
+                   : d.golden_cross ? '<span class="sig-pill bull">Golden ✓</span>'
+                                    : '<span class="sig-pill bear">Death ✗</span>';
+    const macdPill = pill(d.macd_trend, { bullish: 'bull', bearish: 'bear' });
+    const bbPill   = pill(d.bb_signal,  { neutral: 'neut', overbought: 'bear', oversold: 'bull' });
+    const ovPill   = pill(d.overall,    { bullish: 'bull', bearish: 'bear', neutral: 'neut' });
+    return `<tr>
+      <td><strong style="color:#fff">${sym}</strong> <span style="color:var(--muted);font-size:10px">${d.name}</span></td>
+      <td><span class="pc-type ${d.type}" style="display:inline-block">${d.type}</span></td>
+      <td>${rsiPill}</td>
+      <td>${vs50Pill}</td>
+      <td>${vs200Pill}</td>
+      <td>${gcPill}</td>
+      <td>${macdPill}</td>
+      <td>${bbPill}</td>
+      <td>${ovPill}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.join('') || '<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px">Loading…</td></tr>';
 }
 
 // ── Fear & Greed gauge ────────────────────────────────────────────────────────
-function drawGauge(value) {
-  const canvas = $('fg-canvas');
-  const ctx    = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
-  const cx = W / 2, cy = H - 10, r = W * 0.42;
-  const startAngle = Math.PI, endAngle = 0;
-
-  // Background arc
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, Math.PI, 0);
-  ctx.lineWidth = 14;
-  ctx.strokeStyle = '#1d2333';
-  ctx.stroke();
-
-  // Colour zones
-  const zones = [
-    { from: 0,   to: 25,  color: '#ff3d5a' },
-    { from: 25,  to: 45,  color: '#ff8a65' },
-    { from: 45,  to: 55,  color: '#ffc107' },
-    { from: 55,  to: 75,  color: '#aed581' },
-    { from: 75,  to: 100, color: '#00e676' },
-  ];
-  zones.forEach(z => {
-    const a1 = Math.PI + (z.from / 100) * Math.PI;
-    const a2 = Math.PI + (z.to   / 100) * Math.PI;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, a1, a2);
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = z.color + '88';
-    ctx.stroke();
+function drawGauge(v) {
+  const canvas = $('fg-canvas'), ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, cx = W/2, cy = H-8, r = W*0.42;
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI,0); ctx.lineWidth=14; ctx.strokeStyle='#1c2235'; ctx.stroke();
+  [
+    [0,25,'#ff3d5a'], [25,45,'#ff7043'], [45,55,'#ffc107'], [55,75,'#aed581'], [75,100,'#00e676']
+  ].forEach(([a,b,col]) => {
+    ctx.beginPath(); ctx.arc(cx,cy,r, Math.PI+(a/100)*Math.PI, Math.PI+(b/100)*Math.PI);
+    ctx.lineWidth=14; ctx.strokeStyle=col+'66'; ctx.stroke();
   });
-
-  // Filled arc up to value
-  const fillColor = value < 25 ? '#ff3d5a' : value < 45 ? '#ff8a65' : value < 55 ? '#ffc107' : value < 75 ? '#aed581' : '#00e676';
-  const fillAngle = Math.PI + (Math.min(value, 100) / 100) * Math.PI;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, Math.PI, fillAngle);
-  ctx.lineWidth = 14;
-  ctx.strokeStyle = fillColor;
-  ctx.stroke();
-
-  // Needle
-  const needleAngle = Math.PI + (value / 100) * Math.PI;
-  const nx = cx + (r - 7) * Math.cos(needleAngle);
-  const ny = cy + (r - 7) * Math.sin(needleAngle);
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(nx, ny);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#fff';
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
-
-  // Labels
-  ctx.font = '9px sans-serif';
-  ctx.fillStyle = '#5a6070';
-  ctx.textAlign = 'left';  ctx.fillText('Fear', 14, cy - 4);
-  ctx.textAlign = 'right'; ctx.fillText('Greed', W - 14, cy - 4);
+  const col = v<25?'#ff3d5a':v<45?'#ff7043':v<55?'#ffc107':v<75?'#aed581':'#00e676';
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI,Math.PI+(v/100)*Math.PI); ctx.lineWidth=14; ctx.strokeStyle=col; ctx.stroke();
+  const ang = Math.PI+(v/100)*Math.PI;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+(r-7)*Math.cos(ang),cy+(r-7)*Math.sin(ang));
+  ctx.lineWidth=2; ctx.strokeStyle='#fff'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
 }
 
-function updateFearGreed(fg) {
-  const val = fg.value || 50;
-  drawGauge(val);
-  $('fg-value').textContent = val;
-  $('fg-value').style.color = val < 25 ? '#ff3d5a' : val < 45 ? '#ff8a65' : val < 55 ? '#ffc107' : val < 75 ? '#aed581' : '#00e676';
-  $('fg-label').textContent = fg.label || 'Neutral';
-  $('fg-label').style.color = $('fg-value').style.color;
+function fgColor(v) {
+  return v<25?'#ff3d5a':v<45?'#ff7043':v<55?'#ffc107':v<75?'#aed581':'#00e676';
 }
 
-// ── social sentiment ──────────────────────────────────────────────────────────
-function updateSocial(social) {
-  const rScore  = Math.max(0, Math.min((social.reddit_score  + 1) / 2 * 100, 100));
-  const tScore  = Math.max(0, Math.min((social.twitter_score + 1) / 2 * 100, 100));
-  $('social-reddit-bar').style.width  = rScore + '%';
-  $('social-twitter-bar').style.width = tScore + '%';
-  $('social-reddit-val').textContent  = social.reddit_mentions  + ' mentions';
-  $('social-twitter-val').textContent = social.twitter_mentions + ' mentions';
+function renderFearGreed(fg) {
+  const v = fg.value || 50;
+  drawGauge(v);
+  const col = fgColor(v);
+  $('fg-value').textContent = v; $('fg-value').style.color = col;
+  $('fg-label').textContent = fg.label||'Neutral'; $('fg-label').style.color = col;
+
+  // Change vs yesterday
+  const ch = fg.change_1d || 0;
+  const chEl = $('fg-change');
+  if (chEl) {
+    chEl.textContent = ch === 0 ? 'Unchanged from yesterday'
+      : `${ch > 0 ? '▲' : '▼'} ${Math.abs(ch)} pts vs yesterday (was ${fg.prev_value})`;
+    chEl.style.color = ch > 0 ? 'var(--up)' : ch < 0 ? 'var(--dn)' : 'var(--muted)';
+  }
+
+  // Advice
+  const advEl = $('fg-advice');
+  if (advEl) advEl.textContent = fg.advice || '';
+
+  // 7-day history bars
+  const histEl = $('fg-history');
+  if (histEl && fg.history && fg.history.length) {
+    const maxV = 100;
+    histEl.innerHTML = [...fg.history].reverse().map(h => {
+      const pct  = Math.round(h.value / maxV * 100);
+      const col2 = fgColor(h.value);
+      const date = new Date(h.timestamp * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+      return `<div class="fg-bar" style="height:${pct}%;background:${col2}">
+        <div class="fg-bar-tip">${date}: ${h.value} (${h.label})</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ── breadth bar ───────────────────────────────────────────────────────────────
+function renderBreadth(snap) {
+  const entries = Object.entries(snap);
+  const up    = entries.filter(([,d]) => d.change_pct >= 0);
+  const down  = entries.filter(([,d]) => d.change_pct < 0);
+  const total = entries.length;
+  const pct   = total ? Math.round(up.length/total*100) : 50;
+  $('breadth-bar-up').style.width = pct + '%';
+  $('breadth-labels').innerHTML =
+    `<span class="up">${up.length} up (${pct}%)</span><span class="dn">${down.length} down (${100-pct}%)</span>`;
+  $('breadth-note').textContent = pct >= 70 ? 'Strong broad advance — healthy bullish breadth'
+    : pct >= 55 ? 'More assets rising than falling — mild bullish breadth'
+    : pct <= 30 ? 'Broad market decline — widespread selling pressure'
+    : pct <= 45 ? 'More assets falling — mild bearish breadth'
+    : 'Mixed market — no clear directional bias';
+
+  // Breakdown by type
+  const byType = {};
+  entries.forEach(([sym, d]) => {
+    const t = d.type || 'other';
+    if (!byType[t]) byType[t] = {up:0,dn:0};
+    d.change_pct >= 0 ? byType[t].up++ : byType[t].dn++;
+  });
+  const bdEl = $('breadth-breakdown');
+  if (bdEl) {
+    bdEl.innerHTML = Object.entries(byType).map(([t, v]) => {
+      const tot = v.up + v.dn;
+      const upPct = Math.round(v.up/tot*100);
+      return `<div class="bd-row">
+        <span class="bd-sym">${t.charAt(0).toUpperCase()+t.slice(1)}</span>
+        <span class="bd-val ${v.up >= v.dn ? 'up' : 'dn'}">${v.up}/${tot} up (${upPct}%)</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ── social (multi-stock) ──────────────────────────────────────────────────────
+function renderSocial(social) {
+  const list = $('social-list');
+  if (!list) return;
+  if (!social || !Object.keys(social).length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:11px">Loading social data…</div>';
+    return;
+  }
+  const rows = Object.entries(social).map(([sym, d]) => {
+    const rPct  = Math.max(0, Math.min(((d.reddit_score||0)+1)/2*100, 100));
+    const tPct  = Math.max(0, Math.min(((d.twitter_score||0)+1)/2*100, 100));
+    const ocls  = d.overall || 'neutral';
+    const oLbl  = ocls === 'bullish' ? '🟢 Bullish' : ocls === 'bearish' ? '🔴 Bearish' : '⚪ Neutral';
+    const rColor = rPct > 60 ? 'var(--up)' : rPct < 40 ? 'var(--dn)' : 'var(--accent)';
+    const tColor = tPct > 60 ? 'var(--up)' : tPct < 40 ? 'var(--dn)' : 'var(--accent)';
+    return `<div class="social-sym-row">
+      <span class="social-sym">${sym}</span>
+      <div class="social-bars-col">
+        <div>
+          <div class="social-bar-label">Reddit: ${d.reddit_mentions||0} mentions</div>
+          <div class="soc-mini-bar-outer"><div class="soc-mini-bar-inner" style="width:${rPct}%;background:${rColor}"></div></div>
+        </div>
+        <div>
+          <div class="social-bar-label">Twitter: ${d.twitter_mentions||0} mentions</div>
+          <div class="soc-mini-bar-outer"><div class="soc-mini-bar-inner" style="width:${tPct}%;background:${tColor}"></div></div>
+        </div>
+      </div>
+      <span class="social-overall ${ocls}">${oLbl}</span>
+    </div>`;
+  });
+  list.innerHTML = rows.join('');
+}
+
+// ── analyst recs ──────────────────────────────────────────────────────────────
+function renderAnalyst(recs) {
+  const list = $('analyst-list');
+  if (!recs || !Object.keys(recs).length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:11px">Loading analyst data…</div>';
+    return;
+  }
+  list.innerHTML = Object.entries(recs).slice(0, 8).map(([sym, r]) => {
+    const t = r.total || 1;
+    const buyPct  = Math.round(((r.strongBuy||0)+(r.buy||0))/t*100);
+    const holdPct = Math.round((r.hold||0)/t*100);
+    const sellPct = 100 - buyPct - holdPct;
+    return `<div class="analyst-row">
+      <span class="analyst-sym">${sym}</span>
+      <div class="analyst-bar">
+        <div class="bar-buy"  style="width:${buyPct}%"></div>
+        <div class="bar-hold" style="width:${holdPct}%"></div>
+        <div class="bar-sell" style="width:${Math.max(sellPct,0)}%"></div>
+      </div>
+      <span class="analyst-cons ${r.consensus}">${r.consensus?.toUpperCase()}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── news ─────────────────────────────────────────────────────────────────────
+const BULL_W = ['surge','rally','gain','bull','record','profit','beat','strong','jump','soar'];
+const BEAR_W = ['crash','fall','drop','bear','loss','miss','weak','recession','risk','decline','plunge'];
+
+function renderNews() {
+  const filtered = S.newsFilter === 'all' ? S.news : S.news.filter(n => n.category === S.newsFilter);
+  $('news-grid').innerHTML = filtered.slice(0, 40).map(n => {
+    const cls  = sent(n.headline + ' ' + n.summary);
+    const icon = cls === 'pos' ? '🟢' : cls === 'neg' ? '🔴' : '⚪';
+    return `<a class="news-card ${cls}" href="${n.url}" target="_blank" rel="noopener">
+      <div class="nc-top">
+        <span class="nc-source">${n.source||'News'}</span>
+        <span class="nc-cat ${n.category}">${n.category}</span>
+        <span class="nc-time">${relTime(n.datetime)}</span>
+      </div>
+      <div class="nc-headline">${icon} ${n.headline}</div>
+      ${n.summary ? `<div class="nc-summary">${n.summary}</div>` : ''}
+    </a>`;
+  }).join('') || '<div style="color:var(--muted);padding:20px">No news yet…</div>';
 }
 
 // ── alerts ────────────────────────────────────────────────────────────────────
 function renderAlerts(alerts) {
-  const list = $('alerts-list');
+  const grid = $('alerts-grid');
   if (!alerts || !alerts.length) {
-    list.innerHTML = '<div id="no-alerts">No alerts yet</div>';
+    grid.innerHTML = `<div class="no-alerts">
+      <div style="font-size:24px;margin-bottom:8px">🔔</div>
+      <div style="font-weight:600;color:var(--text);margin-bottom:4px">No alerts fired yet</div>
+      <div>Alerts appear here when an asset moves past its threshold. Enable browser notifications above to get OS popups too.</div>
+      <div style="margin-top:12px;font-size:10px;color:var(--muted)">
+        Thresholds: VIX 5% · BTC 2% · ETH/SOL 2.5–3% · Stocks 1–2% · Indices 0.4–0.6% · Oil 0.8%
+      </div>
+    </div>`;
     return;
   }
-  list.innerHTML = alerts.slice(0, 20).map(a => {
-    const cls   = a.direction === 'UP' ? 'up' : 'dn';
-    const arrow = a.direction === 'UP' ? '▲' : '▼';
-    return `<div class="alert-item">
-      <span class="al-sym">${a.symbol}</span>
-      <span class="al-dir ${cls}">${arrow} ${a.pct}%</span>
-      <span class="al-pct">$${fmt(a.current)}</span>
-      <span class="al-time">${relTime(a.timestamp)}</span>
+  grid.innerHTML = alerts.slice(0, 24).map(a => {
+    const isUp = a.direction === 'UP';
+    const typeBadge = a.type ? `<span class="pc-type ${a.type}" style="display:inline-block;margin-left:6px">${a.type}</span>` : '';
+    return `<div class="alert-card ${isUp ? 'up' : 'dn'}">
+      <div class="ac-top">
+        <span class="ac-sym">${a.symbol}${typeBadge}</span>
+        <span class="ac-dir ${isUp ? 'up' : 'dn'}">${isUp ? '▲ UP' : '▼ DOWN'}</span>
+      </div>
+      <div class="ac-price">$${fmt(a.current)}</div>
+      <div class="ac-pct ${isUp ? 'up' : 'dn'}">Moved ${a.pct}% · threshold was ${a.threshold}%</div>
+      ${a.context ? `<div class="ac-context">${a.context}</div>` : ''}
+      <div class="ac-time">${relTime(a.timestamp)}</div>
     </div>`;
   }).join('');
 }
 
-function pushAlert(alert) {
-  const isUp = alert.direction === 'UP';
-  showToast(
-    `${alert.symbol} ${isUp ? '▲' : '▼'} ${alert.pct}%`,
-    `${alert.name} moved to $${fmt(alert.current)}`,
-    isUp ? 'up' : 'down'
-  );
-  if (Notification.permission === 'granted') {
-    new Notification(`${alert.symbol} ${isUp ? 'UP' : 'DOWN'} ${alert.pct}%`, {
-      body: `${alert.name} is now $${fmt(alert.current)}`,
-      icon: '/favicon.ico',
-      tag:  alert.symbol,
-    });
-  }
-}
-
-// ── toast ──────────────────────────────────────────────────────────────────────
-function showToast(title, msg, type = 'up') {
-  const icon = type === 'up' ? '📈' : '📉';
-  const el   = document.createElement('div');
+// ── toast + push notification ─────────────────────────────────────────────────
+function toast(title, msg, type='up') {
+  const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.innerHTML = `<div class="toast-icon">${icon}</div>
-    <div class="toast-body">
-      <div class="toast-title">${title}</div>
-      <div class="toast-msg">${msg}</div>
-    </div>`;
+  el.innerHTML = `<div class="t-icon">${type==='up'?'📈':'📉'}</div>
+    <div><div class="t-title">${title}</div><div class="t-msg">${msg}</div></div>`;
   $('toast-container').appendChild(el);
   setTimeout(() => el.remove(), 6000);
 }
 
-// ── WebSocket ──────────────────────────────────────────────────────────────────
-let ws, wsRetries = 0;
+function pushNotify(a) {
+  const up = a.direction === 'UP';
+  toast(`${a.symbol} ${up?'▲':'▼'} ${a.pct}%`, `${a.name} now $${fmt(a.current)}`, up?'up':'dn');
+  if (Notification.permission === 'granted') {
+    new Notification(`${a.symbol} ${up?'UP':'DOWN'} ${a.pct}%`, {
+      body: `${a.name} moved to $${fmt(a.current)}`, tag: a.symbol
+    });
+  }
+}
 
+// ── websocket ──────────────────────────────────────────────────────────────────
+let ws, wsRetries = 0;
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}/ws`);
-
-  ws.onopen = () => {
-    $('ws-dot').classList.add('live');
-    $('ws-status-text').textContent = 'LIVE';
-    wsRetries = 0;
-  };
-
-  ws.onmessage = ({ data }) => {
+  ws.onopen = () => { $('ws-dot').classList.add('live'); $('ws-status-text').textContent='LIVE'; wsRetries=0; };
+  ws.onmessage = ({data}) => {
     const msg = JSON.parse(data);
     if (msg.type === 'update') {
-      const prevSnap = {...state.snapshot};
-      state.snapshot = msg.snapshot;
-      renderTicker(state.snapshot);
-      renderPriceCards(state.snapshot, state.rsi);
-      (msg.alerts || []).forEach(a => {
-        pushAlert(a);
-        state.alerts.unshift(a);
-      });
-      renderAlerts(state.alerts);
-      $('last-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+      S.snapshot = msg.snapshot;
+      renderTicker(S.snapshot);
+      renderPrices(S.snapshot, S.rsi);
+      renderBreadth(S.snapshot);
+      (msg.alerts||[]).forEach(a => { pushNotify(a); S.alerts.unshift(a); });
+      renderAlerts(S.alerts);
+      $('last-updated').textContent = 'Live · Updated ' + new Date().toLocaleTimeString();
     }
   };
-
   ws.onclose = () => {
-    $('ws-dot').classList.remove('live');
-    $('ws-status-text').textContent = 'RECONNECTING';
-    const delay = Math.min(1000 * 2 ** wsRetries, 30000);
-    wsRetries++;
-    setTimeout(connectWS, delay);
+    $('ws-dot').classList.remove('live'); $('ws-status-text').textContent='RECONNECTING';
+    setTimeout(connectWS, Math.min(1000*2**wsRetries++, 30000));
   };
-
   ws.onerror = () => ws.close();
 }
 
 // ── fetch helpers ──────────────────────────────────────────────────────────────
-async function fetchJSON(url) {
-  const r = await fetch(url);
-  return r.json();
-}
+const api = url => fetch(url).then(r => r.json());
 
-async function loadInitialData() {
+async function loadAll() {
   try {
-    const [snapRes, newsRes, sentRes, alertsRes, rsiRes] = await Promise.all([
-      fetchJSON('/api/snapshot'),
-      fetchJSON('/api/news'),
-      fetchJSON('/api/sentiment'),
-      fetchJSON('/api/alerts'),
-      fetchJSON('/api/rsi'),
+    const [snap, newsR, sentR, alertsR, rsiR, analysisR] = await Promise.all([
+      api('/api/snapshot'), api('/api/news'), api('/api/sentiment'),
+      api('/api/alerts'), api('/api/rsi'), api('/api/analysis'),
     ]);
+    S.snapshot = snap.data;
+    S.news     = newsR.data || [];
+    S.alerts   = alertsR.data || [];
+    S.rsi      = rsiR.data || {};
+    S.analysis = analysisR.data || {};
 
-    state.snapshot = snapRes.data;
-    state.rsi      = rsiRes.data || {};
-    state.news     = newsRes.data || [];
-    state.alerts   = alertsRes.data || [];
-
-    renderTicker(state.snapshot);
-    renderPriceCards(state.snapshot, state.rsi);
+    renderTicker(S.snapshot);
+    renderPrices(S.snapshot, S.rsi);
+    renderBreadth(S.snapshot);
+    renderHero(S.analysis);
+    renderSignals(S.analysis);
+    renderFearGreed(sentR.fear_greed || {value:50});
+    renderSocial(sentR.social || {});
     renderNews();
-    renderAlerts(state.alerts);
-    updateFearGreed(sentRes.fear_greed);
-    updateSocial(sentRes.social);
+    renderAlerts(S.alerts);
 
-    // Kick off periodic refreshes
-    setInterval(refreshNews,      5 * 60 * 1000);  // 5 min
-    setInterval(refreshSentiment, 60 * 60 * 1000); // 1 hr
-    setInterval(refreshRSI,       60 * 60 * 1000); // 1 hr
-    setInterval(refreshAlerts,    2  * 60 * 1000); // 2 min
-
-  } catch (e) {
-    console.error('Initial load failed', e);
-  }
+    // Deferred heavy calls
+    setTimeout(loadTechnicals, 2000);
+    setTimeout(loadAnalystRecs, 4000);
+  } catch(e) { console.error('Initial load error', e); }
 }
 
-async function refreshNews() {
-  try {
-    const res = await fetchJSON('/api/news');
-    state.news = res.data || [];
-    renderNews();
-  } catch {}
+async function loadTechnicals() {
+  try { const r = await api('/api/technicals'); S.technicals = r.data||{}; renderTechnicals(S.technicals); }
+  catch {}
+}
+async function loadAnalystRecs() {
+  try { const r = await api('/api/analyst-recs'); S.analystRecs = r.data||{}; renderAnalyst(S.analystRecs); }
+  catch {}
 }
 
-async function refreshSentiment() {
-  try {
-    const res = await fetchJSON('/api/sentiment');
-    updateFearGreed(res.fear_greed);
-    updateSocial(res.social);
-  } catch {}
-}
+setInterval(async () => {
+  const r = await api('/api/news').catch(()=>({}));
+  if (r.data) { S.news = r.data; renderNews(); }
+}, 5*60*1000);
 
-async function refreshRSI() {
-  try {
-    const res = await fetchJSON('/api/rsi');
-    state.rsi = res.data || {};
-    renderPriceCards(state.snapshot, state.rsi);
-  } catch {}
-}
+setInterval(async () => {
+  const r = await api('/api/analysis').catch(()=>({}));
+  if (r.data) { S.analysis = r.data; renderHero(S.analysis); renderSignals(S.analysis); }
+}, 5*60*1000);
 
-async function refreshAlerts() {
-  try {
-    const res = await fetchJSON('/api/alerts');
-    state.alerts = res.data || [];
-    renderAlerts(state.alerts);
-  } catch {}
-}
+setInterval(async () => {
+  const r = await api('/api/sentiment').catch(()=>({}));
+  if (r.fear_greed) renderFearGreed(r.fear_greed);
+  if (r.social)     renderSocial(r.social);
+}, 60*60*1000);
 
-// ── notifications ──────────────────────────────────────────────────────────────
+setInterval(async () => {
+  const r = await api('/api/alerts').catch(()=>({}));
+  if (r.data) { S.alerts = r.data; renderAlerts(S.alerts); }
+}, 2*60*1000);
+
+// ── event listeners ───────────────────────────────────────────────────────────
+// Asset filter
+document.querySelectorAll('.atab').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.atab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  S.assetFilter = btn.dataset.type;
+  renderPrices(S.snapshot, S.rsi);
+}));
+
+// News filter
+document.querySelectorAll('.ntab').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.ntab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  S.newsFilter = btn.dataset.cat;
+  renderNews();
+}));
+
+// Plain/Expert toggle
+document.querySelectorAll('.vtog').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.vtog').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  S.viewMode = btn.dataset.mode;
+  renderSignals(S.analysis);
+}));
+
+// Notifications
 $('notif-btn').addEventListener('click', async () => {
-  if (Notification.permission === 'granted') {
-    showToast('Notifications', 'Already enabled', 'up');
-    return;
-  }
-  const perm = await Notification.requestPermission();
-  if (perm === 'granted') {
-    $('notif-btn').textContent = '🔔 ON';
-    showToast('Notifications', 'Enabled! You\'ll get alerts here.', 'up');
-  }
+  if (Notification.permission === 'granted') { toast('Already enabled','You will receive alerts'); return; }
+  const p = await Notification.requestPermission();
+  if (p === 'granted') { $('notif-btn').textContent = '🔔 ON'; toast('Alerts enabled!','You will get OS notifications for price alerts.'); }
 });
+if (Notification.permission === 'granted') $('notif-btn').textContent = '🔔 ON';
 
-// ── tabs ───────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    state.newsFilter = btn.dataset.cat;
-    renderNews();
-  });
-});
-
-// ── init ───────────────────────────────────────────────────────────────────────
-startClock();
-loadInitialData();
+// ── boot ──────────────────────────────────────────────────────────────────────
+loadAll();
 connectWS();
-
-// Update notification button state
-if (Notification.permission === 'granted') {
-  $('notif-btn').textContent = '🔔 ON';
-}
