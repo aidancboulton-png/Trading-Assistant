@@ -141,10 +141,10 @@ function renderPrices(snap, rsi) {
         <div class="pc-range-bar"><div class="pc-range-fill" style="width:${rangePos}%"></div></div>
         <div class="pc-range-labels"><span>L $${fmt(l)}</span><span>H $${fmt(h)}</span></div>
       </div>` : ''}
-      <div class="pc-rsi">
+      ${d.type !== 'crypto' ? `<div class="pc-rsi">
         <div class="rsi-bar"><div class="rsi-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
         <span class="rsi-txt">${rsiVal ? 'RSI ' + rsiVal : 'RSI —'}</span>
-      </div>`;
+      </div>` : ''}`;
 
     let card = grid.querySelector(`[data-sym="${sym}"]`);
     if (card) {
@@ -335,6 +335,38 @@ function renderSocial(social) {
   list.innerHTML = rows.join('');
 }
 
+// ── insider trades ────────────────────────────────────────────────────────────
+function renderInsider(trades) {
+  const list = $('insider-list');
+  if (!list) return;
+  if (!trades || !trades.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:11px">Loading insider data…</div>';
+    return;
+  }
+  list.innerHTML = trades.map(t => {
+    const sig  = t.signal;
+    const sigColor = sig === 'bullish' ? 'var(--up)' : sig === 'bearish' ? 'var(--dn)' : 'var(--muted)';
+    const sigIcon  = sig === 'bullish' ? '🟢' : sig === 'bearish' ? '🔴' : '⚪';
+    const recentHtml = (t.recent || []).map(x =>
+      `<div style="font-size:10px;color:var(--muted);margin-top:2px">
+        ${x.action === 'BUY' ? '▲' : '▼'} <strong style="color:${x.action==='BUY'?'var(--up)':'var(--dn)'}">${x.action}</strong>
+        ${x.shares.toLocaleString()} shares @ $${fmt(x.price)} — ${x.name.split(' ').slice(-1)[0]} · ${x.date}
+      </div>`
+    ).join('');
+    return `<div class="social-sym-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+        <span style="font-weight:700;color:#fff;font-size:13px">${t.symbol}</span>
+        <span style="font-size:11px;font-weight:700;color:${sigColor}">${sigIcon} ${sig.toUpperCase()}</span>
+      </div>
+      <div style="display:flex;gap:14px;font-size:11px;color:var(--muted)">
+        <span class="up">▲ ${t.buy_count} buys ($${t.buy_value}M)</span>
+        <span class="dn">▼ ${t.sell_count} sells ($${t.sell_value}M)</span>
+      </div>
+      ${recentHtml}
+    </div>`;
+  }).join('');
+}
+
 // ── analyst recs ──────────────────────────────────────────────────────────────
 function renderAnalyst(recs) {
   const list = $('analyst-list');
@@ -483,6 +515,7 @@ async function loadAll() {
     // Deferred heavy calls
     setTimeout(loadTechnicals, 2000);
     setTimeout(loadAnalystRecs, 4000);
+    setTimeout(loadStructural, 6000);
   } catch(e) { console.error('Initial load error', e); }
 }
 
@@ -493,6 +526,66 @@ async function loadTechnicals() {
 async function loadAnalystRecs() {
   try { const r = await api('/api/analyst-recs'); S.analystRecs = r.data||{}; renderAnalyst(S.analystRecs); }
   catch {}
+}
+
+// ── earnings priced-in ────────────────────────────────────────────────────────
+let earningsMode = 'simple';
+
+function renderEarnings(events) {
+  const list = $('earnings-list');
+  if (!list) return;
+  if (!events || !events.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:12px 0">Loading earnings data…</div>';
+    return;
+  }
+  list.innerHTML = events.map(e => {
+    const p      = e.priced_in || {};
+    const col    = p.color || 'neutral';
+    const isUp   = e.change_pct >= 0;
+    const timing = e.hour === 'bmo' ? 'Before Open' : e.hour === 'amc' ? 'After Close' : e.hour || '?';
+    const revStr = e.revenueEstimate ? `$${(e.revenueEstimate/1e9).toFixed(1)}B` : '—';
+    const epsStr = e.epsEstimate != null ? `$${e.epsEstimate.toFixed(2)}` : '—';
+    const text   = earningsMode === 'expert' ? p.expert : p.plain;
+
+    return `<div class="earn-row ${col}">
+      <div class="earn-left">
+        <div class="earn-sym">${e.symbol}</div>
+        <div class="earn-date">${e.date}</div>
+        <div class="earn-hour">${timing}</div>
+        ${e.price ? `<div class="earn-price ${isUp?'up':'dn'}">$${fmt(e.price)} ${isUp?'▲':'▼'}${Math.abs(e.change_pct)}%</div>` : ''}
+      </div>
+      <div class="earn-mid">
+        <span class="earn-verdict ${col}">${p.verdict || '—'}</span>
+        <div class="earn-plain">${text || ''}</div>
+        <div class="earn-stats">
+          ${p.move_5d != null ? `<span class="earn-stat">5-Day: <span class="${p.move_5d>=0?'up':'dn'}">${p.move_5d>=0?'+':''}${p.move_5d}%</span></span>` : ''}
+          ${p.move_1m != null ? `<span class="earn-stat">1-Month: <span class="${p.move_1m>=0?'up':'dn'}">${p.move_1m>=0?'+':''}${p.move_1m}%</span></span>` : ''}
+          ${p.rsi    != null ? `<span class="earn-stat">RSI: <span style="color:${p.rsi>70?'var(--dn)':p.rsi<30?'var(--up)':'var(--blue)'}">${p.rsi}</span></span>` : ''}
+        </div>
+      </div>
+      <div class="earn-est">
+        <strong>${epsStr}</strong>EPS est
+        <br><strong>${revStr}</strong>Rev est
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Earnings mode toggle
+document.querySelectorAll('[data-emode]').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('[data-emode]').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  earningsMode = btn.dataset.emode;
+  if (S.structural) renderEarnings(S.structural.earnings_calendar || []);
+}));
+
+async function loadStructural() {
+  try {
+    const r = await api('/api/structural');
+    S.structural = r;
+    renderEarnings(r.earnings_calendar || []);
+    renderInsider(r.insider_trades    || []);
+  } catch(e) { console.error('structural load failed', e); }
 }
 
 setInterval(async () => {

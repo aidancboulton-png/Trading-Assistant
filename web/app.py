@@ -139,8 +139,7 @@ def get_rsi_all() -> dict:
     result = {}
     for sym, info in WATCHLIST.items():
         if info["type"] == "crypto":
-            result[sym] = {"rsi": None, "signal": "n/a", "name": info["name"]}
-            continue
+            continue  # crypto excluded
         closes = get_candles(info["finnhub"])
         rsi    = compute_rsi(closes)
         signal = "overbought" if rsi and rsi > 70 else "oversold" if rsi and rsi < 30 else "neutral"
@@ -152,8 +151,7 @@ def get_technicals_all() -> dict:
     result = {}
     for sym, info in WATCHLIST.items():
         if info["type"] == "crypto":
-            result[sym] = {"name": info["name"], "type": info["type"], "available": False}
-            continue
+            continue  # crypto excluded from technicals
         closes = get_candles(info["finnhub"], count=220)
         if len(closes) < 20:
             result[sym] = {"name": info["name"], "type": info["type"], "available": False}
@@ -517,20 +515,141 @@ def get_insider_trades_all() -> list:
                             "buy_value": 0, "sell_value": 0, "signal": "neutral", "recent": []})
     return results
 
-def get_earnings_calendar() -> list:
-    """Upcoming + recent earnings for major stocks — beat/miss signals."""
+def _priced_in_verdict(move_5d: float, move_1m: float, rsi: float | None) -> dict:
+    """
+    Estimate whether good/bad news is already priced in before earnings.
+
+    Rules:
+    - Stock up big recently + RSI overbought  → good news likely priced in, upside limited
+    - Stock down big recently + RSI oversold  → bad news priced in, beat could spark big rally
+    - Stock up big + RSI normal               → momentum play, could go either way
+    - Flat                                    → market undecided, reaction could be large
+    """
+    abs_move = abs(move_1m)
+    if move_1m > 15 and rsi and rsi > 70:
+        verdict   = "PRICED IN"
+        color     = "warning"
+        plain     = (f"Up {move_1m:.0f}% in the last month with RSI at {rsi:.0f} — "
+                     f"the market already expects a strong report. "
+                     f"Even a beat may not move the stock much. Sell the news risk.")
+        expert    = (f"+{move_1m:.1f}% 1M run-up. RSI {rsi:.0f} overbought. "
+                     f"Options market likely pricing large move. "
+                     f"High bar set — beat+raise needed to sustain momentum.")
+    elif move_1m > 8:
+        verdict   = "MOSTLY PRICED IN"
+        color     = "warning"
+        plain     = (f"Up {move_1m:.0f}% over the past month — investors are already "
+                     f"optimistic going in. A beat would help but may only give a small pop.")
+        expert    = (f"+{move_1m:.1f}% pre-earnings drift. Consensus expectations already elevated. "
+                     f"Risk/reward skewed — modest beat likely muted response.")
+    elif move_1m < -15 and rsi and rsi < 35:
+        verdict   = "FEAR PRICED IN"
+        color     = "opportunity"
+        plain     = (f"Down {abs(move_1m):.0f}% over the past month with RSI at {rsi:.0f} — "
+                     f"the market is bracing for a bad report. If they even slightly beat, "
+                     f"expect a sharp rally as shorts cover.")
+        expert    = (f"{move_1m:.1f}% 1M drawdown. RSI {rsi:.0f} oversold. "
+                     f"Short interest likely elevated. Beat + guidance hold = violent short squeeze risk.")
+    elif move_1m < -8:
+        verdict   = "SELL-OFF AHEAD OF REPORT"
+        color     = "info"
+        plain     = (f"Down {abs(move_1m):.0f}% heading into earnings — "
+                     f"investors are nervous. Low expectations mean a small beat could "
+                     f"be enough to bounce the stock.")
+        expert    = (f"{move_1m:.1f}% pre-earnings weakness. Bar lowered. "
+                     f"Negative sentiment could be a contrarian setup if fundamentals hold.")
+    elif abs_move < 3:
+        verdict   = "NOT PRICED IN"
+        color     = "info"
+        plain     = (f"Barely moved ({move_1m:+.1f}%) in the past month — "
+                     f"the market has no strong view. Earnings could move this stock "
+                     f"sharply in either direction.")
+        expert    = (f"{move_1m:+.1f}% 1M flat. Low pre-earnings drift = high binary risk. "
+                     f"Reaction likely driven purely by actual results vs whisper number.")
+    else:
+        verdict   = "MIXED SIGNALS"
+        color     = "neutral"
+        plain     = (f"{move_1m:+.1f}% over the past month — modest move, "
+                     f"market is watching but not fully committed either way.")
+        expert    = (f"{move_1m:+.1f}% 1M move. Inconclusive pre-earnings setup. "
+                     f"Watch guidance language more than the headline EPS number.")
+
+    return {"verdict": verdict, "color": color, "plain": plain, "expert": expert,
+            "move_5d": round(move_5d, 2), "move_1m": round(move_1m, 2),
+            "rsi": round(rsi, 1) if rsi else None}
+
+
+def get_earnings_with_sentiment() -> list:
+    """
+    Earnings calendar for next 10 days enriched with:
+    - 5-day and 1-month price momentum
+    - RSI heading into earnings
+    - Plain-English 'priced in' verdict
+    """
     try:
         today = datetime.now().strftime("%Y-%m-%d")
-        in7   = (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d")
-        d = fh("/calendar/earnings", {"from": today, "to": in7})
-        watchsyms = set(WATCHLIST.keys()) | {"AAPL","NVDA","MSFT","META","AMZN","TSLA","JPM","XOM","GOOGL","NFLX"}
+        in10  = (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d")
+        d = fh("/calendar/earnings", {"from": today, "to": in10})
+        watchsyms = (set(WATCHLIST.keys()) |
+                     {"AAPL","NVDA","MSFT","META","AMZN","TSLA","JPM","XOM",
+                      "GOOGL","NFLX","AMD","INTC","CRM","UBER","PYPL"})
         events = [e for e in d.get("earningsCalendar", []) if e.get("symbol") in watchsyms]
-        events.sort(key=lambda x: x.get("date",""))
-        return [{"symbol": e["symbol"], "date": e["date"], "hour": e.get("hour",""),
-                 "epsEstimate": e.get("epsEstimate"), "revenueEstimate": e.get("revenueEstimate"),
-                 "epsActual": e.get("epsActual"), "revenueActual": e.get("revenueActual")} for e in events[:20]]
+        events.sort(key=lambda x: x.get("date", ""))
     except:
         return []
+
+    results = []
+    for e in events[:20]:
+        sym = e["symbol"]
+        try:
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}"
+            r   = requests.get(url, params={"interval": "1d", "range": "3mo"},
+                               headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+            closes = r.json()["chart"]["result"][0]["indicators"]["quote"][0]["close"]
+            closes = [c for c in closes if c is not None]
+        except:
+            closes = []
+
+        if len(closes) >= 22:
+            move_5d = ((closes[-1] - closes[-6])  / closes[-6])  * 100
+            move_1m = ((closes[-1] - closes[-22]) / closes[-22]) * 100
+            rsi     = compute_rsi(closes)
+            priced  = _priced_in_verdict(move_5d, move_1m, rsi)
+        else:
+            move_5d = move_1m = 0.0
+            rsi     = None
+            priced  = {"verdict": "INSUFFICIENT DATA", "color": "neutral",
+                       "plain": "Not enough price history to assess.", "expert": "",
+                       "move_5d": 0, "move_1m": 0, "rsi": None}
+
+        # Get today's quote for current price + day change
+        try:
+            q     = fh("/quote", {"symbol": sym})
+            price = q.get("c", 0)
+            chg   = round(((q.get("c",0) - q.get("pc",1)) / q.get("pc",1)) * 100, 2)
+        except:
+            price = chg = 0
+
+        results.append({
+            "symbol":          sym,
+            "date":            e.get("date", ""),
+            "hour":            e.get("hour", ""),
+            "epsEstimate":     e.get("epsEstimate"),
+            "revenueEstimate": e.get("revenueEstimate"),
+            "epsActual":       e.get("epsActual"),
+            "revenueActual":   e.get("revenueActual"),
+            "price":           price,
+            "change_pct":      chg,
+            "priced_in":       priced,
+        })
+        time.sleep(0.2)
+
+    return results
+
+
+def get_earnings_calendar() -> list:
+    """Thin wrapper kept for cache key compatibility."""
+    return get_earnings_with_sentiment()
 
 def get_upgrade_downgrades() -> list:
     """Disabled — requires Finnhub premium tier."""

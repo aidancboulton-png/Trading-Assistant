@@ -343,6 +343,40 @@ canvas#fg-canvas { display: block; margin: 0 auto; }
 .soc-mini-bar-outer { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
 .soc-mini-bar-inner { height: 100%; border-radius: 2px; transition: width .5s; }
 
+/* Earnings priced-in */
+.earnings-big-card { grid-column: span 2; }
+@media (max-width: 900px) { .earnings-big-card { grid-column: span 1; } }
+#earnings-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.earn-row {
+  background: var(--card2); border-radius: 6px; padding: 10px 12px;
+  border-left: 4px solid var(--border2);
+  display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: start;
+}
+.earn-row.warning  { border-left-color: var(--gold); }
+.earn-row.opportunity { border-left-color: var(--up); }
+.earn-row.info     { border-left-color: var(--blue); }
+.earn-row.neutral  { border-left-color: var(--muted); }
+.earn-left  {}
+.earn-sym   { font-size: 14px; font-weight: 800; color: #fff; }
+.earn-date  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.earn-hour  { font-size: 10px; color: var(--accent); }
+.earn-price { font-family: var(--mono); font-size: 12px; margin-top: 4px; }
+.earn-mid   {}
+.earn-verdict {
+  display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .5px;
+  padding: 2px 7px; border-radius: 3px; margin-bottom: 5px;
+}
+.earn-verdict.warning    { background:#2a2200; color:var(--gold); }
+.earn-verdict.opportunity{ background:#062010; color:var(--up); }
+.earn-verdict.info       { background:#051822; color:var(--blue); }
+.earn-verdict.neutral    { background:#1a1a1a; color:var(--muted); }
+.earn-plain  { font-size: 11px; color: var(--text); line-height: 1.55; }
+.earn-stats  { display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+.earn-stat   { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.earn-stat span { color: var(--text); font-weight: 600; }
+.earn-est    { text-align: right; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.earn-est strong { color: #fff; display: block; font-size: 12px; }
+
 /* Breadth breakdown */
 #breadth-breakdown { margin-top: 10px; display: flex; flex-direction: column; gap: 3px; }
 .bd-row { display: flex; justify-content: space-between; font-size: 11px; }
