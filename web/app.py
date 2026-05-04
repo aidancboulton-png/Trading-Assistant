@@ -8,10 +8,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
+from web.predmarket import run_scan
 
 PT = ZoneInfo("America/Los_Angeles")
-ALERTS_PATH = os.path.expanduser("~/trading-assistant/.alerts_history.json")
-LAST_PATH   = os.path.expanduser("~/trading-assistant/.last_prices.json")
+_BASE_DIR   = Path(__file__).parent.parent
+ALERTS_PATH = str(_BASE_DIR / ".alerts_history.json")
+LAST_PATH   = str(_BASE_DIR / ".last_prices.json")
 
 WATCHLIST = {
     # ── Indices ──────────────────────────────────────────────────────────────
@@ -44,9 +46,12 @@ _fkey_env = os.environ.get("FINNHUB_API_KEY")
 if _fkey_env:
     FKEY = _fkey_env
 else:
-    _cfg_path = os.path.expanduser("~/trading-assistant/config.json")
-    with open(_cfg_path) as f:
-        FKEY = json.load(f)["finnhub_api_key"]
+    try:
+        _cfg_path = _BASE_DIR / "config.json"
+        with open(_cfg_path) as f:
+            FKEY = json.load(f)["finnhub_api_key"]
+    except Exception:
+        FKEY = ""
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -865,6 +870,22 @@ async def api_analysis():
     if key not in _cache:
         _cache[key] = generate_analysis(snap, fg, news)
     return {"data": _cache[key], "ts": int(time.time())}
+
+_PREDMARKET_CACHE: dict = {}
+_PREDMARKET_TTL = 300  # 5 minutes — APIs are public but rate-limit-friendly
+
+@app.get("/api/predmarkets")
+async def api_predmarkets():
+    now = time.time()
+    if _PREDMARKET_CACHE and (now - _PREDMARKET_CACHE.get("ts", 0)) < _PREDMARKET_TTL:
+        return _PREDMARKET_CACHE["data"]
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(None, run_scan)
+        _PREDMARKET_CACHE["data"] = result
+        _PREDMARKET_CACHE["ts"]   = now
+        return result
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 _static_dir = Path(__file__).parent / "static"
 app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")
