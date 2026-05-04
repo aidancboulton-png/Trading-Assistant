@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prediction Market Scanner</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --accent: #3b82f6;
+    --green: #10b981;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --yellow: #eab308;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .back-btn {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .back-btn:hover { color: var(--text); border-color: var(--muted); }
+  .header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.05em; color: var(--text); }
+  .header h1 span { color: var(--accent); }
+  .status-row { display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--muted); }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; display: inline-block; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .refresh-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 14px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.2s;
+  }
+  .refresh-btn:hover { opacity: 0.85; }
+  .refresh-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: flex;
+    gap: 24px;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .stat { text-align: center; white-space: nowrap; }
+  .stat-val { font-size: 20px; font-weight: 700; color: var(--text); }
+  .stat-val.green { color: var(--green); }
+  .stat-val.orange { color: var(--orange); }
+  .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .stat-sep { width: 1px; background: var(--border); align-self: stretch; }
+
+  /* ── Filter tabs ── */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    padding: 14px 24px;
+    overflow-x: auto;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    white-space: nowrap;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .tab:hover { color: var(--text); border-color: var(--muted); }
+  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 24px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .controls label { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .controls input[type=range] { accent-color: var(--accent); width: 100px; }
+  #edge-val { color: var(--text); font-weight: 600; min-width: 30px; }
+
+  /* ── Cards grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 20px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── Pair card ── */
+  .pair-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    transition: border-color 0.2s;
+  }
+  .pair-card:hover { border-color: var(--accent); }
+  .pair-card.edge-huge  { border-left: 3px solid var(--red); }
+  .pair-card.edge-large { border-left: 3px solid var(--orange); }
+  .pair-card.edge-mid   { border-left: 3px solid var(--yellow); }
+  .pair-card.edge-small { border-left: 3px solid var(--muted); }
+
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .cat-badge {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .edge-pill {
+    font-size: 13px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .edge-pill.huge  { background: rgba(239,68,68,0.15);  color: var(--red); }
+  .edge-pill.large { background: rgba(245,158,11,0.15); color: var(--orange); }
+  .edge-pill.mid   { background: rgba(234,179,8,0.15);  color: var(--yellow); }
+  .edge-pill.small { background: rgba(100,116,139,0.1); color: var(--muted); }
+
+  .platforms { display: flex; gap: 12px; margin: 10px 0; }
+  .platform-block {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .plat-name { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 4px; }
+  .plat-prob {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .plat-prob.higher { color: var(--green); }
+  .plat-prob.lower  { color: var(--muted); }
+  .plat-title { font-size: 10px; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
+  .plat-vol { font-size: 9px; color: #334155; }
+  .plat-link { font-size: 10px; color: var(--accent); text-decoration: none; }
+  .plat-link:hover { text-decoration: underline; }
+
+  .card-analysis {
+    background: rgba(59,130,246,0.05);
+    border: 1px solid rgba(59,130,246,0.15);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #94a3b8;
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+  .card-analysis strong { color: var(--text); }
+
+  .card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .kelly-tag {
+    background: rgba(16,185,129,0.1);
+    color: var(--green);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+  }
+  .match-tag {
+    color: #334155;
+    font-size: 10px;
+  }
+
+  /* ── Empty / Loading states ── */
+  .loading, .empty {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--muted);
+  }
+  .loading { font-size: 14px; }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+  /* ── Error banner ── */
+  .error-banner {
+    margin: 16px 24px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    color: var(--red);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 12px;
+    display: none;
+  }
+  .error-banner.show { display: block; }
+
+  @media (min-width: 900px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 1300px) {
+    .grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="header-left">
+    <a class="back-btn" href="/">← Dashboard</a>
+    <h1>PREDICTION MARKET <span>SCANNER</span></h1>
+  </div>
+  <div class="status-row">
+    <span class="pulse"></span>
+    <span id="scan-status">Loading…</span>
+    <span id="last-scan"></span>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadData(true)">Refresh</button>
+  </div>
+</div>
+
+<!-- ── Stats bar ── -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat"><div class="stat-val" id="s-kalshi">—</div><div class="stat-lbl">Kalshi Markets</div></div>
+  <div class="stat-sep"></div>
+  <div class="stat"><div class="stat-val" id="s-poly">—</div><div class="stat-lbl">Polymarket Markets</div></div>
+  <div class="stat-sep"></div>
+  <div class="stat"><div class="stat-val" id="s-matches">—</div><div class="stat-lbl">Matched Pairs</div></div>
+  <div class="stat-sep"></div>
+  <div class="stat"><div class="stat-val green" id="s-large">—</div><div class="stat-lbl">Edge ≥5%</div></div>
+  <div class="stat-sep"></div>
+  <div class="stat"><div class="stat-val orange" id="s-showing">—</div><div class="stat-lbl">Showing</div></div>
+</div>
+
+<!-- ── Tabs ── -->
+<div class="tabs" id="tabs">
+  <button class="tab active" data-cat="all" onclick="setCategory(this)">All Markets</button>
+  <button class="tab" data-cat="economics"   onclick="setCategory(this)">Economics</button>
+  <button class="tab" data-cat="weather"     onclick="setCategory(this)">Weather</button>
+  <button class="tab" data-cat="sports"      onclick="setCategory(this)">Sports</button>
+  <button class="tab" data-cat="finance"     onclick="setCategory(this)">Finance</button>
+  <button class="tab" data-cat="geopolitics" onclick="setCategory(this)">Geopolitics</button>
+  <button class="tab" data-cat="science_tech" onclick="setCategory(this)">Science & Tech</button>
+  <button class="tab" data-cat="other"       onclick="setCategory(this)">Other</button>
+</div>
+
+<!-- ── Controls ── -->
+<div class="controls">
+  <label>
+    Min edge:
+    <input type="range" id="edge-slider" min="0" max="20" step="1" value="2" oninput="updateEdgeFilter(this.value)">
+    <span id="edge-val">2%</span>
+  </label>
+  <span style="color:var(--muted);font-size:11px;">Sorted by largest discrepancy first</span>
+</div>
+
+<!-- ── Error ── -->
+<div class="error-banner" id="error-banner"></div>
+
+<!-- ── Main grid ── -->
+<div class="grid" id="grid">
+  <div class="loading">
+    <div class="spinner"></div>
+    Scanning Kalshi and Polymarket — this takes ~15 seconds on first load…
+  </div>
+</div>
+
+<script>
+let allPairs = [];
+let activeCategory = 'all';
+let minEdge = 2;
+
+const CAT_COLORS = {
+  economics:    '#3b82f6',
+  weather:      '#06b6d4',
+  sports:       '#f59e0b',
+  finance:      '#10b981',
+  geopolitics:  '#ef4444',
+  science_tech: '#8b5cf6',
+  other:        '#6b7280',
+};
+
+function edgeClass(pct) {
+  if (pct >= 15) return 'huge';
+  if (pct >= 8)  return 'large';
+  if (pct >= 4)  return 'mid';
+  return 'small';
+}
+
+function fmtVol(v) {
+  if (!v) return '';
+  if (v >= 1_000_000) return `$${(v/1_000_000).toFixed(1)}M vol`;
+  if (v >= 1_000)     return `$${(v/1_000).toFixed(0)}K vol`;
+  return `$${v} vol`;
+}
+
+function renderCard(p) {
+  const k  = p.kalshi;
+  const pm = p.polymarket;
+  const ec = edgeClass(p.edge_pct);
+  const kHigher = k.yes_prob > pm.yes_prob;
+  const color = CAT_COLORS[p.category] || '#6b7280';
+
+  return `
+  <div class="pair-card edge-${ec}">
+    <div class="card-top">
+      <span class="cat-badge" style="background:${color}22;color:${color}">${p.category_label}</span>
+      <span class="edge-pill ${ec}">${p.edge_pct.toFixed(1)}pp EDGE</span>
+    </div>
+    <div class="platforms">
+      <div class="platform-block">
+        <div class="plat-name">Kalshi</div>
+        <div class="plat-prob ${kHigher ? 'higher' : 'lower'}">${(k.yes_prob*100).toFixed(1)}%</div>
+        <div class="plat-title">${k.title.slice(0,80)}${k.title.length>80?'…':''}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="plat-vol">${fmtVol(k.volume)}</span>
+          <a class="plat-link" href="${k.url}" target="_blank" rel="noopener">View ↗</a>
+        </div>
+      </div>
+      <div class="platform-block">
+        <div class="plat-name">Polymarket</div>
+        <div class="plat-prob ${!kHigher ? 'higher' : 'lower'}">${(pm.yes_prob*100).toFixed(1)}%</div>
+        <div class="plat-title">${pm.title.slice(0,80)}${pm.title.length>80?'…':''}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="plat-vol">${fmtVol(pm.volume)}</span>
+          <a class="plat-link" href="${pm.url}" target="_blank" rel="noopener">View ↗</a>
+        </div>
+      </div>
+    </div>
+    <div class="card-analysis">
+      <strong>Analysis:</strong> ${p.plain_english}
+    </div>
+    <div class="card-bottom">
+      <span class="match-tag">Match confidence: ${(p.match_score*100).toFixed(0)}%</span>
+      <span class="kelly-tag">¼-Kelly: ${(p.kelly*100).toFixed(1)}% bankroll</span>
+    </div>
+  </div>`;
+}
+
+function renderGrid() {
+  const filtered = allPairs.filter(p => {
+    if (activeCategory !== 'all' && p.category !== activeCategory) return false;
+    if (p.edge_pct < minEdge) return false;
+    return true;
+  });
+
+  document.getElementById('s-showing').textContent = filtered.length;
+
+  const grid = document.getElementById('grid');
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <div class="empty-icon">🔍</div>
+      No pairs match your filters. Try lowering the minimum edge or switching category.
+    </div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(renderCard).join('');
+}
+
+function setCategory(btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  activeCategory = btn.dataset.cat;
+  renderGrid();
+}
+
+function updateEdgeFilter(val) {
+  minEdge = parseInt(val);
+  document.getElementById('edge-val').textContent = val + '%';
+  renderGrid();
+}
+
+async function loadData(force = false) {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = 'Scanning…';
+  document.getElementById('scan-status').textContent = 'Scanning markets…';
+  document.getElementById('error-banner').classList.remove('show');
+
+  const url = force ? '/api/predmarkets?bust=' + Date.now() : '/api/predmarkets';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    allPairs = data.pairs || [];
+    const stats = data.stats || {};
+
+    document.getElementById('s-kalshi').textContent  = stats.total_kalshi    ?? '—';
+    document.getElementById('s-poly').textContent    = stats.total_polymarket ?? '—';
+    document.getElementById('s-matches').textContent = stats.matches_found   ?? '—';
+    document.getElementById('s-large').textContent   = stats.large_edges     ?? '—';
+
+    renderGrid();
+
+    const now = new Date();
+    document.getElementById('last-scan').textContent =
+      `Last scan: ${now.toLocaleTimeString()}`;
+    document.getElementById('scan-status').textContent =
+      `${allPairs.length} pairs found`;
+
+  } catch (err) {
+    const banner = document.getElementById('error-banner');
+    banner.textContent = `Scan error: ${err.message}. APIs may be rate-limiting — try again in 30s.`;
+    banner.classList.add('show');
+    document.getElementById('scan-status').textContent = 'Error — retry';
+    if (allPairs.length === 0) {
+      document.getElementById('grid').innerHTML =
+        `<div class="empty" style="grid-column:1/-1">
+          <div class="empty-icon">⚠️</div>
+          Could not reach Kalshi or Polymarket APIs.<br>
+          They may be rate-limiting. Retrying in 30s…
+        </div>`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Refresh';
+  }
+}
+
+// Auto-refresh every 4 minutes
+loadData();
+setInterval(() => loadData(), 4 * 60 * 1000);
+</script>
+</body>
+</html>

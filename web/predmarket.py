@@ -127,12 +127,12 @@ def _mid(bid: Optional[float], ask: Optional[float]) -> Optional[float]:
 # ── Kalshi fetcher ────────────────────────────────────────────────────────────
 
 def fetch_kalshi(max_pages: int = 5) -> list[dict]:
-    """Fetch open Kalshi markets. Returns normalised list."""
+    """Fetch active Kalshi markets. Returns normalised list."""
     markets = []
     cursor = None
 
     for _ in range(max_pages):
-        params = {"limit": 200, "status": "open"}
+        params = {"limit": 200}
         if cursor:
             params["cursor"] = cursor
         try:
@@ -146,28 +146,50 @@ def fetch_kalshi(max_pages: int = 5) -> list[dict]:
 
         raw = data.get("markets", [])
         for m in raw:
-            yes_bid = m.get("yes_bid")
-            yes_ask = m.get("yes_ask")
-            # Kalshi prices are in cents (0–100) — normalise to 0–1
-            if yes_bid is not None:
-                yes_bid = yes_bid / 100.0
-            if yes_ask is not None:
-                yes_ask = yes_ask / 100.0
+            # Skip non-active or settled markets
+            if m.get("status") not in ("active", "open"):
+                continue
+            # Skip multi-leg combo markets (title is a CSV of legs)
+            title = m.get("title", "") or m.get("yes_sub_title", "")
+            if not title or title.count(",") > 2:
+                continue
+
+            # Prices are dollar-denominated floats already in [0, 1]
+            def _to_float(v) -> Optional[float]:
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    return None
+
+            yes_bid = _to_float(m.get("yes_bid_dollars"))
+            yes_ask = _to_float(m.get("yes_ask_dollars"))
+            last    = _to_float(m.get("last_price_dollars"))
+
             mid = _mid(yes_bid, yes_ask)
-            if mid is None:
+            # Fall back to last traded price if bid/ask are both zero or missing
+            if mid is None or mid < 0.001:
+                if last and last > 0.001:
+                    mid = last
+                else:
+                    continue
+
+            if not (0.01 <= mid <= 0.99):
                 continue
-            title = m.get("title", "") or m.get("subtitle", "")
-            if not title:
-                continue
+
+            try:
+                volume = int(float(m.get("volume_fp", 0) or 0))
+            except Exception:
+                volume = 0
+
             markets.append({
                 "platform":  "Kalshi",
                 "id":        m.get("ticker", ""),
                 "title":     title,
                 "category":  categorize(title),
                 "yes_prob":  round(mid, 4),
-                "volume":    m.get("volume", 0) or 0,
+                "volume":    volume,
                 "close":     m.get("close_time", ""),
-                "url":       f"https://kalshi.com/markets/{m.get('ticker', '')}",
+                "url":       f"https://kalshi.com/markets/{m.get('event_ticker', m.get('ticker', ''))}",
             })
 
         cursor = data.get("cursor")

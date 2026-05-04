@@ -101,6 +101,16 @@ function renderSignals(analysis) {
 }
 
 // ── price cards ───────────────────────────────────────────────────────────────
+// Map symbols to TradingView chart URLs
+const TV_LINK = {
+  ES: 'SPY', NQ: 'QQQ', DJI: 'DIA', RUT: 'IWM', VIX: 'VIX',
+  CL: 'USOIL', GC: 'GOLD', DXY: 'DXY',
+  BTC: 'BTCUSD', ETH: 'ETHUSD', SOL: 'SOLUSD',
+  NVDA: 'NVDA', AAPL: 'AAPL', TSLA: 'TSLA', META: 'META',
+  AMZN: 'AMZN', MSFT: 'MSFT', JPM: 'JPM', XOM: 'XOM',
+};
+const tvUrl = sym => `https://www.tradingview.com/symbols/${TV_LINK[sym] || sym}/`;
+
 function renderPrices(snap, rsi) {
   const grid = $('price-grid');
   const entries = Object.entries(snap).filter(([, d]) =>
@@ -157,10 +167,14 @@ function renderPrices(snap, rsi) {
       card.innerHTML = inner;
       card.dataset.price = d.current;
     } else {
-      card = document.createElement('div');
+      card = document.createElement('a');
       card.className    = 'price-card';
       card.dataset.sym  = sym;
       card.dataset.price = d.current;
+      card.href         = tvUrl(sym);
+      card.target       = '_blank';
+      card.rel          = 'noopener';
+      card.title        = `Open ${sym} chart on TradingView`;
       card.innerHTML    = inner;
       grid.appendChild(card);
     }
@@ -184,8 +198,10 @@ function renderTechnicals(tech) {
       </tr>`;
     }
     const rsiPill  = d.rsi ? `<span class="sig-pill ${d.rsi_signal === 'overbought' ? 'bear' : d.rsi_signal === 'oversold' ? 'bull' : 'neut'}">${d.rsi}</span>` : '<span class="sig-pill na">—</span>';
-    const vs50Pill = pill(d.vs_sma50,  { above: 'bull', below: 'bear' });
-    const vs200Pill= pill(d.vs_sma200, { above: 'bull', below: 'bear' });
+    const vs50Pill = d.vs_sma50 == null ? '<span class="sig-pill na">—</span>'
+                   : `<span class="sig-pill ${d.vs_sma50 === 'above' ? 'bull' : 'bear'}">${d.vs_sma50 === 'above' ? '↑ Above' : '↓ Below'}</span>`;
+    const vs200Pill= d.vs_sma200 == null ? '<span class="sig-pill na">—</span>'
+                   : `<span class="sig-pill ${d.vs_sma200 === 'above' ? 'bull' : 'bear'}">${d.vs_sma200 === 'above' ? '↑ Above' : '↓ Below'}</span>`;
     const gcPill   = d.golden_cross == null ? '<span class="sig-pill na">—</span>'
                    : d.golden_cross ? '<span class="sig-pill bull">Golden ✓</span>'
                                     : '<span class="sig-pill bear">Death ✗</span>';
@@ -193,7 +209,7 @@ function renderTechnicals(tech) {
     const bbPill   = pill(d.bb_signal,  { neutral: 'neut', overbought: 'bear', oversold: 'bull' });
     const ovPill   = pill(d.overall,    { bullish: 'bull', bearish: 'bear', neutral: 'neut' });
     return `<tr>
-      <td><strong style="color:#fff">${sym}</strong> <span style="color:var(--muted);font-size:10px">${d.name}</span></td>
+      <td><a href="${tvUrl(sym)}" target="_blank" rel="noopener" class="tech-link"><strong style="color:#fff">${sym}</strong></a> <span style="color:var(--muted);font-size:10px">${d.name}</span></td>
       <td><span class="pc-type ${d.type}" style="display:inline-block">${d.type}</span></td>
       <td>${rsiPill}</td>
       <td>${vs50Pill}</td>

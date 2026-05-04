@@ -200,9 +200,16 @@ section:last-child { border-bottom: none; }
 .price-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 8px; padding: 14px;
-  transition: border-color .2s, transform .15s;
+  transition: border-color .2s, transform .15s, box-shadow .15s;
+  text-decoration: none; color: inherit; display: block; cursor: pointer;
 }
-.price-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.price-card:hover {
+  border-color: var(--blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 200, 255, 0.1);
+}
+.tech-link { color: #fff; text-decoration: none; }
+.tech-link:hover { color: var(--blue); }
 .price-card.flash-up   { animation: fup .5s; }
 .price-card.flash-dn   { animation: fdn .5s; }
 @keyframes fup { 0%{background:#00e67622} 100%{background:var(--card)} }
