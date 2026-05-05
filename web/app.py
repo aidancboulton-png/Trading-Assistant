@@ -712,26 +712,77 @@ _ALERT_CONTEXT = {
     },
 }
 
+_ALERT_FIRED_TODAY: dict = {}  # {symbol: {"UP" or "DOWN": "YYYY-MM-DD"}}
+
+def _today_str() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
 def check_alerts(snap: dict) -> list:
-    last = load_last()
-    hits = []
+    """
+    Fire alerts on TWO conditions:
+      1. Big daily move (current vs prev_close) — once per direction per day
+      2. Flash 30s move (current vs last poll) — fires every time, throttled
+         only by the per-symbol alert_pct threshold scaled 3x
+    """
+    last  = load_last()
+    today = _today_str()
+    hits  = []
+
     for k, d in snap.items():
-        cur, prv = d.get("current", 0), last.get(k, 0)
-        if not cur or not prv: continue
-        pct = abs((cur - prv) / prv) * 100
-        if pct >= d.get("alert_pct", 0.5):
-            direction = "UP" if cur > prv else "DOWN"
-            ctx = _ALERT_CONTEXT.get(k, {}).get(direction, f"{d.get('name',k)} made a significant move.")
-            hits.append({
-                "symbol": k, "name": d.get("name", k),
-                "direction": direction,
-                "pct": round(pct, 2), "current": cur,
-                "prev": prv,
-                "threshold": d.get("alert_pct"),
-                "context": ctx,
-                "type": d.get("type", ""),
-                "timestamp": int(time.time()),
-            })
+        cur = d.get("current", 0)
+        if not cur:
+            continue
+        threshold = d.get("alert_pct", 0.5)
+        name = d.get("name", k)
+        sym_state = _ALERT_FIRED_TODAY.setdefault(k, {})
+
+        # Reset daily flags if it's a new day
+        for direction in ("UP", "DOWN"):
+            if sym_state.get(direction) and sym_state[direction] != today:
+                sym_state.pop(direction, None)
+
+        # ─── 1. DAILY MOVE alert — fire once per direction per session ──
+        prev_close = d.get("prev_close", 0)
+        if prev_close:
+            day_pct = (cur - prev_close) / prev_close * 100
+            day_dir = "UP" if day_pct > 0 else "DOWN"
+            if abs(day_pct) >= threshold and sym_state.get(day_dir) != today:
+                ctx = _ALERT_CONTEXT.get(k, {}).get(
+                    day_dir, f"{name} moved {abs(day_pct):.1f}% today.")
+                hits.append({
+                    "symbol": k, "name": name,
+                    "direction": day_dir,
+                    "pct": round(abs(day_pct), 2),
+                    "current": cur, "prev": prev_close,
+                    "threshold": threshold,
+                    "context": f"Daily move: {ctx}",
+                    "type": d.get("type", ""),
+                    "kind": "daily",
+                    "timestamp": int(time.time()),
+                })
+                sym_state[day_dir] = today
+
+        # ─── 2. FLASH MOVE alert — large 30s move (3× the daily threshold) ──
+        prv = last.get(k, 0)
+        if prv:
+            flash_pct = abs((cur - prv) / prv) * 100
+            flash_threshold = threshold * 3   # require sharper move intraday
+            if flash_pct >= flash_threshold:
+                flash_dir = "UP" if cur > prv else "DOWN"
+                ctx = _ALERT_CONTEXT.get(k, {}).get(
+                    flash_dir, f"{name} flash move {flash_pct:.2f}%.")
+                hits.append({
+                    "symbol": k, "name": name,
+                    "direction": flash_dir,
+                    "pct": round(flash_pct, 2),
+                    "current": cur, "prev": prv,
+                    "threshold": flash_threshold,
+                    "context": f"Flash move: {ctx}",
+                    "type": d.get("type", ""),
+                    "kind": "flash",
+                    "timestamp": int(time.time()),
+                })
+
     save_last(snap)
     return hits
 
