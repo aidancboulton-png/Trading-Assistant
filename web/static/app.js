@@ -101,15 +101,30 @@ function renderSignals(analysis) {
 }
 
 // ── price cards ───────────────────────────────────────────────────────────────
-// Map symbols to TradingView chart URLs
+// Map symbols to TradingView chart URLs with explicit exchange:ticker
+// (the chart URL always resolves correctly, unlike /symbols/ redirects)
 const TV_LINK = {
-  ES: 'SPY', NQ: 'QQQ', DJI: 'DIA', RUT: 'IWM', VIX: 'VIX',
-  CL: 'USOIL', GC: 'GOLD', DXY: 'DXY',
-  BTC: 'BTCUSD', ETH: 'ETHUSD', SOL: 'SOLUSD',
-  NVDA: 'NVDA', AAPL: 'AAPL', TSLA: 'TSLA', META: 'META',
-  AMZN: 'AMZN', MSFT: 'MSFT', JPM: 'JPM', XOM: 'XOM',
+  ES:   'AMEX:SPY',
+  NQ:   'NASDAQ:QQQ',
+  DJI:  'AMEX:DIA',
+  RUT:  'AMEX:IWM',
+  VIX:  'TVC:VIX',
+  CL:   'TVC:USOIL',
+  GC:   'TVC:GOLD',
+  DXY:  'TVC:DXY',
+  BTC:  'BINANCE:BTCUSDT',
+  ETH:  'BINANCE:ETHUSDT',
+  SOL:  'BINANCE:SOLUSDT',
+  NVDA: 'NASDAQ:NVDA',
+  AAPL: 'NASDAQ:AAPL',
+  TSLA: 'NASDAQ:TSLA',
+  META: 'NASDAQ:META',
+  AMZN: 'NASDAQ:AMZN',
+  MSFT: 'NASDAQ:MSFT',
+  JPM:  'NYSE:JPM',
+  XOM:  'NYSE:XOM',
 };
-const tvUrl = sym => `https://www.tradingview.com/symbols/${TV_LINK[sym] || sym}/`;
+const tvUrl = sym => `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(TV_LINK[sym] || sym)}`;
 
 function renderPrices(snap, rsi) {
   const grid = $('price-grid');
