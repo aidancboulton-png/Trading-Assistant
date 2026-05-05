@@ -796,6 +796,8 @@ async def warm_caches():
         await asyncio.to_thread(lambda: cached("technicals", get_technicals_all))
         await asyncio.to_thread(lambda: cached("news",       get_news))
         await asyncio.to_thread(lambda: cached("fear_greed", get_fear_greed))
+        # Kick off the slow predmarket scan in the background
+        asyncio.create_task(_predmarket_refresh())
     except Exception as e:
         print(f"[warm] cache warm error: {e}")
 
@@ -887,20 +889,53 @@ async def api_analysis():
     return {"data": _cache[key], "ts": int(time.time())}
 
 _PREDMARKET_CACHE: dict = {}
-_PREDMARKET_TTL = 300  # 5 minutes — APIs are public but rate-limit-friendly
+_PREDMARKET_TTL = 300              # serve cached for 5 min before refreshing
+_PREDMARKET_SCANNING = {"flag": False}
+
+async def _predmarket_refresh():
+    """Run the (slow) predmarket scan in the background and cache the result."""
+    if _PREDMARKET_SCANNING["flag"]:
+        return
+    _PREDMARKET_SCANNING["flag"] = True
+    try:
+        result = await asyncio.to_thread(run_scan)
+        _PREDMARKET_CACHE["data"] = result
+        _PREDMARKET_CACHE["ts"]   = time.time()
+    except Exception as e:
+        print(f"[predmarket] scan error: {e}")
+    finally:
+        _PREDMARKET_SCANNING["flag"] = False
 
 @app.get("/api/predmarkets")
 async def api_predmarkets():
+    """
+    Serve cached predmarket result instantly. If the cache is missing or
+    stale, kick off a refresh in the background — don't block the request.
+    Railway has ~60s request timeout; the scan can take 30-60s.
+    """
     now = time.time()
-    if _PREDMARKET_CACHE and (now - _PREDMARKET_CACHE.get("ts", 0)) < _PREDMARKET_TTL:
-        return _PREDMARKET_CACHE["data"]
-    try:
-        result = await asyncio.get_event_loop().run_in_executor(None, run_scan)
-        _PREDMARKET_CACHE["data"] = result
-        _PREDMARKET_CACHE["ts"]   = now
-        return result
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+    cached_age = now - _PREDMARKET_CACHE.get("ts", 0) if _PREDMARKET_CACHE else None
+
+    # No cache yet — kick off scan and return a stub so the UI shows status
+    if not _PREDMARKET_CACHE:
+        asyncio.create_task(_predmarket_refresh())
+        return {
+            "stats": {
+                "total_kalshi": 0, "total_polymarket": 0,
+                "matches_found": 0, "large_edges": 0, "arb_count": 0,
+                "by_category": {}, "scan_time": None, "scanning": True,
+            },
+            "pairs": [],
+            "top_by_category": {},
+            "scanning": True,
+            "message": "First scan in progress — refresh in 30 seconds.",
+        }
+
+    # Stale cache — refresh in background but serve what we have
+    if cached_age is not None and cached_age > _PREDMARKET_TTL:
+        asyncio.create_task(_predmarket_refresh())
+
+    return _PREDMARKET_CACHE["data"]
 
 _static_dir = Path(__file__).parent / "static"
 app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")
