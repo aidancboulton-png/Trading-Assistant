@@ -75,13 +75,29 @@ CATEGORY_COLORS = {
 }
 
 STOP_WORDS = {
-    "the", "a", "an", "in", "on", "at", "will", "be", "to", "of", "by",
-    "for", "is", "are", "was", "above", "below", "end", "year", "before",
-    "after", "this", "that", "or", "and", "if", "than", "more", "less",
-    "over", "under", "between", "within", "reach", "hit", "exceed", "go",
-    "up", "down", "out", "into", "with", "from", "their", "its", "have",
-    "has", "had", "would", "could", "should", "may", "might", "does", "do",
+    "the", "a", "an", "in", "on", "at", "to", "of", "by",
+    "for", "is", "are", "was", "this", "that", "or", "and", "if",
+    "with", "from", "their", "its", "have", "has", "had", "would",
+    "could", "should", "may", "might", "does", "do", "be", "will",
 }
+
+# Tokens that uniquely identify a market and should weight matching heavily
+def _anchor_tokens(title: str) -> set:
+    """Pull out high-signal tokens: numbers, $ amounts, %, years, proper nouns."""
+    t = title.lower()
+    anchors = set()
+    # Years (4-digit), e.g. 2026
+    anchors |= set(re.findall(r"\b(19|20)\d{2}\b", t))
+    # Dollar amounts: $5k, $1m, $120, $1.5b
+    anchors |= set(re.findall(r"\$[\d.,]+\s?[kmb]?", t))
+    # Percentages: 50%, 2.5%
+    anchors |= set(re.findall(r"\d+\.?\d*%", t))
+    # Pure numbers ≥ 3 digits (price targets, counts)
+    anchors |= set(re.findall(r"\b\d{3,}\b", t))
+    # Proper nouns (capitalized, ≥4 chars) from original title
+    anchors |= {w.lower() for w in re.findall(r"\b[A-Z][a-zA-Z]{3,}\b", title)
+                if w.lower() not in {"will", "this", "that", "what", "when", "where", "which"}}
+    return anchors
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -95,11 +111,89 @@ def _normalize(title: str) -> set:
 
 
 def _similarity(a: str, b: str) -> float:
-    """Jaccard similarity on cleaned tokens."""
+    """
+    Hybrid similarity score:
+      • Base = Jaccard on cleaned tokens
+      • Bonus = anchor tokens shared (years, $ amounts, %, proper nouns)
+    Anchors are weighted heavily because matching titles for the same event
+    almost always share at least one specific anchor.
+    """
     ta, tb = _normalize(a), _normalize(b)
     if not ta or not tb:
         return 0.0
-    return len(ta & tb) / len(ta | tb)
+    jaccard = len(ta & tb) / len(ta | tb)
+
+    aa, ab = _anchor_tokens(a), _anchor_tokens(b)
+    if aa and ab:
+        anchor_overlap = len(aa & ab) / max(len(aa | ab), 1)
+        # Each shared anchor bumps similarity meaningfully
+        anchor_bonus = min(0.4, len(aa & ab) * 0.15)
+        return min(1.0, jaccard * 0.6 + anchor_overlap * 0.4 + anchor_bonus)
+    return jaccard
+
+
+_NEG_PATTERNS = [
+    r"\bnot\b", r"\bno\s", r"\bfail\b", r"\bwon[' ]?t\b", r"\bdoesn[' ]?t\b",
+    r"\bdidn[' ]?t\b", r"\bisn[' ]?t\b", r"\bwithout\b", r"\bavoid\b",
+    r"\bmiss(es|ed)?\b", r"\bunder\b", r"\bbelow\b",
+]
+_RANGE_PATTERNS = [
+    r"\d+\s*-\s*\d+\s*%",          # "0-10%", "20-30 %"
+    r"\d+\s*to\s*\d+\s*%",         # "0 to 10%"
+    r"between\s+\$?\d+\s+and",      # "between 5 and 10"
+    r"\babove\s+\$?[\d,.]+\b",
+    r"\bover\s+\$?[\d,.]+\s*(point|run|goal|year|%|\$|percent|million|billion)",
+    r"\bmargin\s+of\s+victory\b",  # "Senate margin of victory — X"
+    r"\bsucceed\s+\w+\b",          # "Who will succeed X" — multi-candidate sub
+]
+
+# Country tokens — if both titles mention different countries, mismatch
+_COUNTRY_TOKENS = {
+    "israel", "morocco", "iran", "ukraine", "russia", "china", "taiwan",
+    "japan", "germany", "france", "uk", "britain", "canada", "mexico",
+    "india", "pakistan", "brazil", "argentina", "australia", "egypt",
+    "syria", "lebanon", "turkey", "korea", "vietnam", "afghanistan",
+    "venezuela", "italy", "spain", "poland", "greece",
+}
+def _country_mismatch(a: str, b: str) -> bool:
+    al = a.lower(); bl = b.lower()
+    a_countries = {c for c in _COUNTRY_TOKENS if re.search(rf"\b{c}\b", al)}
+    b_countries = {c for c in _COUNTRY_TOKENS if re.search(rf"\b{c}\b", bl)}
+    if a_countries and b_countries and not (a_countries & b_countries):
+        return True
+    return False
+
+# Kalshi superlative/aggregator questions that match too liberally
+# ("closest race", "who will win", etc.). These create false pairs.
+_AGGREGATOR_PATTERNS = [
+    r"\bclosest\b", r"\bbiggest\b", r"\bsmallest\b", r"\bmost\s",
+    r"\bleast\s", r"\bwhich\s", r"\bhighest\b", r"\blowest\b",
+    r"\bnumber\s+of\b", r"\bhow\s+many\b",
+]
+def _is_aggregator(title: str) -> bool:
+    tl = title.lower()
+    return any(re.search(p, tl) for p in _AGGREGATOR_PATTERNS)
+
+def _is_negated(title: str) -> bool:
+    """Detect if title is the negative framing of a question."""
+    tl = title.lower()
+    return any(re.search(p, tl) for p in _NEG_PATTERNS)
+
+def _political_party(title: str) -> Optional[str]:
+    """Return 'rep' or 'dem' if title is asking about a specific party winning."""
+    tl = title.lower()
+    has_rep = bool(re.search(r"\brepublican(s)?\b|\bgop\b", tl))
+    has_dem = bool(re.search(r"\bdemocrat(s|ic)?\b", tl))
+    if has_rep and not has_dem:
+        return "rep"
+    if has_dem and not has_rep:
+        return "dem"
+    return None  # neither, or both
+
+def _is_subrange(title: str) -> bool:
+    """Detect Kalshi sub-questions like 'margin 0-10%' that scope a parent event."""
+    tl = title.lower()
+    return any(re.search(p, tl) for p in _RANGE_PATTERNS)
 
 
 def categorize(title: str) -> str:
@@ -127,16 +221,26 @@ def _mid(bid: Optional[float], ask: Optional[float]) -> Optional[float]:
 # ── Kalshi fetcher ────────────────────────────────────────────────────────────
 
 def fetch_kalshi(max_pages: int = 5) -> list[dict]:
-    """Fetch active Kalshi markets. Returns normalised list."""
+    """
+    Fetch active Kalshi events with nested markets. Use the EVENT title
+    (clean human-readable question) instead of the market title (which is
+    often parlay-leg gibberish like 'yes Detroit,yes LeBron James: 15+').
+    """
     markets = []
     cursor = None
 
+    def _to_float(v) -> Optional[float]:
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
     for _ in range(max_pages):
-        params = {"limit": 200}
+        params = {"limit": 200, "status": "open", "with_nested_markets": "true"}
         if cursor:
             params["cursor"] = cursor
         try:
-            r = requests.get(f"{KALSHI_BASE}/markets", params=params,
+            r = requests.get(f"{KALSHI_BASE}/events", params=params,
                              headers=HEADERS, timeout=TIMEOUT)
             r.raise_for_status()
             data = r.json()
@@ -144,53 +248,61 @@ def fetch_kalshi(max_pages: int = 5) -> list[dict]:
             print(f"[kalshi] fetch error: {e}")
             break
 
-        raw = data.get("markets", [])
-        for m in raw:
-            # Skip non-active or settled markets
-            if m.get("status") not in ("active", "open"):
-                continue
-            # Skip multi-leg combo markets (title is a CSV of legs)
-            title = m.get("title", "") or m.get("yes_sub_title", "")
-            if not title or title.count(",") > 2:
+        raw = data.get("events", [])
+        for e in raw:
+            event_title = e.get("title", "") or ""
+            event_ticker = e.get("event_ticker", "")
+            sub_markets = e.get("markets", []) or []
+            if not event_title or not sub_markets:
                 continue
 
-            # Prices are dollar-denominated floats already in [0, 1]
-            def _to_float(v) -> Optional[float]:
-                try:
-                    return float(v)
-                except (TypeError, ValueError):
-                    return None
-
-            yes_bid = _to_float(m.get("yes_bid_dollars"))
-            yes_ask = _to_float(m.get("yes_ask_dollars"))
-            last    = _to_float(m.get("last_price_dollars"))
-
-            mid = _mid(yes_bid, yes_ask)
-            # Fall back to last traded price if bid/ask are both zero or missing
-            if mid is None or mid < 0.001:
-                if last and last > 0.001:
-                    mid = last
-                else:
+            # Multi-market events (e.g. "Who will be next Pope?") have one market per
+            # candidate. We treat each market as its own question by combining the
+            # event title with the market's yes_sub_title.
+            for m in sub_markets:
+                if m.get("status") not in ("active", "open"):
                     continue
 
-            if not (0.01 <= mid <= 0.99):
-                continue
+                yes_bid = _to_float(m.get("yes_bid_dollars"))
+                yes_ask = _to_float(m.get("yes_ask_dollars"))
+                last    = _to_float(m.get("last_price_dollars"))
 
-            try:
-                volume = int(float(m.get("volume_fp", 0) or 0))
-            except Exception:
-                volume = 0
+                mid = _mid(yes_bid, yes_ask)
+                if mid is None or mid < 0.001:
+                    if last and last > 0.001:
+                        mid = last
+                    else:
+                        continue
+                if not (0.01 <= mid <= 0.99):
+                    continue
 
-            markets.append({
-                "platform":  "Kalshi",
-                "id":        m.get("ticker", ""),
-                "title":     title,
-                "category":  categorize(title),
-                "yes_prob":  round(mid, 4),
-                "volume":    volume,
-                "close":     m.get("close_time", ""),
-                "url":       f"https://kalshi.com/markets/{m.get('event_ticker', m.get('ticker', ''))}",
-            })
+                # Build a clean question title.
+                if len(sub_markets) == 1:
+                    title = event_title
+                else:
+                    sub = m.get("yes_sub_title") or m.get("subtitle") or ""
+                    title = f"{event_title} — {sub}".strip(" —") if sub else event_title
+
+                # Skip remaining parlay-style titles
+                tl = title.lower()
+                if tl.startswith("yes ") or tl.startswith("no ") or ",yes " in tl or ",no " in tl:
+                    continue
+
+                try:
+                    volume = int(float(m.get("volume_fp", 0) or 0))
+                except Exception:
+                    volume = 0
+
+                markets.append({
+                    "platform":  "Kalshi",
+                    "id":        m.get("ticker", ""),
+                    "title":     title,
+                    "category":  categorize(title),
+                    "yes_prob":  round(mid, 4),
+                    "volume":    volume,
+                    "close":     m.get("close_time", ""),
+                    "url":       f"https://kalshi.com/markets/{event_ticker}",
+                })
 
         cursor = data.get("cursor")
         if not cursor or not raw:
@@ -289,51 +401,125 @@ def fetch_polymarket(max_pages: int = 5) -> list[dict]:
 
 # ── Matcher ───────────────────────────────────────────────────────────────────
 
-MATCH_THRESHOLD = 0.30  # Jaccard similarity floor for a pair to be considered
+MATCH_THRESHOLD = 0.25       # similarity floor for hybrid score
+MIN_JACCARD     = 0.12       # require some real word overlap, not just anchor match
+MIN_SHARED_WORDS = 3         # both titles must share at least N meaningful tokens
+
+
+def _hedge_math(k_prob: float, p_prob: float) -> dict:
+    """
+    Pure arbitrage opportunity calculator.
+    If you can buy YES cheap on one platform and NO cheap on the other,
+    your total cost is < $1 and you collect $1 no matter the outcome.
+    """
+    # Buy YES on cheaper-YES platform, buy NO on the other (NO = 1 - YES)
+    if k_prob < p_prob:
+        yes_buy_plat, yes_buy_price = "Kalshi", k_prob
+        no_buy_plat,  no_buy_price  = "Polymarket", 1 - p_prob
+    else:
+        yes_buy_plat, yes_buy_price = "Polymarket", p_prob
+        no_buy_plat,  no_buy_price  = "Kalshi", 1 - k_prob
+
+    total_cost = yes_buy_price + no_buy_price
+    locked_profit = round((1 - total_cost) * 100, 2)  # ¢ guaranteed per $1 risked
+    is_arb = locked_profit > 0
+    roi_pct = round(locked_profit / (total_cost * 100) * 100, 2) if total_cost > 0 else 0
+
+    return {
+        "is_arb":         is_arb,
+        "yes_platform":   yes_buy_plat,
+        "yes_price":      round(yes_buy_price * 100, 1),
+        "no_platform":    no_buy_plat,
+        "no_price":       round(no_buy_price * 100, 1),
+        "total_cost":     round(total_cost * 100, 1),
+        "locked_profit":  locked_profit,  # ¢ profit per $1 invested
+        "roi_pct":        roi_pct,
+    }
 
 
 def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
     """
-    Cross-match Kalshi and Polymarket markets.
+    Cross-match Kalshi and Polymarket markets across all categories.
     Returns pairs sorted by discrepancy (largest edge first).
     """
     pairs = []
-    poly_by_cat: dict[str, list[dict]] = {}
-    for m in polymarket:
-        poly_by_cat.setdefault(m["category"], []).append(m)
+    seen_polys: set = set()  # prevent same polymarket matched to multiple kalshi
 
     for km in kalshi:
-        cat = km["category"]
-        # search same category first, then "other" as fallback
-        candidates = poly_by_cat.get(cat, []) + poly_by_cat.get("other", [])
+        # Skip sub-range Kalshi questions and superlative aggregators —
+        # both classes generate false matches with simple yes/no Polymarket questions
+        if _is_subrange(km["title"]) or _is_aggregator(km["title"]):
+            continue
+
+        # search ALL polymarket markets, not just same-category
         best_score = 0.0
         best_pm = None
-        for pm in candidates:
+        best_jaccard = 0.0
+        best_shared = 0
+        km_tokens = _normalize(km["title"])
+        for pm in polymarket:
+            if _is_subrange(pm["title"]) or _is_aggregator(pm["title"]):
+                continue
+            if _country_mismatch(km["title"], pm["title"]):
+                continue
             score = _similarity(km["title"], pm["title"])
             if score > best_score:
+                pm_tokens = _normalize(pm["title"])
+                shared = len(km_tokens & pm_tokens)
+                jacc = len(km_tokens & pm_tokens) / max(len(km_tokens | pm_tokens), 1)
                 best_score = score
                 best_pm = pm
+                best_jaccard = jacc
+                best_shared = shared
 
         if best_pm is None or best_score < MATCH_THRESHOLD:
             continue
+        if best_jaccard < MIN_JACCARD or best_shared < MIN_SHARED_WORDS:
+            continue  # anchor matched but titles don't really overlap
 
+        # Polarity check: if one title is negated and the other isn't,
+        # OR if one asks about Republicans winning and the other about Democrats,
+        # flip the inverse side's probability to compare equivalently.
+        k_neg = _is_negated(km["title"])
+        p_neg = _is_negated(best_pm["title"])
+        k_party = _political_party(km["title"])
+        p_party = _political_party(best_pm["title"])
         k_prob = km["yes_prob"]
         p_prob = best_pm["yes_prob"]
-        edge   = abs(k_prob - p_prob)
+        polarity_flipped = False
 
+        if k_neg != p_neg:
+            polarity_flipped = True
+            if p_neg:
+                p_prob = 1 - p_prob
+            else:
+                k_prob = 1 - k_prob
+        elif k_party and p_party and k_party != p_party:
+            # Two-party inversion: P(R wins) = 1 - P(D wins) in a 2-party race
+            polarity_flipped = True
+            p_prob = 1 - p_prob
+
+        edge = abs(k_prob - p_prob)
         if edge < 0.02:
-            continue  # skip trivial differences
+            continue
 
-        # who's higher?
         if k_prob > p_prob:
-            higher, lower = "Kalshi", "Polymarket"
-            buy_advice = f"YES cheaper on Polymarket ({p_prob*100:.1f}¢) — Kalshi prices it at {k_prob*100:.1f}¢"
+            higher = "Kalshi"
+            buy_advice = f"YES (equivalent) cheaper on Polymarket ({p_prob*100:.1f}¢) vs Kalshi ({k_prob*100:.1f}¢)"
         else:
-            higher, lower = "Polymarket", "Kalshi"
-            buy_advice = f"YES cheaper on Kalshi ({k_prob*100:.1f}¢) — Polymarket prices it at {p_prob*100:.1f}¢"
+            higher = "Polymarket"
+            buy_advice = f"YES (equivalent) cheaper on Kalshi ({k_prob*100:.1f}¢) vs Polymarket ({p_prob*100:.1f}¢)"
 
-        # rough kelly (quarter kelly, conservative)
         kelly = round(edge / max(1 - min(k_prob, p_prob), 0.01) * 0.25, 3)
+        hedge = _hedge_math(k_prob, p_prob)
+        if polarity_flipped:
+            hedge["polarity_note"] = (
+                "One platform frames the question in the negative — "
+                "probabilities have been flipped to compare equivalently."
+            )
+
+        # Use the kalshi market's category for display since they tend to be more specific
+        cat = km["category"]
 
         pairs.append({
             "category":       cat,
@@ -345,6 +531,7 @@ def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
             "kelly":          kelly,
             "higher_platform": higher,
             "buy_advice":     buy_advice,
+            "hedge":          hedge,
             "kalshi": {
                 "title":    km["title"],
                 "yes_prob": km["yes_prob"],
@@ -361,7 +548,8 @@ def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
             },
         })
 
-    pairs.sort(key=lambda x: x["edge"], reverse=True)
+    # Sort: arbitrage (locked profit) first, then by edge size
+    pairs.sort(key=lambda x: (-1 if x["hedge"]["is_arb"] else 0, -x["edge"]))
     return pairs
 
 
@@ -421,22 +609,54 @@ def run_scan() -> dict:
     for p in pairs:
         p["plain_english"] = plain_english(p)
 
-    # Category breakdown
+    # Category breakdown for matched pairs
     by_cat: dict[str, list] = {}
     for p in pairs:
         by_cat.setdefault(p["category"], []).append(p)
+
+    # Top single-platform picks per category (high-volume, non-extreme probability)
+    # These show up even when no cross-platform match exists — gives the user
+    # something useful in every category (weather, sports, finance, etc.)
+    def _top_in_category(markets, cat, n=8):
+        cands = [m for m in markets
+                 if m["category"] == cat
+                 and not _is_subrange(m["title"])
+                 and 0.05 <= m["yes_prob"] <= 0.95
+                 and m["volume"] > 0]
+        cands.sort(key=lambda m: m["volume"], reverse=True)
+        return [{
+            "platform":  m["platform"],
+            "title":     m["title"],
+            "yes_prob":  m["yes_prob"],
+            "yes_pct":   round(m["yes_prob"] * 100, 1),
+            "volume":    m["volume"],
+            "url":       m["url"],
+            "category":  cat,
+        } for m in cands[:n]]
+
+    all_markets = kalshi_markets + poly_markets
+    top_by_category = {}
+    for cat in CATEGORY_LABELS:
+        picks = _top_in_category(all_markets, cat)
+        if picks:
+            top_by_category[cat] = {
+                "label": CATEGORY_LABELS[cat],
+                "color": CATEGORY_COLORS.get(cat, "#6b7280"),
+                "picks": picks,
+            }
 
     stats = {
         "total_kalshi":    len(kalshi_markets),
         "total_polymarket":len(poly_markets),
         "matches_found":   len(pairs),
         "large_edges":     sum(1 for p in pairs if p["edge_pct"] >= 5),
+        "arb_count":       sum(1 for p in pairs if p.get("hedge", {}).get("is_arb")),
         "by_category":     {cat: len(ms) for cat, ms in by_cat.items()},
         "scan_time":       started,
     }
 
-    print(f"[scanner] Done. {len(pairs)} matched pairs, {stats['large_edges']} with edge ≥5%")
-    return {"stats": stats, "pairs": pairs}
+    print(f"[scanner] Done. {len(pairs)} matched pairs, {stats['large_edges']} with edge ≥5%, {stats['arb_count']} arbs")
+    return {"stats": stats, "pairs": pairs, "top_by_category": top_by_category}
 
 
 # ── CLI pretty-print ──────────────────────────────────────────────────────────
