@@ -786,6 +786,18 @@ _latest: dict = {"snapshot": {}, "alerts": []}
 @app.on_event("startup")
 async def startup():
     asyncio.create_task(market_loop())
+    asyncio.create_task(warm_caches())
+
+async def warm_caches():
+    """Pre-populate slow caches so the first visitor doesn't wait."""
+    await asyncio.sleep(2)  # let the snapshot loop go first
+    try:
+        await asyncio.to_thread(lambda: cached("rsi",        get_rsi_all))
+        await asyncio.to_thread(lambda: cached("technicals", get_technicals_all))
+        await asyncio.to_thread(lambda: cached("news",       get_news))
+        await asyncio.to_thread(lambda: cached("fear_greed", get_fear_greed))
+    except Exception as e:
+        print(f"[warm] cache warm error: {e}")
 
 async def market_loop():
     while True:
@@ -841,7 +853,10 @@ async def api_structural():
 
 @app.get("/api/rsi")
 async def api_rsi():
-    return {"data": await asyncio.to_thread(get_rsi_all), "ts": int(time.time())}
+    # Cache RSI for 1h (TTL["rsi"] = 3600) — prevents 19 sequential Yahoo
+    # calls on every page load. Without this, /api/rsi takes ~7s on every hit.
+    return {"data": await asyncio.to_thread(lambda: cached("rsi", get_rsi_all)),
+            "ts": int(time.time())}
 
 @app.get("/api/alerts")
 async def api_alerts():
