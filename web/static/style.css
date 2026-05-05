@@ -491,8 +491,67 @@ footer {
 
 /* ── MOBILE ── */
 @media (max-width: 768px) {
+  /* Layout: tighter padding, stack everything */
+  main { padding: 0 12px 60px; }
+  body { font-size: 14px; }
+
+  /* Header: shrink and wrap */
+  .topbar { padding: 8px 12px; gap: 10px; flex-wrap: wrap; }
+  .brand { font-size: 14px; }
   .nav-links { display: none; }
-  #price-grid { grid-template-columns: 1fr 1fr; }
-  #news-grid  { grid-template-columns: 1fr; }
+  #ws-status-text { display: none; }
+
+  /* Ticker: smaller text, faster scroll */
+  .ticker-item, .tick-item { font-size: 11px; padding: 6px 10px; }
+
+  /* Hero / stats / sentiment all stack */
+  .hero-grid { grid-template-columns: 1fr !important; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
   .sentiment-grid { grid-template-columns: 1fr; }
+
+  /* Price cards: 2-up on phone, smaller */
+  #price-grid { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+  .price-card { padding: 10px; }
+  .price-card .psym { font-size: 13px; }
+  .price-card .pprice { font-size: 16px; }
+
+  /* News and earnings: single column */
+  #news-grid { grid-template-columns: 1fr !important; }
+  .earnings-big-card { grid-column: span 1; }
+  .earnings-row { grid-template-columns: 80px 1fr auto; gap: 6px; font-size: 12px; }
+
+  /* Insider / signals / analyst grids */
+  .insider-grid, .signal-grid, .analyst-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Critical: technicals table has 9 columns — wrap in horizontal scroll */
+  .table-wrap, .tech-table-wrap, #tech-table-wrap, .tech-scroll {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: -ms-autohiding-scrollbar;
+  }
+  table { font-size: 11px; min-width: 560px; }
+  table th, table td { padding: 6px 8px; }
+
+  /* Section headers */
+  h1 { font-size: 22px; }
+  h2 { font-size: 16px; }
+  .section-title { font-size: 14px; }
+
+  /* Buttons: bigger tap target */
+  button, .btn { min-height: 36px; padding: 8px 12px; }
+
+  /* Toast notifications: full width on phone */
+  .toast { left: 8px; right: 8px; max-width: none; }
+
+  /* Predmarket page */
+  #grid { grid-template-columns: 1fr !important; }
+  .pm-card { padding: 12px; }
+  .pm-stats { grid-template-columns: 1fr 1fr; }
+}
+
+/* Very narrow (≤400px) — go single-column even for prices */
+@media (max-width: 400px) {
+  #price-grid { grid-template-columns: 1fr !important; }
+  .stats-grid { grid-template-columns: 1fr; }
 }
