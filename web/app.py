@@ -3,12 +3,17 @@ from pathlib import Path
 import requests
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from typing import List
 from web.predmarket import run_scan
+
+# Shared thread pool for parallel external API calls
+_POOL = ThreadPoolExecutor(max_workers=16)
 
 PT = ZoneInfo("America/Los_Angeles")
 _BASE_DIR   = Path(__file__).parent.parent
@@ -71,12 +76,10 @@ def get_quote(symbol: str) -> dict:
         return {"current": 0, "prev_close": 0, "high": 0, "low": 0, "change_pct": 0}
 
 def build_snapshot() -> dict:
-    snap = {}
-    for k, info in WATCHLIST.items():
-        q = get_quote(info["finnhub"])
-        snap[k] = {**info, **q}
-        time.sleep(0.2)
-    return snap
+    """Parallel fetch of all WATCHLIST quotes. ~6s → ~0.5s."""
+    keys = list(WATCHLIST.keys())
+    quotes = list(_POOL.map(lambda k: get_quote(WATCHLIST[k]["finnhub"]), keys))
+    return {k: {**WATCHLIST[k], **q} for k, q in zip(keys, quotes)}
 
 _YAHOO_SYMBOL_MAP = {
     "USO": "USO", "SPY": "SPY", "QQQ": "QQQ", "DIA": "DIA", "IWM": "IWM",
@@ -386,64 +389,67 @@ def _tag_category(headline: str, summary: str, base_cat: str) -> str:
         return "earnings"
     return base_cat
 
+def _fetch_market_news(cat: str) -> list:
+    try:
+        items = fh("/news", {"category": cat, "minId": 0})
+    except:
+        return []
+    out = []
+    for n in items[:20]:
+        headline = n.get("headline", "")
+        summary  = (n.get("summary") or "")[:220]
+        out.append({
+            "id":       n.get("id", 0),
+            "headline": headline,
+            "summary":  summary,
+            "source":   n.get("source", ""),
+            "url":      n.get("url", ""),
+            "datetime": n.get("datetime", 0),
+            "category": _tag_category(headline, summary, cat),
+            "image":    n.get("image", ""),
+            "related":  n.get("related", ""),
+        })
+    return out
+
+def _fetch_company_news(sym: str) -> list:
+    try:
+        fr = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+        to = datetime.now().strftime("%Y-%m-%d")
+        items = fh("/company-news", {"symbol": sym, "from": fr, "to": to})
+    except:
+        return []
+    out = []
+    for n in items[:4]:
+        headline = n.get("headline", "")
+        summary  = (n.get("summary") or "")[:220]
+        out.append({
+            "id":       n.get("id", 0),
+            "headline": headline,
+            "summary":  summary,
+            "source":   n.get("source", sym),
+            "url":      n.get("url", ""),
+            "datetime": n.get("datetime", 0),
+            "category": _tag_category(headline, summary, "earnings"),
+            "image":    n.get("image", ""),
+            "related":  sym,
+        })
+    return out
+
 def get_news() -> list:
-    news = []
-    seen = set()
+    """Parallel fetch of market + company news. ~2.8s → ~0.5s."""
+    cats   = ("general", "crypto", "forex", "merger")
+    syms   = ("AAPL", "NVDA", "MSFT", "META", "AMZN", "TSLA", "JPM", "XOM")
+    market = _POOL.map(_fetch_market_news, cats)
+    company = _POOL.map(_fetch_company_news, syms)
 
-    # Finnhub market categories
-    for cat in ("general", "crypto", "forex", "merger"):
-        try:
-            items = fh("/news", {"category": cat, "minId": 0})
-            for n in items[:20]:
-                nid = n.get("id", 0)
-                if nid in seen:
-                    continue
-                seen.add(nid)
-                headline = n.get("headline", "")
-                summary  = (n.get("summary") or "")[:220]
-                tagged   = _tag_category(headline, summary, cat)
-                news.append({
-                    "id":       nid,
-                    "headline": headline,
-                    "summary":  summary,
-                    "source":   n.get("source", ""),
-                    "url":      n.get("url", ""),
-                    "datetime": n.get("datetime", 0),
-                    "category": tagged,
-                    "image":    n.get("image", ""),
-                    "related":  n.get("related", ""),
-                })
-        except:
-            pass
-
-    # Company news for major S&P movers (earnings, guidance leaks, etc.)
-    for sym in ("AAPL", "NVDA", "MSFT", "META", "AMZN", "TSLA", "JPM", "XOM"):
-        try:
-            fr = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
-            to = datetime.now().strftime("%Y-%m-%d")
-            items = fh(f"/company-news", {"symbol": sym, "from": fr, "to": to})
-            for n in items[:4]:
-                nid = n.get("id", 0)
-                if nid in seen:
-                    continue
-                seen.add(nid)
-                headline = n.get("headline", "")
-                summary  = (n.get("summary") or "")[:220]
-                tagged   = _tag_category(headline, summary, "earnings")
-                news.append({
-                    "id":       nid,
-                    "headline": headline,
-                    "summary":  summary,
-                    "source":   n.get("source", sym),
-                    "url":      n.get("url", ""),
-                    "datetime": n.get("datetime", 0),
-                    "category": tagged,
-                    "image":    n.get("image", ""),
-                    "related":  sym,
-                })
-            time.sleep(0.15)
-        except:
-            pass
+    news, seen = [], set()
+    for batch in list(market) + list(company):
+        for item in batch:
+            nid = item.get("id", 0)
+            if nid and nid in seen:
+                continue
+            seen.add(nid)
+            news.append(item)
 
     news.sort(key=lambda x: x["datetime"], reverse=True)
     return news[:80]
@@ -816,6 +822,7 @@ def cached(key: str, fn, *args):
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 
 app = FastAPI(title="Trading Dashboard")
+app.add_middleware(GZipMiddleware, minimum_size=512)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 class Manager:
@@ -841,12 +848,13 @@ async def startup():
 
 async def warm_caches():
     """Pre-populate slow caches so the first visitor doesn't wait."""
-    await asyncio.sleep(2)  # let the snapshot loop go first
     try:
-        await asyncio.to_thread(lambda: cached("rsi",        get_rsi_all))
-        await asyncio.to_thread(lambda: cached("technicals", get_technicals_all))
+        # Warm snapshot first — it's the most-loaded endpoint
+        await asyncio.to_thread(lambda: cached("snapshot",   build_snapshot))
         await asyncio.to_thread(lambda: cached("news",       get_news))
         await asyncio.to_thread(lambda: cached("fear_greed", get_fear_greed))
+        await asyncio.to_thread(lambda: cached("rsi",        get_rsi_all))
+        await asyncio.to_thread(lambda: cached("technicals", get_technicals_all))
         # Kick off the slow predmarket scan in the background
         asyncio.create_task(_predmarket_refresh())
     except Exception as e:
