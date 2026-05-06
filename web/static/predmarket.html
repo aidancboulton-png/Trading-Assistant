@@ -6,17 +6,18 @@
 <title>Prediction Market Scanner</title>
 <style>
   :root {
-    --bg: #0a0e1a;
-    --surface: #111827;
-    --surface2: #1a2235;
-    --border: #1e293b;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --accent: #3b82f6;
-    --green: #10b981;
-    --red: #ef4444;
-    --orange: #f59e0b;
-    --yellow: #eab308;
+    /* Conviction Capital — black · brown · gold · grey */
+    --bg: #0e0c0a;
+    --surface: #15110d;
+    --surface2: #1c1814;
+    --border: #2e2820;
+    --text: #e8e0d0;
+    --muted: #8a8275;
+    --accent: #c9a55c;
+    --green: #6b9b6b;
+    --red: #b87055;
+    --orange: #c9a55c;
+    --yellow: #e0c084;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; min-height: 100vh; }
@@ -326,13 +327,13 @@ let activeCategory = 'all';
 let minEdge = 2;
 
 const CAT_COLORS = {
-  economics:    '#3b82f6',
-  weather:      '#06b6d4',
-  sports:       '#f59e0b',
-  finance:      '#10b981',
-  geopolitics:  '#ef4444',
-  science_tech: '#8b5cf6',
-  other:        '#6b7280',
+  economics:    '#c9a55c',  /* gold */
+  weather:      '#8a8275',  /* warm grey */
+  sports:       '#e0c084',  /* light gold */
+  finance:      '#6b9b6b',  /* muted green */
+  geopolitics:  '#b87055',  /* brown-red */
+  science_tech: '#8a6f3a',  /* deep gold */
+  other:        '#5c4a3a',  /* brown */
 };
 
 function edgeClass(pct) {
@@ -354,7 +355,7 @@ function renderCard(p) {
   const pm = p.polymarket;
   const ec = edgeClass(p.edge_pct);
   const kHigher = k.yes_prob > pm.yes_prob;
-  const color = CAT_COLORS[p.category] || '#6b7280';
+  const color = CAT_COLORS[p.category] || '#5c4a3a';
 
   return `
   <div class="pair-card edge-${ec}">
