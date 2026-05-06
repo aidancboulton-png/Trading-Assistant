@@ -2,269 +2,366 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aidan's Market Intel</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="style.css?v=4">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+  <title>Conviction Capital — Real-time Market Intel + Trader Community</title>
+  <meta name="description" content="Live market intelligence dashboard, prediction-market arbitrage scanner, and a private community of serious traders. Built by Aidan Boulton.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0a0e14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Conviction Capital">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Conviction Capital">
+  <meta property="og:description" content="Real-time market intel + a private community of serious traders.">
+  <meta property="og:type" content="website">
+
+  <style>
+    :root{
+      --bg:#0a0e14; --bg2:#11151c; --card:#161b25; --border:#222936;
+      --text:#e8edf5; --muted:#8a96a8; --blue:#3b82f6; --green:#10b981;
+      --red:#ef4444; --gold:#f59e0b; --purple:#8b5cf6;
+    }
+    *{box-sizing:border-box; margin:0; padding:0}
+    html,body{background:var(--bg); color:var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                   "Inter", system-ui, sans-serif;
+      line-height:1.5; -webkit-font-smoothing: antialiased; overflow-x:hidden;}
+    a{color:inherit; text-decoration:none}
+
+    /* ── NAV ── */
+    .nav{position:sticky; top:0; z-index:50;
+      background:rgba(10,14,20,.85); backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border); padding:14px 24px;
+      display:flex; align-items:center; justify-content:space-between;}
+    .logo{font-weight:800; font-size:18px; letter-spacing:-.02em;
+      background:linear-gradient(90deg,#3b82f6,#10b981); -webkit-background-clip:text; color:transparent;}
+    .nav-cta{background:var(--blue); color:#fff; padding:8px 16px; border-radius:8px;
+      font-size:14px; font-weight:600; transition:transform .15s, box-shadow .15s;}
+    .nav-cta:hover{transform:translateY(-1px); box-shadow:0 4px 14px rgba(59,130,246,.4);}
+
+    /* ── HERO ── */
+    .hero{padding:80px 24px 60px; max-width:1100px; margin:0 auto; text-align:center;
+      background:radial-gradient(ellipse at top, rgba(59,130,246,.08), transparent 60%);}
+    .hero-tag{display:inline-block; background:rgba(59,130,246,.12); color:var(--blue);
+      border:1px solid rgba(59,130,246,.3); padding:6px 14px; border-radius:999px;
+      font-size:13px; font-weight:600; margin-bottom:24px;}
+    .hero h1{font-size:54px; line-height:1.1; letter-spacing:-.03em; font-weight:800;
+      margin-bottom:20px;}
+    .hero h1 .grad{background:linear-gradient(90deg,#3b82f6 0%,#10b981 100%);
+      -webkit-background-clip:text; color:transparent;}
+    .hero-sub{font-size:19px; color:var(--muted); max-width:680px; margin:0 auto 36px;}
+    .hero-cta{display:flex; gap:14px; justify-content:center; flex-wrap:wrap;}
+    .btn{display:inline-block; padding:14px 28px; border-radius:10px; font-weight:600;
+      font-size:15px; transition:transform .15s, box-shadow .15s, background .15s;
+      cursor:pointer; border:none;}
+    .btn-primary{background:var(--blue); color:#fff;}
+    .btn-primary:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(59,130,246,.4);}
+    .btn-secondary{background:transparent; color:var(--text); border:1px solid var(--border);}
+    .btn-secondary:hover{background:var(--card); border-color:var(--blue);}
+
+    /* ── SECTIONS ── */
+    section{padding:80px 24px;}
+    .container{max-width:1100px; margin:0 auto;}
+    .eyebrow{color:var(--blue); font-size:13px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.1em; margin-bottom:12px;}
+    .section-title{font-size:36px; line-height:1.15; letter-spacing:-.02em;
+      font-weight:800; margin-bottom:16px;}
+    .section-sub{color:var(--muted); font-size:17px; max-width:640px;
+      margin-bottom:48px;}
+
+    /* ── FEATURES GRID ── */
+    .features{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr));
+      gap:20px;}
+    .feature{background:var(--card); border:1px solid var(--border); border-radius:12px;
+      padding:28px; transition:transform .2s, border-color .2s;}
+    .feature:hover{transform:translateY(-3px); border-color:rgba(59,130,246,.4);}
+    .feature-icon{font-size:32px; margin-bottom:14px;}
+    .feature h3{font-size:18px; font-weight:700; margin-bottom:8px;}
+    .feature p{color:var(--muted); font-size:15px;}
+
+    /* ── COMMUNITY ── */
+    .community{background:var(--bg2); border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);}
+    .community-grid{display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center;}
+    .community-list{list-style:none; display:flex; flex-direction:column; gap:14px;}
+    .community-list li{display:flex; align-items:flex-start; gap:12px; font-size:16px;}
+    .community-list li::before{content:"✓"; color:var(--green); font-weight:700; font-size:18px; flex-shrink:0;}
+
+    /* ── PRICING ── */
+    .pricing-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:20px;}
+    .tier{background:var(--card); border:1px solid var(--border); border-radius:14px;
+      padding:32px; display:flex; flex-direction:column; position:relative;}
+    .tier.featured{border-color:var(--blue); transform:scale(1.03);
+      background:linear-gradient(180deg, rgba(59,130,246,.08) 0%, var(--card) 50%);}
+    .tier.featured::before{content:"Most Popular"; position:absolute;
+      top:-12px; left:50%; transform:translateX(-50%);
+      background:var(--blue); color:#fff; padding:5px 14px; border-radius:999px;
+      font-size:12px; font-weight:700;}
+    .tier h3{font-size:22px; margin-bottom:6px; font-weight:700;}
+    .tier-price{font-size:42px; font-weight:800; letter-spacing:-.02em;
+      margin:14px 0 4px;}
+    .tier-price small{font-size:16px; color:var(--muted); font-weight:500;}
+    .tier-tagline{color:var(--muted); margin-bottom:22px; font-size:14px;}
+    .tier ul{list-style:none; flex-grow:1; margin-bottom:24px;}
+    .tier ul li{padding:8px 0; font-size:14.5px; display:flex; gap:8px; align-items:flex-start;}
+    .tier ul li::before{content:"→"; color:var(--blue); font-weight:700; flex-shrink:0;}
+    .tier .btn{width:100%; text-align:center; margin-top:auto;}
+    .tier-note{font-size:12px; color:var(--gold); margin-top:10px; text-align:center; font-weight:500;}
+
+    /* ── CONTACT ── */
+    .contact-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:16px;}
+    .contact-card{background:var(--card); border:1px solid var(--border);
+      border-radius:12px; padding:24px; text-align:center;
+      transition:transform .15s, border-color .15s;}
+    .contact-card:hover{transform:translateY(-2px); border-color:var(--blue);}
+    .contact-card .icon{font-size:32px; margin-bottom:10px;}
+    .contact-card .label{color:var(--muted); font-size:13px; margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em;}
+    .contact-card .value{font-weight:600; font-size:15px; word-break:break-all;}
+
+    /* ── FOOTER ── */
+    footer{padding:40px 24px; text-align:center; color:var(--muted); font-size:13px;
+      border-top:1px solid var(--border);}
+    footer a{color:var(--blue); margin:0 8px;}
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px){
+      .nav{padding:12px 16px;}
+      .logo{font-size:15px;}
+      .hero{padding:48px 16px 36px;}
+      .hero h1{font-size:36px;}
+      .hero-sub{font-size:16px;}
+      section{padding:48px 16px;}
+      .section-title{font-size:26px;}
+      .section-sub{font-size:15px;}
+      .community-grid{grid-template-columns:1fr; gap:24px;}
+      .pricing-grid{grid-template-columns:1fr; gap:14px;}
+      .tier.featured{transform:none;}
+      .tier{padding:24px;}
+    }
+  </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav id="nav">
-  <div class="nav-logo">⚡ AIDAN'S MARKET INTEL</div>
-  <div class="nav-links">
-    <a href="#hero">Overview</a>
-    <a href="#intelligence">Intelligence</a>
-    <a href="#prices">Prices</a>
-    <a href="#technicals">Technicals</a>
-    <a href="#sentiment">Sentiment</a>
-    <a href="#news">News</a>
-    <a href="#alerts">Alerts</a>
-    <a href="/predmarket.html" style="color:#3b82f6;font-weight:600">⚡ Pred Markets</a>
-  </div>
-  <div class="nav-right">
-    <span id="clock">--:--:-- ET</span>
-    <div id="ws-status"><div id="ws-dot"></div><span id="ws-status-text">CONNECTING</span></div>
-    <button id="notif-btn">🔔 Alerts</button>
-  </div>
+<!-- ── NAV ── -->
+<nav class="nav">
+  <a href="/" class="logo">⚡ CONVICTION CAPITAL</a>
+  <a href="/dashboard.html" class="nav-cta">Live Dashboard →</a>
 </nav>
 
-<!-- TICKER TAPE -->
-<div id="ticker-bar"><div id="ticker-inner">Loading…</div></div>
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-tag">⚡ Real-time market intel + private trader community</div>
+  <h1>Trade with <span class="grad">conviction</span>,<br>not guesswork.</h1>
+  <p class="hero-sub">
+    Live market dashboard, prediction-market arbitrage scanner, and a private community of serious traders —
+    memecoin, options, futures, equities, and macro. All in one place.
+  </p>
+  <div class="hero-cta">
+    <a href="#pricing" class="btn btn-primary">See Pricing</a>
+    <a href="/dashboard.html" class="btn btn-secondary">View Live Dashboard</a>
+  </div>
+</section>
 
-<main>
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="container">
+    <div class="eyebrow">What you get</div>
+    <h2 class="section-title">The dashboard that does what your terminal won't.</h2>
+    <p class="section-sub">Everything I check before placing a trade — built into one screen.
+      Live, free of fluff, designed for people who actually push buttons.</p>
 
-  <!-- ── HERO ── -->
-  <section id="hero">
-    <div class="hero-grid">
-
-      <div class="hero-mood-card" id="hero-mood-card">
-        <div class="mood-label">Market Status</div>
-        <div class="mood-badge" id="mood-badge">LOADING…</div>
-        <div class="mood-desc" id="mood-desc">Gathering market data…</div>
-        <div class="mood-ts" id="mood-ts"></div>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">📊</div>
+        <h3>Live prices, all asset classes</h3>
+        <p>Indices, commodities, crypto, top single-name stocks — refreshed every 30s.
+        Click any card to jump to TradingView.</p>
       </div>
-
-      <div class="hero-summary-card">
-        <div class="summary-label">Today in Plain English</div>
-        <div class="summary-text" id="summary-text">Connecting to live data feeds…</div>
+      <div class="feature">
+        <div class="feature-icon">⚡</div>
+        <h3>Prediction-market arbitrage scanner</h3>
+        <p>Cross-checks Kalshi vs Polymarket on hundreds of contracts daily.
+        Surfaces locked-profit hedge opportunities others miss.</p>
       </div>
-
-      <div class="hero-stats-card">
-        <div class="stats-label">Snapshot</div>
-        <div class="stats-grid">
-          <div class="stat-box">
-            <div class="stat-val up" id="stat-up">—</div>
-            <div class="stat-key">Assets Up</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val dn" id="stat-down">—</div>
-            <div class="stat-key">Assets Down</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="stat-vix">—</div>
-            <div class="stat-key">VIX</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="stat-fg">—</div>
-            <div class="stat-key">Fear &amp; Greed</div>
-          </div>
-        </div>
+      <div class="feature">
+        <div class="feature-icon">📈</div>
+        <h3>Technicals, traffic-light style</h3>
+        <p>RSI, 50/200-day MAs, Golden Cross, MACD, Bollinger.
+        Quick green/red signals. No PhD required.</p>
       </div>
-
+      <div class="feature">
+        <div class="feature-icon">🧠</div>
+        <h3>Plain-English market read</h3>
+        <p>Daily macro summary in human language. Why is gold up? What does VIX
+        mean today? You'll know.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔔</div>
+        <h3>Push alerts on big moves</h3>
+        <p>Browser + phone notifications when any tracked asset moves past its
+        threshold. Daily and intraday flash alerts.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🕵️</div>
+        <h3>Insider trades, earnings, news</h3>
+        <p>Latest C-suite buys/sells, earnings calendar with surprise %,
+        and curated news feed by category.</p>
+      </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ── INTELLIGENCE ── -->
-  <section id="intelligence">
-    <div class="section-header">
+<!-- ── COMMUNITY ── -->
+<section class="community">
+  <div class="container">
+    <div class="community-grid">
       <div>
-        <h2>Market Intelligence</h2>
-        <p class="section-sub">Live signals from price, macro, geopolitical &amp; sentiment data</p>
+        <div class="eyebrow">The community</div>
+        <h2 class="section-title">More than a chart. A room full of traders who actually trade.</h2>
+        <p style="color:var(--muted); font-size:16px; margin-bottom:24px;">
+          The dashboard is the tip of the iceberg. The real edge is the people.
+          We run live calls, trade together, talk macro, options flow, memecoin rotations,
+          futures, and the world that moves them.
+        </p>
       </div>
-      <div class="view-toggle">
-        <button class="vtog active" data-mode="simple">Plain English</button>
-        <button class="vtog" data-mode="expert">Pro / Expert</button>
-      </div>
-    </div>
-    <div id="signal-grid"></div>
-    <div class="movers-header">Top Movers Right Now</div>
-    <div id="movers-row"></div>
-  </section>
-
-  <!-- ── PRICES ── -->
-  <section id="prices">
-    <div class="section-header">
       <div>
-        <h2>Live Prices</h2>
-        <p class="section-sub">Real-time quotes with day range and momentum</p>
-      </div>
-      <div id="asset-tabs" class="tab-row">
-        <button class="atab active" data-type="all">All</button>
-        <button class="atab" data-type="index">Indices</button>
-        <button class="atab" data-type="stock">Stocks</button>
-        <button class="atab" data-type="crypto">Crypto</button>
-        <button class="atab" data-type="commodity">Commodities</button>
-      </div>
-    </div>
-    <div id="price-grid"></div>
-  </section>
-
-  <!-- ── TECHNICALS ── -->
-  <section id="technicals">
-    <div class="section-header">
-      <div>
-        <h2>Technical Analysis</h2>
-        <p class="section-sub">RSI, Moving Averages, MACD &amp; Bollinger Bands — traffic-light signals</p>
+        <ul class="community-list">
+          <li>Memecoin, options, futures, equity, and macro traders all in one Discord</li>
+          <li>Live voice rooms during market hours — trade together, react in real time</li>
+          <li>Direct DM access to me (Aidan) at higher tiers</li>
+          <li>Portfolio reviews and trade idea reviews for inner circle</li>
+          <li>Macro / world-economy discussion threads</li>
+          <li>Off-platform meetups: trips, dinners, group calls with guest pros</li>
+        </ul>
       </div>
     </div>
-    <div class="tech-table-wrap">
-      <table id="tech-table">
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Type</th>
-            <th>RSI</th>
-            <th>vs 50-Day MA</th>
-            <th>vs 200-Day MA</th>
-            <th>Golden Cross</th>
-            <th>MACD</th>
-            <th>Bollinger</th>
-            <th>Overall Signal</th>
-          </tr>
-        </thead>
-        <tbody id="tech-tbody">
-          <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Loading technicals…</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="tech-legend">
-      <span class="leg bull">🟢 Bullish</span>
-      <span class="leg bear">🔴 Bearish</span>
-      <span class="leg neut">🟡 Neutral</span>
-      <span class="leg na">— Not available (crypto/insufficient data)</span>
-    </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ── SENTIMENT ── -->
-  <section id="sentiment">
-    <div class="section-header">
-      <div>
-        <h2>Sentiment Dashboard</h2>
-        <p class="section-sub">Fear &amp; Greed history · Social buzz per stock · Analyst ratings · Market breadth</p>
-      </div>
-    </div>
-    <div class="sentiment-grid">
+<!-- ── PRICING ── -->
+<section id="pricing">
+  <div class="container">
+    <div class="eyebrow">Pricing</div>
+    <h2 class="section-title">Pick your level. Cancel anytime.</h2>
+    <p class="section-sub">Monthly subscription. Inner Circle is application-only.</p>
 
-      <!-- Fear & Greed expanded -->
-      <div class="sent-card fg-big-card" id="fg-card">
-        <div class="sent-card-title">Fear &amp; Greed Index</div>
-        <canvas id="fg-canvas" width="200" height="110"></canvas>
-        <div id="fg-value" class="fg-val">—</div>
-        <div id="fg-label" class="fg-lbl">Loading…</div>
-        <div id="fg-change" class="fg-change"></div>
-        <div id="fg-advice" class="fg-advice"></div>
-        <div class="fg-history-label">7-Day History</div>
-        <div id="fg-history"></div>
-        <div class="fg-zones">
-          <span style="color:#ff3d5a">■ 0–25 Extreme Fear</span>
-          <span style="color:#ff7043">■ 25–45 Fear</span>
-          <span style="color:#ffc107">■ 45–55 Neutral</span>
-          <span style="color:#aed581">■ 55–75 Greed</span>
-          <span style="color:#00e676">■ 75–100 Extreme Greed</span>
-        </div>
+    <div class="pricing-grid">
+
+      <div class="tier">
+        <h3>Member</h3>
+        <div class="tier-price">$19<small>/mo</small></div>
+        <p class="tier-tagline">The dashboard + the chat.</p>
+        <ul>
+          <li>Full access to Conviction Capital dashboard</li>
+          <li>Discord server access — main chat channels</li>
+          <li>Push alerts for big moves</li>
+          <li>Daily plain-English market read</li>
+          <li>Prediction-market arb scanner</li>
+        </ul>
+        <a href="#contact" class="btn btn-secondary">Get Started</a>
       </div>
 
-      <!-- Market Breadth -->
-      <div class="sent-card" id="breadth-card">
-        <div class="sent-card-title">Market Breadth</div>
-        <div id="breadth-bar-wrap">
-          <div id="breadth-bar-up"></div>
-          <div id="breadth-bar-dn"></div>
-        </div>
-        <div id="breadth-labels"></div>
-        <div class="breadth-note" id="breadth-note">How many of your tracked assets are up vs down</div>
-        <div id="breadth-breakdown"></div>
+      <div class="tier featured">
+        <h3>Insider</h3>
+        <div class="tier-price">$39<small>/mo</small></div>
+        <p class="tier-tagline">Trade alongside us, in real time.</p>
+        <ul>
+          <li>Everything in Member</li>
+          <li>Live voice rooms during market hours</li>
+          <li>Real-time trade calls and idea posts</li>
+          <li>Direct DM access to Aidan</li>
+          <li>Macro & options-flow discussion channels</li>
+          <li>Early access to new dashboard features</li>
+        </ul>
+        <a href="#contact" class="btn btn-primary">Get Started</a>
       </div>
 
-      <!-- SEC Insider Trades -->
-      <div class="sent-card social-big-card" id="insider-card">
-        <div class="sent-card-title">🏛 SEC Insider Transactions (Form 4)</div>
-        <div class="sent-card-sub">Executives &amp; directors buying/selling their own stock — the most reliable signal on Wall Street</div>
-        <div id="insider-list"></div>
-      </div>
-
-      <!-- Analyst Ratings -->
-      <div class="sent-card" id="analyst-card">
-        <div class="sent-card-title">📊 Wall Street Analyst Ratings</div>
-        <div id="analyst-list"></div>
-        <div class="social-note" style="margin-top:8px">Buy/Hold/Sell consensus from all covering analysts</div>
-      </div>
-
-      <!-- Upcoming Earnings + Priced In -->
-      <div class="sent-card earnings-big-card" id="earnings-card">
-        <div class="sent-card-title">📅 Earnings — Already Priced In?</div>
-        <div class="sent-card-sub">Price momentum + RSI heading into each report tells you whether the market already expects good or bad news</div>
-        <div class="view-toggle" style="margin:8px 0">
-          <button class="vtog active" data-emode="simple">Plain English</button>
-          <button class="vtog" data-emode="expert">Pro</button>
-        </div>
-        <div id="earnings-list"></div>
-      </div>
-
-      <!-- Analyst Upgrades/Downgrades -->
-      <div class="sent-card" id="upgrades-card">
-        <div class="sent-card-title">⬆️ Upgrades &amp; Downgrades (14 Days)</div>
-        <div class="sent-card-sub">When a big bank changes their rating, institutions follow</div>
-        <div id="upgrades-list"></div>
+      <div class="tier">
+        <h3>Inner Circle</h3>
+        <div class="tier-price">$79<small>/mo</small></div>
+        <p class="tier-tagline">Small group. Higher signal.</p>
+        <ul>
+          <li>Everything in Insider</li>
+          <li>Small-group Zoom calls (capped membership)</li>
+          <li>Personal portfolio reviews</li>
+          <li>Trade idea reviews on demand</li>
+          <li>Off-platform invites: trips, dinners, guest sessions</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="#contact" class="btn btn-secondary">Apply</a>
+        <div class="tier-note">⚡ Application required · $3-7K+ trading capital minimum</div>
       </div>
 
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ── NEWS ── -->
-  <section id="news">
-    <div class="section-header">
-      <div>
-        <h2>News Intelligence</h2>
-        <p class="section-sub">Auto-categorised: War &amp; Geopolitical · Macro/Fed · Earnings · Crypto · Forex · M&amp;A</p>
-      </div>
-      <div id="news-tabs" class="tab-row">
-        <button class="ntab active" data-cat="all">All</button>
-        <button class="ntab" data-cat="geopolitical">🌍 War &amp; Geo</button>
-        <button class="ntab" data-cat="macro">📊 Macro</button>
-        <button class="ntab" data-cat="earnings">💰 Earnings</button>
-        <button class="ntab" data-cat="crypto">₿ Crypto</button>
-        <button class="ntab" data-cat="forex">💱 Forex</button>
-        <button class="ntab" data-cat="merger">🤝 M&amp;A</button>
-      </div>
+<!-- ── CONTACT ── -->
+<section id="contact" style="background:var(--bg2); border-top:1px solid var(--border);">
+  <div class="container">
+    <div class="eyebrow">Get in touch</div>
+    <h2 class="section-title">Reach out to lock in your tier.</h2>
+    <p class="section-sub">Pick whichever channel works for you. I'll get you onboarded
+      and into the Discord within 24h.</p>
+
+    <div class="contact-grid">
+      <a href="mailto:aidancboulton@gmail.com?subject=Conviction%20Capital%20-%20Membership%20Inquiry" class="contact-card">
+        <div class="icon">📧</div>
+        <div class="label">Email</div>
+        <div class="value">aidancboulton@gmail.com</div>
+      </a>
+      <a href="https://wa.me/18052493269?text=Hey%20Aidan%2C%20I%27m%20interested%20in%20joining%20Conviction%20Capital" target="_blank" rel="noopener" class="contact-card">
+        <div class="icon">💬</div>
+        <div class="label">WhatsApp</div>
+        <div class="value">(805) 249-3269</div>
+      </a>
+      <a href="tel:+18052493269" class="contact-card">
+        <div class="icon">📱</div>
+        <div class="label">Text / Call</div>
+        <div class="value">(805) 249-3269</div>
+      </a>
+      <a href="#" class="contact-card" onclick="alert('Telegram: search \'Aidan Boulton\' or message (805) 249-3269')">
+        <div class="icon">✈️</div>
+        <div class="label">Telegram</div>
+        <div class="value">Aidan Boulton</div>
+      </a>
     </div>
-    <div id="news-grid"></div>
-  </section>
 
-  <!-- ── ALERTS ── -->
-  <section id="alerts">
-    <div class="section-header">
-      <div>
-        <h2>Price Alerts</h2>
-        <p class="section-sub">Fires when an asset moves past its threshold — with plain-English context on what it means</p>
-      </div>
-      <div id="alert-thresholds" class="thresh-info">
-        <span>Thresholds: VIX 5% · BTC/SOL 2–3% · Stocks 1–2% · Indices 0.4–0.6%</span>
-      </div>
+    <div style="margin-top:48px; padding:28px; background:var(--card);
+                border:1px solid var(--border); border-radius:14px;">
+      <h3 style="font-size:18px; margin-bottom:14px;">Inner Circle Application</h3>
+      <p style="color:var(--muted); font-size:14px; margin-bottom:18px;">
+        Inner Circle is application-only with a $3-7K minimum trading capital requirement.
+        Reach out via any channel above with the following info and I'll review:
+      </p>
+      <ul style="color:var(--muted); font-size:14px; padding-left:20px; line-height:1.9;">
+        <li>Your name and trading background</li>
+        <li>Approximate trading capital range</li>
+        <li>Markets you trade (options, futures, crypto, memecoin, equities)</li>
+        <li>What you're hoping to get out of the group</li>
+      </ul>
     </div>
-    <div id="alerts-grid"></div>
-  </section>
-
-</main>
+  </div>
+</section>
 
 <footer>
-  <span id="last-updated">Connecting…</span>
-  <span>Aidan's Market Intel · Data: Finnhub · Fear &amp; Greed: Alternative.me</span>
+  <div class="container">
+    <p>© 2026 Conviction Capital · Built by Aidan Boulton</p>
+    <p style="margin-top:10px;">
+      <a href="/dashboard.html">Dashboard</a> ·
+      <a href="/predmarket.html">Prediction Markets</a> ·
+      <a href="#contact">Contact</a>
+    </p>
+    <p style="margin-top:14px; font-size:11px; color:var(--muted); max-width:600px; margin-left:auto; margin-right:auto;">
+      Educational content only. Not financial advice. Trading involves risk including loss of principal.
+      Past performance does not guarantee future results.
+    </p>
+  </div>
 </footer>
 
-<div id="toast-container"></div>
-
-<script src="app.js?v=3"></script>
 </body>
 </html>
