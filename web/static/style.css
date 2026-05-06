@@ -284,7 +284,66 @@ section:last-child { border-bottom: none; }
 .sig-pill.na   { background: transparent; color: var(--muted); }
 
 .tech-legend { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
-.leg { font-size: 11px; color: var(--muted); }
+.leg { font-size: 11px; color: var(--muted); display:inline-flex; align-items:center; gap:6px; }
+.dot { display:inline-block; width:9px; height:9px; border-radius:50%; }
+.dot-bull { background:var(--green, #6b9b6b); }
+.dot-bear { background:var(--red, #b87055); }
+.dot-neut { background:var(--gold, #c9a55c); }
+
+.nc-tone { display:inline-block; width:7px; height:7px; border-radius:50%;
+  margin-right:7px; vertical-align:1px; background:var(--muted, #8a8275); }
+.nc-tone.pos { background:var(--green, #6b9b6b); }
+.nc-tone.neg { background:var(--red, #b87055); }
+
+/* Signal pills (replaces emoji icons) */
+.sig-kind {
+  display:inline-block; font-size:10px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; padding:3px 8px; border-radius:4px;
+  background:rgba(201,165,92,.12); color:var(--gold, #c9a55c);
+  border:1px solid rgba(201,165,92,.25); margin-bottom:8px;
+}
+.sig-kind.danger  { background:rgba(184,112,85,.15); color:var(--red, #b87055); border-color:rgba(184,112,85,.3); }
+.sig-kind.warning { background:rgba(201,165,92,.15); color:var(--gold, #c9a55c); border-color:rgba(201,165,92,.3); }
+.sig-kind.bullish { background:rgba(107,155,107,.15); color:var(--green, #6b9b6b); border-color:rgba(107,155,107,.3); }
+.sig-kind.opportunity { background:rgba(107,155,107,.12); color:var(--green, #6b9b6b); border-color:rgba(107,155,107,.25); }
+
+/* Correlations card */
+.corr-row {
+  display:grid; grid-template-columns:auto 1fr auto; gap:10px;
+  padding:10px 0; border-bottom:1px solid var(--border, #2e2820);
+  align-items:center;
+}
+.corr-row:last-child { border-bottom:none; }
+.corr-pair { font-weight:700; font-size:13px; color:var(--text, #e8e0d0); }
+.corr-desc { color:var(--muted, #8a8275); font-size:12px; line-height:1.45; }
+.corr-state { font-size:10px; font-weight:700; padding:3px 8px; border-radius:4px; letter-spacing:.05em; text-transform:uppercase; }
+.corr-state.normal { background:rgba(107,155,107,.15); color:var(--green, #6b9b6b); }
+.corr-state.broken { background:rgba(184,112,85,.18); color:var(--red, #b87055); }
+.corr-state.weak { background:rgba(201,165,92,.15); color:var(--gold, #c9a55c); }
+
+/* Beefier analyst card */
+.analyst-row {
+  padding:12px 0; border-bottom:1px solid var(--border, #2e2820);
+}
+.analyst-row:last-child { border-bottom:none; }
+.analyst-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+.analyst-sym { font-weight:700; font-size:15px; }
+.analyst-consensus { font-size:10px; font-weight:700; padding:3px 8px; border-radius:4px; letter-spacing:.05em; text-transform:uppercase; }
+.analyst-consensus.buy  { background:rgba(107,155,107,.18); color:var(--green, #6b9b6b); }
+.analyst-consensus.hold { background:rgba(201,165,92,.18); color:var(--gold, #c9a55c); }
+.analyst-consensus.sell { background:rgba(184,112,85,.18); color:var(--red, #b87055); }
+.analyst-bar { display:flex; height:6px; border-radius:3px; overflow:hidden; background:var(--card2, #251f17); margin-bottom:6px; }
+.analyst-seg { height:100%; }
+.analyst-seg.sb { background:#6b9b6b; }
+.analyst-seg.b  { background:#8fb38f; }
+.analyst-seg.h  { background:#c9a55c; }
+.analyst-seg.s  { background:#cf8d75; }
+.analyst-seg.ss { background:#b87055; }
+.analyst-counts { display:flex; gap:10px; font-size:11px; color:var(--muted, #8a8275); }
+.analyst-counts span strong { color:var(--text, #e8e0d0); }
+.analyst-trend { font-size:11px; color:var(--muted, #8a8275); margin-top:4px; }
+.analyst-trend.up { color:var(--green, #6b9b6b); }
+.analyst-trend.down { color:var(--red, #b87055); }
 
 /* ── SENTIMENT GRID ── */
 .sentiment-grid {

@@ -405,8 +405,8 @@ function renderGrid() {
   const grid = document.getElementById('grid');
   if (filtered.length === 0) {
     grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
-      <div class="empty-icon">🔍</div>
-      No pairs match your filters. Try lowering the minimum edge or switching category.
+      <div style="font-weight:600;margin-bottom:6px">No pairs match your filters.</div>
+      <div style="color:var(--muted);font-size:13px">Try lowering the minimum edge or switching category.</div>
     </div>`;
     return;
   }
@@ -426,6 +426,8 @@ function updateEdgeFilter(val) {
   renderGrid();
 }
 
+let _retryTimer = null;
+
 async function loadData(force = false) {
   const btn = document.getElementById('refresh-btn');
   btn.disabled = true;
@@ -440,6 +442,26 @@ async function loadData(force = false) {
     const data = await res.json();
 
     if (data.error) throw new Error(data.error);
+
+    // Backend reports first scan still running — show progress UI + auto-retry
+    if (data.scanning === true && (!data.pairs || data.pairs.length === 0)) {
+      document.getElementById('s-kalshi').textContent  = '…';
+      document.getElementById('s-poly').textContent    = '…';
+      document.getElementById('s-matches').textContent = '…';
+      document.getElementById('s-large').textContent   = '…';
+      document.getElementById('grid').innerHTML =
+        `<div class="empty" style="grid-column:1/-1">
+          <div style="margin-bottom:14px;font-size:18px;font-weight:600">Scanning prediction markets…</div>
+          <div style="color:var(--muted);font-size:14px;margin-bottom:6px">
+            Pulling thousands of contracts from Kalshi + Polymarket and matching equivalent questions.
+          </div>
+          <div style="color:var(--muted);font-size:13px">First scan takes ~30-60 seconds. Auto-retrying.</div>
+        </div>`;
+      document.getElementById('scan-status').textContent = 'First scan in progress…';
+      clearTimeout(_retryTimer);
+      _retryTimer = setTimeout(() => loadData(), 8000);
+      return;
+    }
 
     allPairs = data.pairs || [];
     const stats = data.stats || {};
@@ -459,15 +481,16 @@ async function loadData(force = false) {
 
   } catch (err) {
     const banner = document.getElementById('error-banner');
-    banner.textContent = `Scan error: ${err.message}. APIs may be rate-limiting — try again in 30s.`;
+    banner.textContent = `Scan error: ${err.message}. Retrying in 10s…`;
     banner.classList.add('show');
     document.getElementById('scan-status').textContent = 'Error — retry';
+    clearTimeout(_retryTimer);
+    _retryTimer = setTimeout(() => loadData(), 10000);
     if (allPairs.length === 0) {
       document.getElementById('grid').innerHTML =
         `<div class="empty" style="grid-column:1/-1">
-          <div class="empty-icon">⚠️</div>
-          Could not reach Kalshi or Polymarket APIs.<br>
-          They may be rate-limiting. Retrying in 30s…
+          <div style="margin-bottom:10px;font-weight:600">Could not reach the scanner.</div>
+          Auto-retrying every 10 seconds.
         </div>`;
     }
   } finally {

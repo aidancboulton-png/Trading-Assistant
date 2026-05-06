@@ -75,18 +75,24 @@ function renderHero(analysis) {
 }
 
 // ── intelligence signals ──────────────────────────────────────────────────────
+const SIG_KIND_LABEL = {
+  vol:'Volatility', sent:'Sentiment', fx:'Currency', energy:'Energy',
+  crypto:'Crypto', tech:'Tech / AI', banks:'Banks', geo:'Geopolitical',
+};
+
 function renderSignals(analysis) {
   if (!analysis || !analysis.signals) return;
 
   // Signals
-  $('signal-grid').innerHTML = (analysis.signals || []).map(sig => `
+  $('signal-grid').innerHTML = (analysis.signals || []).map(sig => {
+    const kindLabel = SIG_KIND_LABEL[sig.kind] || (sig.type || 'Signal').toUpperCase();
+    return `
     <div class="signal-card ${sig.type || 'info'}">
-      <div class="sig-header">
-        <span class="sig-icon">${sig.icon}</span>
-        <span class="sig-title">${sig.title}</span>
-      </div>
+      <span class="sig-kind ${sig.type || ''}">${kindLabel}</span>
+      <div class="sig-title">${sig.title}</div>
       <div class="sig-text">${S.viewMode === 'expert' ? sig.expert : sig.plain}</div>
-    </div>`).join('') || '<p style="color:var(--muted)">Loading intelligence signals…</p>';
+    </div>`;
+  }).join('') || '<p style="color:var(--muted)">Loading intelligence signals…</p>';
 
   // Top movers
   $('movers-row').innerHTML = (analysis.top_movers || []).map(m => {
@@ -405,21 +411,82 @@ function renderAnalyst(recs) {
     list.innerHTML = '<div style="color:var(--muted);font-size:11px">Loading analyst data…</div>';
     return;
   }
-  list.innerHTML = Object.entries(recs).slice(0, 8).map(([sym, r]) => {
+  list.innerHTML = Object.entries(recs).map(([sym, r]) => {
     const t = r.total || 1;
-    const buyPct  = Math.round(((r.strongBuy||0)+(r.buy||0))/t*100);
-    const holdPct = Math.round((r.hold||0)/t*100);
-    const sellPct = 100 - buyPct - holdPct;
+    const sb = r.strongBuy||0, b = r.buy||0, h = r.hold||0, s = r.sell||0, ss = r.strongSell||0;
+    const seg = (n) => `${(n/t)*100}%`;
+
+    let trendHtml = '';
+    if (r.trend !== null && r.trend !== undefined) {
+      const t3 = r.trend;
+      if (Math.abs(t3) < 0.05) {
+        trendHtml = `<div class="analyst-trend">Stable vs 3 months ago</div>`;
+      } else if (t3 > 0) {
+        trendHtml = `<div class="analyst-trend up">▲ Sentiment improved (+${t3}) vs 3 months ago</div>`;
+      } else {
+        trendHtml = `<div class="analyst-trend down">▼ Sentiment cooled (${t3}) vs 3 months ago</div>`;
+      }
+    }
+
+    let targetHtml = '';
+    if (r.target && r.target.median) {
+      const tg = r.target;
+      targetHtml = `<div class="analyst-trend">Median target: <strong style="color:var(--text)">$${tg.median}</strong>` +
+        (tg.high && tg.low ? ` <span style="color:var(--muted)">(range $${tg.low}–$${tg.high})</span>` : '') +
+        `</div>`;
+    }
+
     return `<div class="analyst-row">
-      <span class="analyst-sym">${sym}</span>
-      <div class="analyst-bar">
-        <div class="bar-buy"  style="width:${buyPct}%"></div>
-        <div class="bar-hold" style="width:${holdPct}%"></div>
-        <div class="bar-sell" style="width:${Math.max(sellPct,0)}%"></div>
+      <div class="analyst-top">
+        <span class="analyst-sym">${sym}</span>
+        <span class="analyst-consensus ${r.consensus}">${r.consensus?.toUpperCase()} (score ${r.score})</span>
       </div>
-      <span class="analyst-cons ${r.consensus}">${r.consensus?.toUpperCase()}</span>
+      <div class="analyst-bar" title="Strong Buy / Buy / Hold / Sell / Strong Sell">
+        <div class="analyst-seg sb" style="width:${seg(sb)}"></div>
+        <div class="analyst-seg b"  style="width:${seg(b)}"></div>
+        <div class="analyst-seg h"  style="width:${seg(h)}"></div>
+        <div class="analyst-seg s"  style="width:${seg(s)}"></div>
+        <div class="analyst-seg ss" style="width:${seg(ss)}"></div>
+      </div>
+      <div class="analyst-counts">
+        <span><strong>${sb}</strong> Strong Buy</span>
+        <span><strong>${b}</strong> Buy</span>
+        <span><strong>${h}</strong> Hold</span>
+        <span><strong>${s}</strong> Sell</span>
+        <span><strong>${ss}</strong> Strong Sell</span>
+        <span style="margin-left:auto;color:var(--muted)">${t} analysts</span>
+      </div>
+      ${targetHtml}
+      ${trendHtml}
     </div>`;
   }).join('');
+}
+
+// ── correlations ─────────────────────────────────────────────────────────────
+function renderCorrelations(corrs) {
+  const list = $('correlations-list');
+  if (!list) return;
+  if (!corrs || !corrs.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Loading correlations…</div>';
+    return;
+  }
+  list.innerHTML = corrs.map(c => {
+    return `<div class="corr-row">
+      <div>
+        <div class="corr-pair">${c.pair}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">
+          A: ${c.a_pct >= 0 ? '+' : ''}${c.a_pct}% · B: ${c.b_pct >= 0 ? '+' : ''}${c.b_pct}%
+        </div>
+      </div>
+      <div class="corr-desc">${c.why}</div>
+      <span class="corr-state ${c.state}">${c.label}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadCorrelations() {
+  try { const r = await api('/api/correlations'); renderCorrelations(r.data || []); }
+  catch {}
 }
 
 // ── news ─────────────────────────────────────────────────────────────────────
@@ -429,15 +496,14 @@ const BEAR_W = ['crash','fall','drop','bear','loss','miss','weak','recession','r
 function renderNews() {
   const filtered = S.newsFilter === 'all' ? S.news : S.news.filter(n => n.category === S.newsFilter);
   $('news-grid').innerHTML = filtered.slice(0, 40).map(n => {
-    const cls  = sent(n.headline + ' ' + n.summary);
-    const icon = cls === 'pos' ? '🟢' : cls === 'neg' ? '🔴' : '⚪';
+    const cls = sent(n.headline + ' ' + n.summary);
     return `<a class="news-card ${cls}" href="${n.url}" target="_blank" rel="noopener">
       <div class="nc-top">
         <span class="nc-source">${n.source||'News'}</span>
         <span class="nc-cat ${n.category}">${n.category}</span>
         <span class="nc-time">${relTime(n.datetime)}</span>
       </div>
-      <div class="nc-headline">${icon} ${n.headline}</div>
+      <div class="nc-headline"><span class="nc-tone ${cls}"></span>${n.headline}</div>
       ${n.summary ? `<div class="nc-summary">${n.summary}</div>` : ''}
     </a>`;
   }).join('') || '<div style="color:var(--muted);padding:20px">No news yet…</div>';
@@ -448,10 +514,13 @@ function renderAlerts(alerts) {
   const grid = $('alerts-grid');
   if (!alerts || !alerts.length) {
     grid.innerHTML = `<div class="no-alerts">
-      <div style="font-size:24px;margin-bottom:8px">🔔</div>
-      <div style="font-weight:600;color:var(--text);margin-bottom:4px">No alerts fired yet</div>
-      <div>Alerts appear here when an asset moves past its threshold. Enable browser notifications above to get OS popups too.</div>
-      <div style="margin-top:12px;font-size:10px;color:var(--muted)">
+      <div style="font-weight:700;color:var(--text);margin-bottom:6px;font-size:15px">Quiet markets — no events have triggered yet today</div>
+      <div style="color:var(--muted);font-size:13px;line-height:1.55">
+        This panel records the <em>moments</em> a tracked asset broke its threshold —
+        the kind of move worth your attention. The Live Prices section above tells you
+        the current state. This tells you when something <em>happened</em>.
+      </div>
+      <div style="margin-top:14px;font-size:10px;color:var(--muted)">
         Thresholds: VIX 5% · BTC 2% · ETH/SOL 2.5–3% · Stocks 1–2% · Indices 0.4–0.6% · Oil 0.8%
       </div>
     </div>`;
@@ -544,6 +613,7 @@ async function loadAll() {
     renderAlerts(S.alerts);
 
     // Deferred heavy calls
+    setTimeout(loadCorrelations, 1000);
     setTimeout(loadTechnicals, 2000);
     setTimeout(loadAnalystRecs, 4000);
     setTimeout(loadStructural, 6000);

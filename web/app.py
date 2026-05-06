@@ -200,31 +200,142 @@ def get_technicals_all() -> dict:
         time.sleep(0.3)
     return result
 
+def _score_recs(r: dict) -> float:
+    """Weighted score: -2..+2. +2 = unanimous strong buy, -2 = unanimous strong sell."""
+    sb, b, h, s, ss = (r.get("strongBuy",0), r.get("buy",0), r.get("hold",0),
+                       r.get("sell",0), r.get("strongSell",0))
+    total = sb + b + h + s + ss
+    if not total:
+        return 0.0
+    return round((2*sb + 1*b + 0*h - 1*s - 2*ss) / total, 2)
+
 def get_analyst_recs() -> dict:
+    """Per-stock analyst consensus + 3-month trend + price target if available."""
     result = {}
     stocks = [s for s, i in WATCHLIST.items() if i["type"] == "stock"]
-    for sym in stocks:
+
+    def _one(sym):
         try:
             d = fh("/stock/recommendation", {"symbol": sym})
-            if d:
-                latest = d[0]
-                total  = sum([latest.get("strongBuy",0), latest.get("buy",0),
-                               latest.get("hold",0), latest.get("sell",0), latest.get("strongSell",0)])
-                buys   = latest.get("strongBuy",0) + latest.get("buy",0)
-                sells  = latest.get("sell",0) + latest.get("strongSell",0)
-                consensus = "buy" if buys > sells and buys > total*0.4 else \
-                            "sell" if sells > buys and sells > total*0.4 else "hold"
-                result[sym] = {
-                    "strongBuy": latest.get("strongBuy",0), "buy": latest.get("buy",0),
-                    "hold": latest.get("hold",0), "sell": latest.get("sell",0),
-                    "strongSell": latest.get("strongSell",0),
-                    "total": total, "consensus": consensus,
-                    "period": latest.get("period",""),
+            if not d:
+                return sym, None
+            latest = d[0]
+            prior  = d[3] if len(d) > 3 else (d[-1] if len(d) > 1 else None)
+
+            sb = latest.get("strongBuy",0); b = latest.get("buy",0)
+            h  = latest.get("hold",0);      s = latest.get("sell",0)
+            ss = latest.get("strongSell",0)
+            total = sb + b + h + s + ss
+            buys, sells = sb + b, s + ss
+            consensus = "buy" if buys > sells and buys > total*0.4 else \
+                        "sell" if sells > buys and sells > total*0.4 else "hold"
+            score = _score_recs(latest)
+            prior_score = _score_recs(prior) if prior else None
+            trend = round(score - prior_score, 2) if prior_score is not None else None
+
+            # Price target (best-effort — Finnhub free tier may return blanks)
+            target = None
+            try:
+                tt = fh("/stock/price-target", {"symbol": sym})
+                target = {
+                    "median": tt.get("targetMedian"),
+                    "high":   tt.get("targetHigh"),
+                    "low":    tt.get("targetLow"),
+                    "n":      tt.get("numberOfAnalysts"),
                 }
-            time.sleep(0.3)
+                if not target.get("median"):
+                    target = None
+            except:
+                target = None
+
+            return sym, {
+                "strongBuy": sb, "buy": b, "hold": h, "sell": s, "strongSell": ss,
+                "total": total, "consensus": consensus, "score": score,
+                "prior_score": prior_score, "trend": trend,
+                "period": latest.get("period",""),
+                "target": target,
+            }
         except:
-            pass
+            return sym, None
+
+    # Parallel fetch — Finnhub allows ~30 req/sec
+    for sym, info in _POOL.map(_one, stocks):
+        if info:
+            result[sym] = info
     return result
+
+# ── Correlations engine ──────────────────────────────────────────────────────
+# Each correlation is a known pair, the expected sign, and a plain-English
+# explanation of WHY it normally holds. We compare the snapshot's daily change
+# percent and flag whether the relationship held today.
+_CORRELATIONS = [
+    {
+        "pair":     "DXY ↑  →  Gold ↓",
+        "a":        "DXY",       "b": "GC",        "expected": "inverse",
+        "why":      "A stronger dollar makes gold (priced in dollars) more expensive globally, suppressing demand. When this inverse breaks, it usually means fear of inflation or de-dollarization is overriding the math.",
+    },
+    {
+        "pair":     "DXY ↑  →  Bitcoin ↓",
+        "a":        "DXY",       "b": "BTC",       "expected": "inverse",
+        "why":      "Tighter dollar liquidity drains risk assets. BTC behaves like long-duration tech in macro terms — when the dollar rallies, crypto usually fades.",
+    },
+    {
+        "pair":     "VIX ↑  →  S&P 500 ↓",
+        "a":        "VIX",       "b": "ES",        "expected": "inverse",
+        "why":      "VIX measures expected volatility — it spikes when investors buy puts. Falling stocks + rising VIX = panic hedging. If both rise together, that's unusual and usually short-lived.",
+    },
+    {
+        "pair":     "Oil ↑  →  Energy stocks ↑",
+        "a":        "CL",        "b": "XOM",       "expected": "positive",
+        "why":      "Oil majors' earnings are tied to crude prices. When oil rallies, XOM and the energy sector rally with it. A divergence usually signals something company-specific.",
+    },
+    {
+        "pair":     "S&P 500 ↑  →  Bitcoin ↑",
+        "a":        "ES",        "b": "BTC",       "expected": "positive",
+        "why":      "Both are risk assets in modern markets. When liquidity expands and confidence rises, both rally. When BTC leads stocks down, it's a leading indicator of risk-off.",
+    },
+    {
+        "pair":     "Banks ↑  →  Yields rising",
+        "a":        "JPM",       "b": "ES",        "expected": "positive",
+        "why":      "Banks earn the spread between what they pay depositors and what they charge borrowers. Steeper yield curves → fatter margins. JPM rallying alongside the broader market suggests credit conditions are healthy.",
+    },
+    {
+        "pair":     "NVDA ↑  →  Nasdaq ↑",
+        "a":        "NVDA",      "b": "NQ",        "expected": "positive",
+        "why":      "Nvidia is the largest single weight in the AI/tech complex. Strong NVDA pulls the entire Nasdaq higher. NVDA weak while QQQ holds up suggests a rotation out of AI into other tech.",
+    },
+]
+
+def get_correlations() -> list:
+    """Compute today's correlation state from the cached snapshot."""
+    snap = cached("snapshot", build_snapshot)
+    out = []
+    for rule in _CORRELATIONS:
+        a = snap.get(rule["a"], {}).get("change_pct")
+        b = snap.get(rule["b"], {}).get("change_pct")
+        if a is None or b is None:
+            continue
+
+        if rule["expected"] == "inverse":
+            held = (a >= 0 and b <= 0) or (a <= 0 and b >= 0)
+        else:
+            held = (a >= 0 and b >= 0) or (a <= 0 and b <= 0)
+
+        # If both moves are tiny (<0.1%), call it weak
+        if abs(a) < 0.1 and abs(b) < 0.1:
+            state = "weak"
+        else:
+            state = "normal" if held else "broken"
+
+        out.append({
+            "pair":   rule["pair"],
+            "why":    rule["why"],
+            "a_pct":  round(a, 2),
+            "b_pct":  round(b, 2),
+            "state":  state,
+            "label":  {"normal":"Holding","broken":"BROKEN","weak":"Quiet"}[state],
+        })
+    return out
 
 def generate_analysis(snap: dict, fear_greed: dict, news: list) -> dict:
     es  = snap.get("ES",  {}); nq  = snap.get("NQ",  {})
@@ -243,22 +354,22 @@ def generate_analysis(snap: dict, fear_greed: dict, news: list) -> dict:
 
     # Mood
     if es_chg > 0.8 and vix_val < 22:
-        mood, mood_color = "RISK ON 🚀", "green"
+        mood, mood_color = "RISK ON", "green"
         mood_desc = "Markets rallying with low fear. Investors are confident and buying risk assets."
     elif es_chg < -0.8 and vix_val > 22:
-        mood, mood_color = "RISK OFF 🛡️", "red"
+        mood, mood_color = "RISK OFF", "red"
         mood_desc = "Stocks falling while fear rises. Investors are protecting capital and avoiding risk."
     elif vix_val > 30:
-        mood, mood_color = "HIGH FEAR ⚠️", "red"
+        mood, mood_color = "HIGH FEAR", "red"
         mood_desc = f"VIX at {vix_val:.0f} — extreme volatility. The market is scared. Expect large swings."
     elif abs(es_chg) < 0.25:
-        mood, mood_color = "FLAT ↔️", "yellow"
+        mood, mood_color = "FLAT", "yellow"
         mood_desc = "Markets have no clear direction today. Traders waiting for a catalyst."
     elif es_chg > 0:
-        mood, mood_color = "BULLISH 📈", "green"
+        mood, mood_color = "BULLISH", "green"
         mood_desc = "Stocks are climbing. More buyers than sellers in the market right now."
     else:
-        mood, mood_color = "BEARISH 📉", "red"
+        mood, mood_color = "BEARISH", "red"
         mood_desc = "Stocks under pressure. Sellers are in control today."
 
     # Plain English summary
@@ -275,79 +386,79 @@ def generate_analysis(snap: dict, fear_greed: dict, news: list) -> dict:
 
     # VIX
     if vix_val > 30:
-        signals.append({"icon": "🚨", "title": "Market in Panic Mode", "type": "danger",
+        signals.append({"kind": "vol", "title": "Market in Panic Mode", "type": "danger",
             "plain": f"VIX at {vix_val:.0f} is panic territory. Markets can swing wildly. Don't make rushed decisions.",
             "expert": f"VIX {vix_val:.1f} → implied daily SPX move ~{vix_val/16:.1f}%. Vol term structure likely inverted. Short-vol strategies at max risk."})
     elif vix_val > 20:
-        signals.append({"icon": "⚠️", "title": "Volatility is Elevated", "type": "warning",
+        signals.append({"kind": "vol", "title": "Volatility is Elevated", "type": "warning",
             "plain": f"The fear index is at {vix_val:.0f}. Markets are jittery. Be careful with large bets.",
             "expert": f"VIX {vix_val:.1f} above 20 threshold. Dealer hedging pressure elevated. Expect gap risk and wider spreads."})
     elif vix_val < 13:
-        signals.append({"icon": "😴", "title": "Markets Are Too Calm", "type": "info",
+        signals.append({"kind": "vol", "title": "Markets Are Too Calm", "type": "info",
             "plain": f"VIX at {vix_val:.0f} — markets feel very safe. But extreme calm often comes before a storm.",
             "expert": f"VIX {vix_val:.1f} near complacency levels. Low vol regime risk. Tail hedges are cheap — consider adding protection."})
 
     # Fear & Greed
     if fg_val <= 25:
-        signals.append({"icon": "🔴", "title": "Extreme Fear = Buying Opportunity?", "type": "opportunity",
+        signals.append({"kind": "sent", "title": "Extreme Fear — Possible Opportunity", "type": "opportunity",
             "plain": f"Fear & Greed index at {fg_val}/100. Historically, when everyone is scared, prices are low and smart money buys.",
             "expert": f"CNN F&G {fg_val} (Extreme Fear). Contrarian long signal. Check if fundamental catalyst justifies fear or if this is sentiment overshoot."})
     elif fg_val >= 75:
-        signals.append({"icon": "🟡", "title": "Extreme Greed — Be Cautious", "type": "warning",
+        signals.append({"kind": "sent", "title": "Extreme Greed — Be Cautious", "type": "warning",
             "plain": f"Fear & Greed at {fg_val}/100. Everyone is greedy — this is when bubbles form. Markets may be stretched.",
             "expert": f"CNN F&G {fg_val} (Extreme Greed). Sentiment overbought. Mean reversion risk elevated. Trim overweight positions."})
 
     # DXY vs Gold
     if dxy_chg > 0.4 and gc_chg < -0.3:
-        signals.append({"icon": "💵", "title": "Strong Dollar, Weak Gold", "type": "info",
+        signals.append({"kind": "fx", "title": "Strong Dollar, Weak Gold", "type": "info",
             "plain": "The US Dollar is gaining strength while Gold falls. Investors trust the US economy and want dollars over safe havens.",
             "expert": f"DXY proxy +{dxy_chg:.2f}% / GLD {gc_chg:.2f}%. Real rate pickup likely. Dollar strength negative for commodities and EM assets."})
     elif dxy_chg < -0.4 and gc_chg > 0.3:
-        signals.append({"icon": "🥇", "title": "Dollar Weakening, Gold Rising", "type": "warning",
+        signals.append({"kind": "fx", "title": "Dollar Weakening, Gold Rising", "type": "warning",
             "plain": "The dollar is falling and gold is rising — a classic signal that investors are worried about inflation or economic instability.",
             "expert": f"DXY proxy {dxy_chg:.2f}% / GLD +{gc_chg:.2f}%. Real rates pressured lower. Dollar weakness supportive of commodities and risk assets."})
 
     # Oil
     if cl_chg > 2.5:
-        signals.append({"icon": "🛢️", "title": "Oil Spiking — Watch Inflation", "type": "danger",
+        signals.append({"kind": "energy", "title": "Oil Spiking — Watch Inflation", "type": "danger",
             "plain": f"Crude oil is up {cl_chg:.1f}% today. Higher oil means higher gas prices and more inflation — bad for most consumers, great for energy stocks like XOM.",
             "expert": f"USO +{cl_chg:.2f}%. Energy sector should outperform. Negative for growth/tech via rate expectations. Monitor TIPS breakevens."})
     elif cl_chg < -2.5:
-        signals.append({"icon": "🛢️", "title": "Oil Dropping — Inflation Relief", "type": "opportunity",
+        signals.append({"kind": "energy", "title": "Oil Dropping — Inflation Relief", "type": "opportunity",
             "plain": f"Crude oil fell {abs(cl_chg):.1f}%. Cheaper oil means cheaper gas and less inflation — a positive for the overall economy and consumer stocks.",
             "expert": f"USO {cl_chg:.2f}%. Disinflationary input cost signal. Positive for margin expansion in industrials and consumer discretionary."})
 
     # BTC risk barometer
     if btc_chg > 4 and es_chg > 0:
-        signals.append({"icon": "🚀", "title": "Crypto + Stocks Both Surging", "type": "bullish",
+        signals.append({"kind": "crypto", "title": "Crypto + Stocks Both Surging", "type": "bullish",
             "plain": f"Bitcoin up {btc_chg:.1f}% alongside stocks — maximum 'risk-on' signal. Investors are in full buying mode across all markets.",
             "expert": "Cross-asset risk appetite elevated. BTC/equity correlation positive. Rotate into high-beta: growth tech, small caps, crypto alts."})
     elif btc_chg < -4 and es_chg < 0:
-        signals.append({"icon": "📉", "title": "Crypto + Stocks Both Falling", "type": "danger",
+        signals.append({"kind": "crypto", "title": "Crypto + Stocks Both Falling", "type": "danger",
             "plain": f"Bitcoin down {abs(btc_chg):.1f}% with stocks also falling — everything selling off at once. Classic de-risking.",
             "expert": "Macro deleveraging event. BTC leading risk-off. Watch high-yield credit spreads and USD/JPY for confirmation of severity."})
 
     # NVDA / AI signal
     if nvda.get("change_pct", 0) > 3:
-        signals.append({"icon": "🤖", "title": "AI Stocks Leading the Market", "type": "bullish",
+        signals.append({"kind": "tech", "title": "AI Stocks Leading the Market", "type": "bullish",
             "plain": f"NVDA up {nvda.get('change_pct',0):.1f}%. AI/tech names are the strongest performers today — the market believes in the AI trade.",
             "expert": "Mega-cap AI outperforming. Semis acting as risk-on leading indicator. Watch SOX index for sustainability."})
     elif nvda.get("change_pct", 0) < -3:
-        signals.append({"icon": "💻", "title": "Tech/AI Stocks Under Pressure", "type": "warning",
+        signals.append({"kind": "tech", "title": "Tech/AI Stocks Under Pressure", "type": "warning",
             "plain": f"NVDA down {abs(nvda.get('change_pct',0)):.1f}%. Tech is lagging — could signal rotation away from growth into value.",
             "expert": "Semis underperforming. Growth/duration risk-off. Check 10yr yield — if rising, that explains the tech pressure."})
 
     # Banks
     if abs(jpm.get("change_pct", 0)) > 1.5:
         up = jpm.get("change_pct", 0) > 0
-        signals.append({"icon": "🏦", "title": f"Banking Sector {'Rallying' if up else 'Selling Off'}", "type": "bullish" if up else "warning",
+        signals.append({"kind": "banks", "title": f"Banking Sector {'Rallying' if up else 'Selling Off'}", "type": "bullish" if up else "warning",
             "plain": f"JPMorgan {'up' if up else 'down'} {abs(jpm.get('change_pct',0)):.1f}%. Banks are a barometer of economic health. {'Positive signal' if up else 'Watch for broader credit stress'}.",
             "expert": f"JPM {jpm.get('change_pct',0):.2f}%. {'Yield curve steepening / credit expansion signal.' if up else 'Potential NIM compression or credit risk concerns. Watch CDS spreads.'}"})
 
     # Geopolitical news
     geo = [n for n in news if n.get("category") == "geopolitical"][:1]
     if geo:
-        signals.append({"icon": "🌍", "title": "Geopolitical Event in the News", "type": "warning",
+        signals.append({"kind": "geo", "title": "Geopolitical Event in the News", "type": "warning",
             "plain": f"{geo[0]['headline'][:120]}. Geopolitical events can cause sudden, sharp moves — especially in oil and defense stocks.",
             "expert": "Active geo risk. Monitor: crude oil, USD, defense sector (LMT/RTX/NOC/GD), safe havens (GLD, TLT). Tail risk elevated."})
 
@@ -811,7 +922,8 @@ _cache: dict = {}
 _cache_ts: dict = {}
 TTL = {"snapshot": 30, "news": 300, "fear_greed": 3600, "rsi": 3600,
        "social": 1800, "technicals": 7200, "analyst_recs": 7200, "analysis": 300,
-       "insider_trades": 3600, "earnings_cal": 1800, "upgrades": 3600}
+       "insider_trades": 3600, "earnings_cal": 1800, "upgrades": 3600,
+       "correlations": 60}
 
 def cached(key: str, fn, *args):
     if key not in _cache or time.time() - _cache_ts.get(key, 0) > TTL.get(key, 60):
@@ -937,6 +1049,11 @@ async def api_analyst_recs():
     return {"data": await asyncio.to_thread(lambda: cached("analyst_recs", get_analyst_recs)),
             "ts": int(time.time())}
 
+@app.get("/api/correlations")
+async def api_correlations():
+    return {"data": await asyncio.to_thread(lambda: cached("correlations", get_correlations)),
+            "ts": int(time.time())}
+
 @app.get("/api/analysis")
 async def api_analysis():
     snap = cached("snapshot", build_snapshot)
@@ -1009,6 +1126,12 @@ class _NoCacheHTMLStatic(StaticFiles):
                 resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
                 resp.headers["Pragma"] = "no-cache"
                 resp.headers["Expires"] = "0"
+            # Cache versioned static assets (CSS/JS/images/fonts) aggressively —
+            # we cache-bust via ?v=N query string in the HTML, so it's safe to
+            # let the browser hold onto them for a year.
+            elif target.endswith((".css", ".js", ".png", ".jpg", ".jpeg",
+                                   ".webp", ".svg", ".woff", ".woff2", ".ico")):
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         except Exception:
             pass
         return resp

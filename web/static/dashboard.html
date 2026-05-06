@@ -11,13 +11,18 @@
   <meta name="apple-mobile-web-app-title" content="Conviction Capital">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="preload" as="fetch" href="/api/snapshot" crossorigin>
+  <link rel="preload" as="fetch" href="/api/news" crossorigin>
+  <link rel="preload" as="fetch" href="/api/sentiment" crossorigin>
+  <link rel="preload" as="fetch" href="/api/analysis" crossorigin>
+  <link rel="preload" as="script" href="app.js?v=7">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
 <!-- NAV -->
 <nav id="nav">
-  <a href="/" class="nav-logo" style="text-decoration:none">⚡ CONVICTION CAPITAL</a>
+  <a href="/" class="nav-logo" style="text-decoration:none">CONVICTION CAPITAL</a>
   <div class="nav-links">
     <a href="#hero">Overview</a>
     <a href="#intelligence">Intelligence</a>
@@ -26,12 +31,12 @@
     <a href="#sentiment">Sentiment</a>
     <a href="#news">News</a>
     <a href="#alerts">Alerts</a>
-    <a href="/predmarket.html" style="color:#3b82f6;font-weight:600">⚡ Pred Markets</a>
+    <a href="/predmarket.html" style="color:var(--gold,#c9a55c);font-weight:600">Pred Markets</a>
   </div>
   <div class="nav-right">
     <span id="clock">--:--:-- ET</span>
     <div id="ws-status"><div id="ws-dot"></div><span id="ws-status-text">CONNECTING</span></div>
-    <button id="notif-btn">🔔 Alerts</button>
+    <button id="notif-btn">Alerts</button>
   </div>
 </nav>
 
@@ -145,9 +150,9 @@
       </table>
     </div>
     <div class="tech-legend">
-      <span class="leg bull">🟢 Bullish</span>
-      <span class="leg bear">🔴 Bearish</span>
-      <span class="leg neut">🟡 Neutral</span>
+      <span class="leg bull"><span class="dot dot-bull"></span> Bullish</span>
+      <span class="leg bear"><span class="dot dot-bear"></span> Bearish</span>
+      <span class="leg neut"><span class="dot dot-neut"></span> Neutral</span>
       <span class="leg na">— Not available (crypto/insufficient data)</span>
     </div>
   </section>
@@ -195,21 +200,21 @@
 
       <!-- SEC Insider Trades -->
       <div class="sent-card social-big-card" id="insider-card">
-        <div class="sent-card-title">🏛 SEC Insider Transactions (Form 4)</div>
+        <div class="sent-card-title">SEC Insider Transactions (Form 4)</div>
         <div class="sent-card-sub">Executives &amp; directors buying/selling their own stock — the most reliable signal on Wall Street</div>
         <div id="insider-list"></div>
       </div>
 
       <!-- Analyst Ratings -->
-      <div class="sent-card" id="analyst-card">
-        <div class="sent-card-title">📊 Wall Street Analyst Ratings</div>
+      <div class="sent-card analyst-big-card" id="analyst-card">
+        <div class="sent-card-title">Wall Street Analyst Ratings</div>
+        <div class="sent-card-sub">Buy/Hold/Sell consensus, score, and how it has moved over the last 4 months</div>
         <div id="analyst-list"></div>
-        <div class="social-note" style="margin-top:8px">Buy/Hold/Sell consensus from all covering analysts</div>
       </div>
 
       <!-- Upcoming Earnings + Priced In -->
       <div class="sent-card earnings-big-card" id="earnings-card">
-        <div class="sent-card-title">📅 Earnings — Already Priced In?</div>
+        <div class="sent-card-title">Earnings — Already Priced In?</div>
         <div class="sent-card-sub">Price momentum + RSI heading into each report tells you whether the market already expects good or bad news</div>
         <div class="view-toggle" style="margin:8px 0">
           <button class="vtog active" data-emode="simple">Plain English</button>
@@ -218,9 +223,16 @@
         <div id="earnings-list"></div>
       </div>
 
+      <!-- Cross-Asset Correlations -->
+      <div class="sent-card correlations-big-card" id="correlations-card">
+        <div class="sent-card-title">Cross-Asset Correlations — Why one moves when another does</div>
+        <div class="sent-card-sub">Live relationships between major assets. When these break their normal pattern, that's a tradable signal.</div>
+        <div id="correlations-list"></div>
+      </div>
+
       <!-- Analyst Upgrades/Downgrades -->
       <div class="sent-card" id="upgrades-card">
-        <div class="sent-card-title">⬆️ Upgrades &amp; Downgrades (14 Days)</div>
+        <div class="sent-card-title">Upgrades &amp; Downgrades (14 Days)</div>
         <div class="sent-card-sub">When a big bank changes their rating, institutions follow</div>
         <div id="upgrades-list"></div>
       </div>
@@ -237,12 +249,12 @@
       </div>
       <div id="news-tabs" class="tab-row">
         <button class="ntab active" data-cat="all">All</button>
-        <button class="ntab" data-cat="geopolitical">🌍 War &amp; Geo</button>
-        <button class="ntab" data-cat="macro">📊 Macro</button>
-        <button class="ntab" data-cat="earnings">💰 Earnings</button>
-        <button class="ntab" data-cat="crypto">₿ Crypto</button>
-        <button class="ntab" data-cat="forex">💱 Forex</button>
-        <button class="ntab" data-cat="merger">🤝 M&amp;A</button>
+        <button class="ntab" data-cat="geopolitical">War &amp; Geo</button>
+        <button class="ntab" data-cat="macro">Macro</button>
+        <button class="ntab" data-cat="earnings">Earnings</button>
+        <button class="ntab" data-cat="crypto">Crypto</button>
+        <button class="ntab" data-cat="forex">Forex</button>
+        <button class="ntab" data-cat="merger">M&amp;A</button>
       </div>
     </div>
     <div id="news-grid"></div>
@@ -252,8 +264,8 @@
   <section id="alerts">
     <div class="section-header">
       <div>
-        <h2>Price Alerts</h2>
-        <p class="section-sub">Fires when an asset moves past its threshold — with plain-English context on what it means</p>
+        <h2>Triggered Events Log</h2>
+        <p class="section-sub">A timestamped record of moments when an asset broke its threshold — what fired, when, and what it meant. (Live Prices show the current state. This shows what <em>happened</em>.)</p>
       </div>
       <div id="alert-thresholds" class="thresh-info">
         <span>Thresholds: VIX 5% · BTC/SOL 2–3% · Stocks 1–2% · Indices 0.4–0.6%</span>
@@ -271,6 +283,6 @@
 
 <div id="toast-container"></div>
 
-<script src="app.js?v=5"></script>
+<script src="app.js?v=7" defer></script>
 </body>
 </html>
