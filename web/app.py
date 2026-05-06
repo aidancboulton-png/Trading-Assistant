@@ -989,7 +989,23 @@ async def api_predmarkets():
     return _PREDMARKET_CACHE["data"]
 
 _static_dir = Path(__file__).parent / "static"
-app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")
+
+# Tell browsers (and iOS Safari especially) NOT to cache the HTML so users
+# always get the latest version. CSS/JS use ?v=N query strings for busting.
+class _NoCacheHTMLStatic(StaticFiles):
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        try:
+            target = path or "index.html"
+            if target.endswith(".html") or target in ("", "/"):
+                resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                resp.headers["Pragma"] = "no-cache"
+                resp.headers["Expires"] = "0"
+        except Exception:
+            pass
+        return resp
+
+app.mount("/", _NoCacheHTMLStatic(directory=str(_static_dir), html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
