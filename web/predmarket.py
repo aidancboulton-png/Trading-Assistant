@@ -364,6 +364,93 @@ def _office_mismatch(a: str, b: str) -> bool:
     return False
 
 
+# ── Candidate-suffix lock ─────────────────────────────────────────────────────
+# Kalshi multi-market events use the format "<event question> — <candidate>".
+# Each <candidate> is a *different* bet (UAE ≠ China; Rubio ≠ DeSantis).
+# If the Kalshi title has a candidate suffix, the Polymarket title MUST contain
+# a token from that suffix — otherwise the two markets are about different
+# specific outcomes and must not be matched.
+_COUNTRY_ALIASES = {
+    "uae":          ("united arab emirates", "uae", "emirates"),
+    "emirates":     ("united arab emirates", "uae", "emirates"),
+    "uk":           ("united kingdom", "britain", "british", "uk"),
+    "usa":          ("united states", "america", "us", "usa"),
+    "us":           ("united states", "america", "us", "usa"),
+    "drc":          ("congo", "drc"),
+    "south korea":  ("south korea", "korea"),
+    "north korea":  ("north korea", "dprk"),
+}
+
+def _candidate_suffix(title: str) -> Optional[str]:
+    """
+    Extract the candidate string after a Kalshi em-dash separator.
+    e.g. 'Where will X meet? — United Arab Emirates' → 'united arab emirates'
+    """
+    # Em-dash, en-dash, or " - " separator at the end
+    m = re.search(r"[—–]\s*(.+)$", title)
+    if not m:
+        return None
+    suffix = m.group(1).strip().lower()
+    # Reject very long suffixes — those are usually not candidate labels
+    if len(suffix) > 60 or len(suffix) < 2:
+        return None
+    return suffix
+
+
+def _candidate_tokens(suffix: str) -> set:
+    """Tokens worth requiring in the other title — names, places, acronyms."""
+    s = suffix.lower()
+    out = set()
+    # Whole-word tokens ≥ 3 chars excluding stopwords
+    for tok in re.findall(r"[a-zA-Z]{3,}", s):
+        if tok not in {"the", "and", "for", "any", "all", "his", "her",
+                       "any", "his", "won", "win"}:
+            out.add(tok)
+    # Acronyms (UAE, UK, US, EU)
+    out |= {tok for tok in re.findall(r"\b[A-Z]{2,5}\b", suffix.upper()) if len(tok) >= 2}
+    # Pull in alias expansions
+    expanded = set()
+    for tok in list(out):
+        for k, vs in _COUNTRY_ALIASES.items():
+            if tok in (k, *vs):
+                expanded |= set(vs)
+                # Each alias broken into its own tokens
+                for v in vs:
+                    expanded |= set(re.findall(r"[a-zA-Z]{3,}", v.lower()))
+    return out | expanded
+
+
+def _candidate_present(other_title: str, candidate_tokens: set) -> bool:
+    """Does the other title mention at least one significant candidate token?"""
+    if not candidate_tokens:
+        return True  # nothing to enforce
+    ol = other_title.lower()
+    for tok in candidate_tokens:
+        # Whole-word match
+        if re.search(rf"\b{re.escape(tok)}\b", ol):
+            return True
+    return False
+
+
+def _candidate_mismatch(kalshi_title: str, poly_title: str) -> bool:
+    """
+    True if the Kalshi title has a candidate suffix and that candidate is NOT
+    represented in the Polymarket title. We also do the reverse if the
+    Polymarket title has a similar suffix structure.
+    """
+    k_suffix = _candidate_suffix(kalshi_title)
+    if k_suffix:
+        toks = _candidate_tokens(k_suffix)
+        if toks and not _candidate_present(poly_title, toks):
+            return True
+    p_suffix = _candidate_suffix(poly_title)
+    if p_suffix:
+        toks = _candidate_tokens(p_suffix)
+        if toks and not _candidate_present(kalshi_title, toks):
+            return True
+    return False
+
+
 def _numbers_compatible(a: str, b: str) -> bool:
     """
     If BOTH titles have numeric anchors, at least one must overlap.
@@ -672,6 +759,8 @@ def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
             if not _subjects_compatible(km["title"], pm["title"]):
                 continue
             if _office_mismatch(km["title"], pm["title"]):
+                continue
+            if _candidate_mismatch(km["title"], pm["title"]):
                 continue
             pdays = _close_in_days(pm.get("close", ""))
             if pdays is not None and pdays < MIN_DAYS_TO_CLOSE:
