@@ -11,6 +11,11 @@ import requests
 from datetime import datetime, timezone
 from typing import Optional
 
+try:
+    from web.predmarket_context import fetch_manifold_markets, build_reality_check
+except ImportError:  # when run as a script from the web/ directory
+    from predmarket_context import fetch_manifold_markets, build_reality_check
+
 KALSHI_BASE  = "https://api.elections.kalshi.com/trade-api/v2"
 POLY_GAMMA   = "https://gamma-api.polymarket.com"
 
@@ -194,6 +199,198 @@ def _is_subrange(title: str) -> bool:
     """Detect Kalshi sub-questions like 'margin 0-10%' that scope a parent event."""
     tl = title.lower()
     return any(re.search(p, tl) for p in _RANGE_PATTERNS)
+
+
+# ── Question-shape fingerprint ────────────────────────────────────────────────
+# Two markets cannot legitimately match unless their question SHAPE is the same.
+# A "voter turnout above 960K" question is NOT the same bet as "Will Democrats
+# win the senate race" — even if both are about the same election.
+def _question_shape(title: str) -> str:
+    """
+    Classify the *kind* of question being asked. Markets with different shapes
+    must never be matched.
+        threshold_above   — "will X be above N", "more than N"
+        threshold_below   — "below N", "less than N", "under N"
+        range_between     — "between A and B"
+        winner_party      — "will Republicans/Democrats win"
+        winner_named      — "will <PERSON/THING> win"
+        binary_event      — "will <event> happen"
+    """
+    tl = title.lower()
+    if re.search(r"\b(above|over|more than|exceed|greater than|higher than|at least)\b", tl):
+        return "threshold_above"
+    if re.search(r"\b(below|under|less than|fewer than|at most|no more than)\b", tl):
+        return "threshold_below"
+    if re.search(r"\bbetween\b.*\band\b", tl) or re.search(r"\d+\s*[-–]\s*\d+", tl):
+        return "range_between"
+    if re.search(r"\b(republican|democrat|gop)\b.*\b(win|winner|control)\b", tl) \
+       or re.search(r"\b(win|winner|control)\b.*\b(republican|democrat|gop)\b", tl):
+        return "winner_party"
+    if re.search(r"\b(win|winner|nominee|elected|chosen|named)\b", tl):
+        return "winner_named"
+    return "binary_event"
+
+
+def _shape_compatible(a: str, b: str) -> bool:
+    """Two question shapes match if they're identical, OR both are binary events."""
+    sa, sb = _question_shape(a), _question_shape(b)
+    if sa == sb:
+        return True
+    # winner_named and winner_party can sometimes legitimately mirror each other
+    # IF both titles refer to the same election. We let the numeric/anchor lock
+    # downstream decide. Other cross-shape pairings are forbidden.
+    if {sa, sb} == {"winner_named", "winner_party"}:
+        return True
+    return False
+
+
+def _numeric_tokens(title: str) -> set:
+    """
+    Extract every numeric anchor a title commits to: thresholds, dollar amounts,
+    percentages, vote totals, point spreads. If two titles both commit to numbers
+    but they're different numbers, they cannot be the same bet.
+    """
+    t = title.lower().replace(",", "")
+    out = set()
+    # $5k, $1m, $1.5b, $50, etc.
+    for m in re.findall(r"\$?\d+(?:\.\d+)?\s*[kmb]?\b", t):
+        s = m.strip()
+        if s and not s.isalpha():
+            out.add(s.replace("$", ""))
+    # bare integers ≥ 3 digits
+    out |= set(re.findall(r"\b\d{3,}\b", t))
+    # percentages
+    out |= set(re.findall(r"\d+\.?\d*%", t))
+    # filter out tiny spurious
+    return {x for x in out if len(x) >= 2}
+
+
+_SPECIFIC_SUBJECT_HINTS = (
+    # office / race
+    "senate", "president", "presidential", "house", "governor", "mayoral",
+    # action types
+    "meet", "meeting", "summit", "win", "nominee", "nomination", "election",
+    "leader", "ceasefire", "agreement", "treaty",
+)
+
+
+def _proper_nouns(title: str) -> set:
+    """Capitalized 4+ char tokens — locations, people, organizations."""
+    return {w.lower() for w in re.findall(r"\b[A-Z][a-zA-Z]{3,}\b", title)
+            if w.lower() not in {
+                "will", "this", "that", "what", "when", "where", "which",
+                "who", "kalshi", "polymarket", "the", "and", "for", "from",
+            }}
+
+
+def _race_year(title: str) -> Optional[str]:
+    """Extract the election year if present (2024, 2026, 2028 etc.)."""
+    m = re.search(r"\b(20\d{2})\b", title)
+    return m.group(1) if m else None
+
+
+_CATEGORICAL_PHRASES = (
+    "family member", "any of", "anyone", "either of", "any candidate",
+    "any republican", "any democrat", "anyone else", "any other",
+)
+
+
+def _is_categorical(title: str) -> bool:
+    """Title asks about a category/group, not a specific person/thing."""
+    tl = title.lower()
+    return any(p in tl for p in _CATEGORICAL_PHRASES)
+
+
+def _subjects_compatible(a: str, b: str) -> bool:
+    """
+    Strict subject lock. If both titles reference specific subjects (proper
+    nouns) AND at least one hints at a specific outcome, the proper-noun
+    overlap must be ≥ 60% of the smaller set. This stops:
+      - "Trump/Putin meet UAE" vs "Trump/Putin meet China" (locations differ)
+      - "Trump family member" vs "Donald Trump" (categorical vs specific)
+      - "AOC Senate" vs "AOC President" (offices differ — handled separately)
+    """
+    # Categorical-vs-specific is never the same bet
+    if _is_categorical(a) != _is_categorical(b):
+        return False
+
+    al, bl = a.lower(), b.lower()
+    al_has_hint = any(h in al for h in _SPECIFIC_SUBJECT_HINTS)
+    bl_has_hint = any(h in bl for h in _SPECIFIC_SUBJECT_HINTS)
+    if not (al_has_hint or bl_has_hint):
+        return True
+
+    pa, pb = _proper_nouns(a), _proper_nouns(b)
+    if not pa or not pb:
+        return True
+
+    overlap = pa & pb
+    smaller = min(len(pa), len(pb))
+    if smaller == 0:
+        return True
+    overlap_ratio = len(overlap) / smaller
+
+    # Need ≥ 60% of the smaller proper-noun set overlapping
+    if overlap_ratio >= 0.60 and len(overlap) >= 2:
+        return True
+    # Single-overlap fallback: same race year + that overlap can still be valid
+    ya, yb = _race_year(a), _race_year(b)
+    if len(overlap) >= 1 and ya and yb and ya == yb and overlap_ratio >= 0.5:
+        return True
+    return False
+
+
+# Office / race words that describe the *kind* of contest. If both titles
+# carry an office word and they're different, it's a different bet entirely
+# (Senate ≠ President ≠ Governor).
+_OFFICE_TOKENS = {
+    "senate":         "senate",
+    "house":          "house",
+    "governor":       "governor",
+    "gubernatorial":  "governor",
+    "president":      "president",
+    "presidential":   "president",
+    "mayor":          "mayor",
+    "mayoral":        "mayor",
+    "vice president": "vp",
+    "vp":             "vp",
+}
+def _office_mismatch(a: str, b: str) -> bool:
+    al, bl = a.lower(), b.lower()
+    a_off = {v for k, v in _OFFICE_TOKENS.items() if re.search(rf"\b{k}\b", al)}
+    b_off = {v for k, v in _OFFICE_TOKENS.items() if re.search(rf"\b{k}\b", bl)}
+    if a_off and b_off and not (a_off & b_off):
+        return True
+    return False
+
+
+def _numbers_compatible(a: str, b: str) -> bool:
+    """
+    If BOTH titles have numeric anchors, at least one must overlap.
+    If only one side has numbers, that's allowed (e.g. "Will Trump win" vs
+    "Will Trump win in 2026").
+    """
+    na, nb = _numeric_tokens(a), _numeric_tokens(b)
+    if not na or not nb:
+        return True
+    return bool(na & nb)
+
+
+def _close_in_days(close_iso: str) -> Optional[float]:
+    """Return days until market close, or None if unknown."""
+    if not close_iso:
+        return None
+    try:
+        # Kalshi uses 'Z', Polymarket uses '+00:00' — both work with fromisoformat
+        # after stripping 'Z'.
+        s = close_iso.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        delta = (dt - datetime.now(timezone.utc)).total_seconds() / 86400.0
+        return delta
+    except Exception:
+        return None
 
 
 def categorize(title: str) -> str:
@@ -401,9 +598,10 @@ def fetch_polymarket(max_pages: int = 5) -> list[dict]:
 
 # ── Matcher ───────────────────────────────────────────────────────────────────
 
-MATCH_THRESHOLD = 0.25       # similarity floor for hybrid score
-MIN_JACCARD     = 0.12       # require some real word overlap, not just anchor match
-MIN_SHARED_WORDS = 3         # both titles must share at least N meaningful tokens
+MATCH_THRESHOLD  = 0.40       # tightened — was 0.25, far too lenient
+MIN_JACCARD      = 0.25       # tightened — require real word overlap
+MIN_SHARED_WORDS = 4          # tightened — both titles share ≥4 meaningful tokens
+MIN_DAYS_TO_CLOSE = 7.0       # only show markets resolving 7+ days out
 
 
 def _hedge_math(k_prob: float, p_prob: float) -> dict:
@@ -450,6 +648,10 @@ def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
         # both classes generate false matches with simple yes/no Polymarket questions
         if _is_subrange(km["title"]) or _is_aggregator(km["title"]):
             continue
+        # Drop anything resolving in less than the configured floor
+        kdays = _close_in_days(km.get("close", ""))
+        if kdays is not None and kdays < MIN_DAYS_TO_CLOSE:
+            continue
 
         # search ALL polymarket markets, not just same-category
         best_score = 0.0
@@ -461,6 +663,18 @@ def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
             if _is_subrange(pm["title"]) or _is_aggregator(pm["title"]):
                 continue
             if _country_mismatch(km["title"], pm["title"]):
+                continue
+            # Hard locks — must pass before scoring
+            if not _shape_compatible(km["title"], pm["title"]):
+                continue
+            if not _numbers_compatible(km["title"], pm["title"]):
+                continue
+            if not _subjects_compatible(km["title"], pm["title"]):
+                continue
+            if _office_mismatch(km["title"], pm["title"]):
+                continue
+            pdays = _close_in_days(pm.get("close", ""))
+            if pdays is not None and pdays < MIN_DAYS_TO_CLOSE:
                 continue
             score = _similarity(km["title"], pm["title"])
             if score > best_score:
@@ -532,12 +746,17 @@ def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
             "higher_platform": higher,
             "buy_advice":     buy_advice,
             "hedge":          hedge,
+            "days_to_close": round(min(
+                _close_in_days(km.get("close", "")) or 9999,
+                _close_in_days(best_pm.get("close", "")) or 9999,
+            ), 1),
             "kalshi": {
                 "title":    km["title"],
                 "yes_prob": km["yes_prob"],
                 "volume":   km["volume"],
                 "url":      km["url"],
                 "id":       km["id"],
+                "close":    km.get("close", ""),
             },
             "polymarket": {
                 "title":    best_pm["title"],
@@ -545,11 +764,26 @@ def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
                 "volume":   best_pm["volume"],
                 "url":      best_pm["url"],
                 "id":       best_pm["id"],
+                "close":    best_pm.get("close", ""),
             },
         })
 
-    # Sort: arbitrage (locked profit) first, then by edge size
-    pairs.sort(key=lambda x: (-1 if x["hedge"]["is_arb"] else 0, -x["edge"]))
+    # Category preference: simple/objective markets first
+    _CAT_PRIORITY = {
+        "weather":      0,   # most objective — measurable, clear resolution
+        "finance":      1,   # price-mention markets are simple and verifiable
+        "sports":       2,
+        "economics":    3,
+        "science_tech": 4,
+        "geopolitics":  5,   # squishiest — last
+        "other":        6,
+    }
+    # Sort: arbitrage first, then by category clarity, then edge
+    pairs.sort(key=lambda x: (
+        -1 if x["hedge"]["is_arb"] else 0,
+        _CAT_PRIORITY.get(x["category"], 9),
+        -x["edge"],
+    ))
     return pairs
 
 
@@ -605,9 +839,23 @@ def run_scan() -> dict:
     print("[scanner] Matching and scoring…")
     pairs = match_markets(kalshi_markets, poly_markets)
 
-    # Annotate with plain English
+    # Pull Manifold once for cross-validation across all pairs
+    print("[scanner] Fetching Manifold for reality-check…")
+    try:
+        manifold_markets = fetch_manifold_markets(limit=1000)
+        print(f"[scanner] Got {len(manifold_markets)} Manifold markets")
+    except Exception as e:
+        print(f"[scanner] manifold fetch failed: {e}")
+        manifold_markets = []
+
+    # Annotate with plain English + reality check (3rd source, weather, FRED, base rates)
     for p in pairs:
         p["plain_english"] = plain_english(p)
+        try:
+            p["reality_check"] = build_reality_check(p, manifold_markets)
+        except Exception as e:
+            print(f"[scanner] reality_check failed for pair: {e}")
+            p["reality_check"] = {"sources": [], "verdict": None}
 
     # Category breakdown for matched pairs
     by_cat: dict[str, list] = {}

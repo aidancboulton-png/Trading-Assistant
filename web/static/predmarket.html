@@ -141,7 +141,23 @@
   .pair-card.edge-mid   { border-left: 3px solid var(--yellow); }
   .pair-card.edge-small { border-left: 3px solid var(--muted); }
 
-  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .bet-headline {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.35;
+    margin: 6px 0 4px;
+  }
+  .bet-summary {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .bet-summary .yes { color: var(--green); font-weight: 600; }
+  .bet-summary .no  { color: var(--red);   font-weight: 600; }
+  .bet-summary .mark { color: var(--accent); font-weight: 600; }
   .cat-badge {
     font-size: 9px;
     text-transform: uppercase;
@@ -172,7 +188,20 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    cursor: pointer;
+    position: relative;
   }
+  .platform-block:hover {
+    border-color: var(--accent);
+    background: #221d16;
+    transform: translateY(-1px);
+  }
+  .platform-block:active { transform: translateY(0); }
   .plat-name { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 4px; }
   .plat-prob {
     font-size: 24px;
@@ -182,10 +211,30 @@
   }
   .plat-prob.higher { color: var(--green); }
   .plat-prob.lower  { color: var(--muted); }
-  .plat-title { font-size: 10px; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
-  .plat-vol { font-size: 9px; color: #334155; }
-  .plat-link { font-size: 10px; color: var(--accent); text-decoration: none; }
-  .plat-link:hover { text-decoration: underline; }
+  .plat-title { font-size: 11px; color: var(--text); line-height: 1.45; margin-bottom: 8px; opacity: 0.9; }
+  .plat-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 6px;
+  }
+  .plat-vol { font-size: 9px; color: var(--muted); }
+  .plat-cta {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--accent);
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(201,165,92,0.08);
+  }
+  .platform-block:hover .plat-cta {
+    background: var(--accent);
+    color: #15110d;
+  }
 
   .card-analysis {
     background: rgba(59,130,246,0.05);
@@ -198,6 +247,56 @@
     margin-top: 8px;
   }
   .card-analysis strong { color: var(--text); }
+
+  /* ── Reality check block ── */
+  .reality-check {
+    margin-top: 10px;
+    background: rgba(201,165,92,0.04);
+    border: 1px solid rgba(201,165,92,0.18);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .rc-header {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rc-header::before {
+    content: "◆";
+    font-size: 9px;
+  }
+  .rc-source {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 4px 0;
+    font-size: 11px;
+    border-top: 1px dashed rgba(201,165,92,0.12);
+  }
+  .rc-source:first-of-type { border-top: none; }
+  .rc-label {
+    color: var(--muted);
+    flex-shrink: 0;
+    min-width: 130px;
+    font-weight: 600;
+  }
+  .rc-value { color: var(--text); flex: 1; }
+  .rc-meta { font-size: 9px; color: var(--muted); margin-left: 8px; }
+  .rc-verdict {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(201,165,92,0.18);
+    font-size: 11px;
+    color: var(--yellow);
+    font-weight: 600;
+    line-height: 1.5;
+  }
 
   .card-bottom {
     display: flex;
@@ -350,12 +449,71 @@ function fmtVol(v) {
   return `$${v} vol`;
 }
 
+function pickHeadline(k, pm) {
+  // Prefer the longer, more descriptive title
+  const a = (k.title || '').trim();
+  const b = (pm.title || '').trim();
+  return a.length >= b.length ? a : b;
+}
+
+function buildSummary(k, pm, edgePct) {
+  const kPct  = (k.yes_prob  * 100).toFixed(1);
+  const pmPct = (pm.yes_prob * 100).toFixed(1);
+  const kHigher = k.yes_prob > pm.yes_prob;
+  const cheap = kHigher ? 'Polymarket' : 'Kalshi';
+  const expensive = kHigher ? 'Kalshi' : 'Polymarket';
+  const cheapPct = kHigher ? pmPct : kPct;
+  const expensivePct = kHigher ? kPct : pmPct;
+  return `
+    The bet: <span class="mark">YES this happens.</span>
+    <br>
+    <span class="mark">${expensive}</span> says it's <span class="yes">${expensivePct}%</span> likely.
+    <span class="mark">${cheap}</span> says it's only <span class="no">${cheapPct}%</span> likely.
+    <br>
+    Buy <span class="yes">YES on ${cheap}</span> (cheap) — sell or skip on ${expensive}.
+    Edge: <strong style="color:var(--accent)">${edgePct.toFixed(1)} percentage points.</strong>
+  `;
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function renderRealityCheck(p) {
+  const rc = p.reality_check;
+  if (!rc || !rc.sources || rc.sources.length === 0) return '';
+
+  const rows = rc.sources.map(s => {
+    const meta = s.match ? `<span class="rc-meta">match ${(s.match*100).toFixed(0)}%</span>` : '';
+    const titleLine = s.title ? `<div class="rc-meta" style="margin-left:0;margin-top:2px">${escapeHtml(s.title)}</div>` : '';
+    return `
+      <div class="rc-source">
+        <span class="rc-label">${escapeHtml(s.label)}</span>
+        <span class="rc-value">${escapeHtml(s.value)}${meta}${titleLine}</span>
+      </div>`;
+  }).join('');
+
+  const verdict = rc.verdict
+    ? `<div class="rc-verdict">${escapeHtml(rc.verdict)}</div>`
+    : '';
+
+  return `
+    <div class="reality-check">
+      <div class="rc-header">Reality Check</div>
+      ${rows}
+      ${verdict}
+    </div>`;
+}
+
 function renderCard(p) {
   const k  = p.kalshi;
   const pm = p.polymarket;
   const ec = edgeClass(p.edge_pct);
   const kHigher = k.yes_prob > pm.yes_prob;
   const color = CAT_COLORS[p.category] || '#5c4a3a';
+  const headline = pickHeadline(k, pm);
 
   return `
   <div class="pair-card edge-${ec}">
@@ -363,32 +521,35 @@ function renderCard(p) {
       <span class="cat-badge" style="background:${color}22;color:${color}">${p.category_label}</span>
       <span class="edge-pill ${ec}">${p.edge_pct.toFixed(1)}pp EDGE</span>
     </div>
+    <div class="bet-headline">${headline}</div>
+    <div class="bet-summary">${buildSummary(k, pm, p.edge_pct)}</div>
     <div class="platforms">
-      <div class="platform-block">
-        <div class="plat-name">Kalshi</div>
+      <a class="platform-block" href="${k.url}" target="_blank" rel="noopener">
+        <div class="plat-name">Kalshi · YES price</div>
         <div class="plat-prob ${kHigher ? 'higher' : 'lower'}">${(k.yes_prob*100).toFixed(1)}%</div>
-        <div class="plat-title">${k.title.slice(0,80)}${k.title.length>80?'…':''}</div>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div class="plat-title">${k.title}</div>
+        <div class="plat-foot">
           <span class="plat-vol">${fmtVol(k.volume)}</span>
-          <a class="plat-link" href="${k.url}" target="_blank" rel="noopener">View ↗</a>
+          <span class="plat-cta">Open ↗</span>
         </div>
-      </div>
-      <div class="platform-block">
-        <div class="plat-name">Polymarket</div>
+      </a>
+      <a class="platform-block" href="${pm.url}" target="_blank" rel="noopener">
+        <div class="plat-name">Polymarket · YES price</div>
         <div class="plat-prob ${!kHigher ? 'higher' : 'lower'}">${(pm.yes_prob*100).toFixed(1)}%</div>
-        <div class="plat-title">${pm.title.slice(0,80)}${pm.title.length>80?'…':''}</div>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div class="plat-title">${pm.title}</div>
+        <div class="plat-foot">
           <span class="plat-vol">${fmtVol(pm.volume)}</span>
-          <a class="plat-link" href="${pm.url}" target="_blank" rel="noopener">View ↗</a>
+          <span class="plat-cta">Open ↗</span>
         </div>
-      </div>
+      </a>
     </div>
     <div class="card-analysis">
-      <strong>Analysis:</strong> ${p.plain_english}
+      <strong>What this means:</strong> ${p.plain_english}
     </div>
+    ${renderRealityCheck(p)}
     <div class="card-bottom">
-      <span class="match-tag">Match confidence: ${(p.match_score*100).toFixed(0)}%</span>
-      <span class="kelly-tag">¼-Kelly: ${(p.kelly*100).toFixed(1)}% bankroll</span>
+      <span class="match-tag">Match confidence: ${(p.match_score*100).toFixed(0)}% · Resolves in ~${p.days_to_close ?? '?'} days</span>
+      <span class="kelly-tag">Suggested size (¼-Kelly): ${(p.kelly*100).toFixed(1)}% of bankroll</span>
     </div>
   </div>`;
 }
