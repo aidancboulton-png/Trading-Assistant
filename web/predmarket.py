@@ -294,11 +294,85 @@ _CATEGORICAL_PHRASES = (
     "any republican", "any democrat", "anyone else", "any other",
 )
 
+# Pure party labels — these mean "any candidate from this party", which is
+# NEVER the same bet as a specific named candidate.
+_PARTY_LABELS = {
+    "republican party", "democratic party", "democrat party",
+    "republicans", "democrats", "gop",
+}
+
 
 def _is_categorical(title: str) -> bool:
     """Title asks about a category/group, not a specific person/thing."""
     tl = title.lower()
     return any(p in tl for p in _CATEGORICAL_PHRASES)
+
+
+def _suffix_is_party_label(suffix: Optional[str]) -> bool:
+    """True if a Kalshi candidate suffix is a generic party label, not a person."""
+    if not suffix:
+        return False
+    s = suffix.strip().lower()
+    return s in _PARTY_LABELS
+
+
+# Place words that look like 2-word capitalized names but aren't people.
+_PLACE_TWO_WORD = {
+    "south carolina", "north carolina", "south dakota", "north dakota",
+    "new york", "new jersey", "new mexico", "new hampshire", "new orleans",
+    "rhode island", "west virginia", "south africa", "north korea",
+    "south korea", "saudi arabia", "united states", "united kingdom",
+    "hong kong", "puerto rico", "los angeles", "san francisco", "san diego",
+    "las vegas", "el paso", "el salvador", "costa rica", "el nino",
+    "cape town", "tel aviv", "buenos aires", "rio grande",
+    "supreme court", "white house", "wall street", "world cup",
+    "super bowl",
+}
+
+
+_NAME_SKIP_FIRST = {
+    "will", "has", "have", "did", "does", "is", "are", "was", "were",
+    "the", "a", "an", "this", "that", "what", "when", "where", "which",
+    "who", "how", "republican", "democrat", "republicans", "democrats",
+    "kalshi", "polymarket", "trump", "biden",  # too common alone
+}
+
+# When the second word is one of these, the pair is a place/institution,
+# not a person ("Carolina Senate", "Texas House", "Florida Governor").
+_NAME_SKIP_SECOND = {
+    "senate", "house", "governor", "governorship", "presidency",
+    "congress", "court", "election", "primary", "republican",
+    "democrat", "republicans", "democrats", "state", "states",
+    "race", "seat", "party", "nominee", "nomination", "winner",
+    "championship", "playoffs", "open", "cup", "bowl", "league",
+    "title", "trophy", "tournament", "series",
+}
+
+
+def _names_specific_person(title: str) -> bool:
+    """
+    Detect if a title names a specific individual (not just a place).
+    Walks consecutive capitalized 2+ char tokens, skips sentence-starters,
+    place names, and generic political labels.
+    """
+    # Pull every word; track which are capitalized
+    words = re.findall(r"[A-Za-z][A-Za-z.]*", title)
+    for i in range(len(words) - 1):
+        a, b = words[i], words[i + 1]
+        if not (a[:1].isupper() and b[:1].isupper()):
+            continue
+        if a.lower() in _NAME_SKIP_FIRST:
+            continue
+        if b.lower() in _NAME_SKIP_SECOND:
+            continue
+        # Both must have at least 2 chars (skip stray initials alone)
+        if len(a) < 2 or len(b) < 2:
+            continue
+        pair = f"{a} {b}".lower()
+        if pair in _PLACE_TWO_WORD:
+            continue
+        return True
+    return False
 
 
 def _subjects_compatible(a: str, b: str) -> bool:
@@ -437,14 +511,26 @@ def _candidate_mismatch(kalshi_title: str, poly_title: str) -> bool:
     True if the Kalshi title has a candidate suffix and that candidate is NOT
     represented in the Polymarket title. We also do the reverse if the
     Polymarket title has a similar suffix structure.
+
+    Special case: if the Kalshi suffix is a generic party label (e.g.
+    'Republican party') and the Polymarket title names a specific person,
+    they are different bets — party-wins ≠ specific-candidate-wins.
     """
     k_suffix = _candidate_suffix(kalshi_title)
-    if k_suffix:
+    p_suffix = _candidate_suffix(poly_title)
+
+    # Party-suffix vs named-person mismatch.
+    # Look for a 2-word capitalized name that is NOT a US state or common place.
+    if _suffix_is_party_label(k_suffix) and _names_specific_person(poly_title):
+        return True
+    if _suffix_is_party_label(p_suffix) and _names_specific_person(kalshi_title):
+        return True
+
+    if k_suffix and not _suffix_is_party_label(k_suffix):
         toks = _candidate_tokens(k_suffix)
         if toks and not _candidate_present(poly_title, toks):
             return True
-    p_suffix = _candidate_suffix(poly_title)
-    if p_suffix:
+    if p_suffix and not _suffix_is_party_label(p_suffix):
         toks = _candidate_tokens(p_suffix)
         if toks and not _candidate_present(kalshi_title, toks):
             return True
