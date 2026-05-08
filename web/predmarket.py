@@ -506,6 +506,18 @@ def _candidate_present(other_title: str, candidate_tokens: set) -> bool:
     return False
 
 
+_GEN_SUFFIXES = {"jr", "sr", "ii", "iii", "iv"}
+
+
+def _has_gen_suffix(s: Optional[str]) -> Optional[str]:
+    if not s:
+        return None
+    for tok in re.findall(r"[a-z]+", s.lower()):
+        if tok in _GEN_SUFFIXES:
+            return tok
+    return None
+
+
 def _candidate_mismatch(kalshi_title: str, poly_title: str) -> bool:
     """
     True if the Kalshi title has a candidate suffix and that candidate is NOT
@@ -518,6 +530,15 @@ def _candidate_mismatch(kalshi_title: str, poly_title: str) -> bool:
     """
     k_suffix = _candidate_suffix(kalshi_title)
     p_suffix = _candidate_suffix(poly_title)
+
+    # Generational suffix lock — Trump Jr. ≠ Trump, Cuomo III ≠ Cuomo Jr.
+    k_gen = _has_gen_suffix(k_suffix) or _has_gen_suffix(kalshi_title.split("—")[-1] if "—" in kalshi_title else "")
+    p_gen = _has_gen_suffix(p_suffix) or _has_gen_suffix(poly_title)
+    # If one side has Jr/Sr/III etc and the other doesn't, mismatch
+    if (k_gen and not p_gen) or (p_gen and not k_gen):
+        return True
+    if k_gen and p_gen and k_gen != p_gen:
+        return True
 
     # Party-suffix vs named-person mismatch.
     # Look for a 2-word capitalized name that is NOT a US state or common place.
