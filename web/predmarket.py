@@ -316,6 +316,33 @@ def _suffix_is_party_label(suffix: Optional[str]) -> bool:
     return s in _PARTY_LABELS
 
 
+# Well-known surnames where the proper-noun lock should treat the token as
+# a unique-individual marker.  If both titles each mention a *different* name
+# from this set, they're different bets ("Trump-Putin meet" ≠ "Putin-Zelenskyy meet").
+_KNOWN_INDIVIDUALS = {
+    "trump", "biden", "harris", "putin", "zelenskyy", "zelensky",
+    "xi", "modi", "netanyahu", "macron", "scholz", "starmer",
+    "rubio", "desantis", "vance", "newsom", "ossoff", "emanuel",
+    "fetterman", "shapiro", "haley", "hegseth", "gabbard",
+    "khamenei", "kim", "erdogan", "lula", "milei",
+}
+
+
+def _participants_mismatch(a: str, b: str) -> bool:
+    """
+    True if each title names a known individual that the other doesn't.
+    Catches 'Trump-Putin meet' vs 'Putin-Zelenskyy meet' (different summit).
+    """
+    al, bl = a.lower(), b.lower()
+    a_names = {n for n in _KNOWN_INDIVIDUALS if re.search(rf"\b{n}\b", al)}
+    b_names = {n for n in _KNOWN_INDIVIDUALS if re.search(rf"\b{n}\b", bl)}
+    if not a_names or not b_names:
+        return False
+    a_only = a_names - b_names
+    b_only = b_names - a_names
+    return bool(a_only) and bool(b_only)
+
+
 # Place words that look like 2-word capitalized names but aren't people.
 _PLACE_TWO_WORD = {
     "south carolina", "north carolina", "south dakota", "north dakota",
@@ -495,15 +522,22 @@ def _candidate_tokens(suffix: str) -> set:
 
 
 def _candidate_present(other_title: str, candidate_tokens: set) -> bool:
-    """Does the other title mention at least one significant candidate token?"""
+    """
+    Require MAJORITY (>=50%, minimum 1) of candidate tokens to appear in the
+    other title — single-token overlap is too lenient (e.g. 'Turner-Smith'
+    sharing only 'turner' with 'Callum Turner').
+    """
     if not candidate_tokens:
-        return True  # nothing to enforce
+        return True
     ol = other_title.lower()
-    for tok in candidate_tokens:
-        # Whole-word match
-        if re.search(rf"\b{re.escape(tok)}\b", ol):
-            return True
-    return False
+    matched = sum(1 for tok in candidate_tokens
+                  if re.search(rf"\b{re.escape(tok)}\b", ol))
+    if matched == 0:
+        return False
+    # If we have 2+ candidate tokens, demand at least half of them present.
+    if len(candidate_tokens) >= 2 and matched / len(candidate_tokens) < 0.5:
+        return False
+    return True
 
 
 _GEN_SUFFIXES = {"jr", "sr", "ii", "iii", "iv"}
@@ -868,6 +902,8 @@ def match_markets(kalshi: list[dict], polymarket: list[dict]) -> list[dict]:
             if _office_mismatch(km["title"], pm["title"]):
                 continue
             if _candidate_mismatch(km["title"], pm["title"]):
+                continue
+            if _participants_mismatch(km["title"], pm["title"]):
                 continue
             pdays = _close_in_days(pm.get("close", ""))
             if pdays is not None and pdays < MIN_DAYS_TO_CLOSE:
