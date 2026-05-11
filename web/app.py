@@ -11,6 +11,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from typing import List
 from web.predmarket import run_scan
+from web.podcasts import (
+    list_episodes as podcast_list_episodes,
+    poll_and_process as podcast_poll,
+    SUBSCRIBED as PODCAST_SUBSCRIBED,
+)
+from jarvis.newsengine import aggregate as news_aggregate
+from jarvis.scriptwriter import generate_script, generate_short
 
 # Shared thread pool for parallel external API calls
 _POOL = ThreadPoolExecutor(max_workers=16)
@@ -1112,6 +1119,104 @@ async def api_predmarkets():
         asyncio.create_task(_predmarket_refresh())
 
     return _PREDMARKET_CACHE["data"]
+
+# ── Podcast intelligence ────────────────────────────────────────────────────
+_PODCAST_POLLING = {"flag": False, "last_run": 0.0}
+_PODCAST_POLL_INTERVAL = 15 * 60  # 15 minutes between background polls
+
+
+async def _podcast_refresh_bg():
+    """Poll + process new podcast episodes in the background. Never blocks."""
+    if _PODCAST_POLLING["flag"]:
+        return
+    _PODCAST_POLLING["flag"] = True
+    try:
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(_POOL, podcast_poll, 3)
+        print(f"[podcasts] refresh result: {result}")
+        _PODCAST_POLLING["last_run"] = time.time()
+    except Exception as e:
+        print(f"[podcasts] refresh error: {e}")
+    finally:
+        _PODCAST_POLLING["flag"] = False
+
+
+@app.get("/api/podcasts")
+async def api_podcasts(limit: int = 20):
+    """
+    List recent processed podcast episodes with intel.
+    Triggers a background poll if last poll was >15 min ago.
+    """
+    now = time.time()
+    if now - _PODCAST_POLLING["last_run"] > _PODCAST_POLL_INTERVAL:
+        asyncio.create_task(_podcast_refresh_bg())
+
+    episodes = podcast_list_episodes(limit=limit)
+    return {
+        "shows": [
+            {"id": k, "name": v["name"], "kind": v.get("kind", "news")}
+            for k, v in PODCAST_SUBSCRIBED.items()
+        ],
+        "episodes": episodes,
+        "polling": _PODCAST_POLLING["flag"],
+        "last_poll": _PODCAST_POLLING["last_run"],
+    }
+
+
+@app.post("/api/podcasts/refresh")
+async def api_podcasts_refresh():
+    """Force a podcast refresh (manual trigger from the UI)."""
+    asyncio.create_task(_podcast_refresh_bg())
+    return {"started": True}
+
+
+_NEWS_CACHE: dict = {}
+_NEWS_RAW_TTL   = 600   # 10 min — RSS re-fetch
+_NEWS_SCRIPT_TTL = 3600 # 1 hour — Claude script stays fixed
+
+@app.get("/api/newsbrief/raw")
+async def api_newsbrief_raw():
+    """Raw clustered stories from all feeds — no script generation."""
+    now = time.time()
+    if _NEWS_CACHE.get("raw") and (now - _NEWS_CACHE.get("raw_ts", 0)) < _NEWS_RAW_TTL:
+        return _NEWS_CACHE["raw"]
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: news_aggregate(translate=False)
+        )
+        _NEWS_CACHE["raw"]    = result
+        _NEWS_CACHE["raw_ts"] = now
+        return result
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/newsbrief/script")
+async def api_newsbrief_script():
+    """Full Jarvis-voiced script + short-form cut. Cached 1 hour."""
+    now = time.time()
+    if _NEWS_CACHE.get("script") and (now - _NEWS_CACHE.get("script_ts", 0)) < _NEWS_SCRIPT_TTL:
+        return _NEWS_CACHE["script"]
+    try:
+        raw = _NEWS_CACHE.get("raw")
+        if not raw:
+            raw = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: news_aggregate(translate=False)
+            )
+            _NEWS_CACHE["raw"]    = raw
+            _NEWS_CACHE["raw_ts"] = now
+        stories = raw.get("stories", [])
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: generate_script(stories)
+        )
+        short = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: generate_short(result["script"])
+        )
+        combined = {**result, **short}
+        _NEWS_CACHE["script"]    = combined
+        _NEWS_CACHE["script_ts"] = now
+        return combined
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 _static_dir = Path(__file__).parent / "static"
 
