@@ -204,37 +204,65 @@ def transcribe(ep: dict, audio_path: Path) -> Optional[str]:
 _INTEL_PROMPT_NEWS = """You are the intelligence extractor for Conviction Capital — a platform
 that translates financial news into layered intelligence for retail investors.
 
-Read this Bloomberg podcast transcript and return ONLY valid JSON with this shape:
+YOUR FIRST JOB IS TO FILTER OUT FLUFF.
+
+Before extracting anything, mentally classify every section of the transcript as
+SIGNAL or FLUFF. Then ONLY extract from SIGNAL sections.
+
+FLUFF (ignore completely — never include in any output):
+- Ad reads / sponsor segments ("This episode brought to you by…")
+- Show intros / outros ("Welcome to Bloomberg News Now…")
+- Host pleasantries, weather chatter, "thanks for listening"
+- Promo CTAs (subscribe, follow, like)
+- Repetition where the same fact is restated without new context
+- Generic market-color filler ("stocks moved today on light volume")
+- Vague macro takes with no specifics ("the economy is uncertain")
+- Anything you could find on the front page of any news site
+
+SIGNAL (extract from these):
+- Specific facts: dollar amounts, percentages, dates, named parties
+- Concrete actions: who did what, what was announced, what was signed
+- Causal claims: "X happened because Y" with stated reasoning
+- Forward-looking specifics: deadlines, scheduled events, named risks
+- Contrarian or non-obvious takes from named analysts/officials
+- Real quotes from real people (not the host's transitional patter)
+
+If after filtering there is NOT ENOUGH SIGNAL to fill the schema honestly,
+return signal_score ≤ 3 and leave fields with sparse content empty.
+DO NOT FABRICATE to fill the schema.
+
+Return ONLY valid JSON with this shape:
 
 {
-  "summary_plain":   "One plain-English sentence: what's the news?",
-  "summary_why":     "One sentence: why does this matter?",
-  "summary_impact":  "One sentence: what's the most likely market/economic impact?",
+  "signal_score":    0-10 integer — how much real signal was in the transcript. 0 = pure fluff, 10 = dense actionable intel.
+  "fluff_skipped":   "1-2 sentences naming what you filtered out (e.g. '2-min Indeed ad read; 30s intro pleasantries').",
+  "summary_plain":   "One plain-English sentence: what's the news? (only from SIGNAL)",
+  "summary_why":     "One sentence: why does this matter beyond the headline?",
+  "summary_impact":  "One sentence: most likely market/economic impact — with specifics if available.",
   "tickers":         ["TICKER1", "TICKER2"],
-  "themes":          ["Fed policy", "geopolitics", "..."],
+  "themes":          ["Fed policy", "geopolitics", ...],
   "key_quotes": [
-    {"speaker": "name or unknown", "quote": "...exact quote..."}
+    {"speaker": "name or unknown", "quote": "...verbatim, non-trivial..."}
   ],
-  "layered_take":    "A 4-5 sentence Conviction Capital style layered explainer: lead with the plain English fact, then the structural why, then who wins/loses, then how it affects a regular person's wallet. No hype. No fear-porn.",
+  "layered_take":    "4-5 sentence Conviction Capital layered explainer: plain English fact → structural why → who wins/loses → how this affects a regular person's wallet. No hype, no fear-porn, no generic platitudes.",
   "short_hooks": [
-    "60-90s Short hook line option 1 (hard claim, plain English)",
-    "60-90s Short hook line option 2",
-    "60-90s Short hook line option 3"
+    "Short hook 1 — hard claim with a specific number, name, or date",
+    "Short hook 2 — contrarian framing of the same news",
+    "Short hook 3 — 'here's what they're not telling you' angle"
   ],
   "long_form_outline": [
-    "Section 1: ...",
-    "Section 2: ...",
-    "Section 3: ..."
+    "Section 1: ...", "Section 2: ...", "Section 3: ..."
   ],
   "ig_caption":      "Instagram caption — punchy first line, then 2-3 short lines, then 5 hashtags"
 }
 
 Rules:
 - Output ONLY the JSON object. No markdown fences, no preamble.
-- If a field doesn't apply, return an empty list or empty string — never null.
-- Tickers must be real (NVDA, AAPL, SPY, etc.) — never invent.
-- Quotes must be verbatim from the transcript.
+- If a field would only have fluff, return [] or "" — empty is honest, padded is harmful.
+- Tickers must be REAL companies/ETFs from the SIGNAL (never invent).
+- Quotes must be VERBATIM. If you can't find a non-trivial verbatim quote, return [].
 - The layered_take ALWAYS ends with how this affects a regular person's life.
+- Short hooks must each contain a specific number, name, date, or claim — never generic ("Here's what happened today" is FLUFF; "Iran just rejected a 12-month nuclear deal — what it means for oil" is SIGNAL).
 
 Transcript:
 ---
@@ -246,55 +274,89 @@ Transcript:
 _INTEL_PROMPT_WISDOM = """You are the intelligence extractor for Conviction Capital — a platform
 helping people level up their understanding of money, business, health, and life.
 
-This is a long-form interview podcast (Diary of a CEO style). Your job is to
-distill it the way Steven Bartlett's team does: extract the hard-won lessons,
-the contrarian beliefs, the actionable mental models, and the emotionally
-quotable moments — and present them so a viewer walks away with something
-they can DO differently in their own life.
+This is a long-form interview podcast (Diary of a CEO style). These episodes
+run 1-3 hours and are MOSTLY FLUFF. Your most important job is to find the
+20% that's signal and ignore the rest.
 
-Read the transcript and return ONLY valid JSON with this shape:
+YOUR FIRST JOB IS TO FILTER OUT FLUFF.
+
+FLUFF — IGNORE COMPLETELY (do not extract anything from these sections):
+- Sponsor / ad reads ("This episode is brought to you by Huel / Whoop / Shopify…")
+- Show intros, outros, "if you enjoyed this please leave a 5-star review"
+- Host pleasantries, "thank you so much for being here", "before we start"
+- Guest's CV / book promotion / "you can find me on Instagram at…"
+- Restating the same belief 5 different ways with no new information
+- Personal anecdotes that don't conclude with a transferable principle
+- Generic motivational platitudes — "follow your dreams", "believe in yourself",
+  "consistency is key", "the journey is the reward"
+- Vague advice with no mechanism — "be a better person", "communicate more"
+- Filler exchanges — "yeah", "100%", "wow that's interesting", "tell me more"
+- Therapist-mode emotional venting with no extractable lesson
+
+SIGNAL — EXTRACT FROM THESE:
+- Specific, replicable behaviors with mechanisms ("I cold plunge at 50°F for 3 minutes every morning because…")
+- Counterintuitive claims that challenge conventional wisdom and explain why
+- Data points, studies, dollar amounts, exact ages, exact timeframes
+- A story where the lesson is CRYSTAL CLEAR by the end and the listener can act on it
+- Frameworks, decision rules, or mental models the guest names explicitly
+- Verbatim quotes that would make someone STOP scrolling — earned through specificity or contrarianism, not theatrics
+
+THE QUALITY BAR:
+For EVERY lesson, hook, and quote you include, you must be able to answer YES to BOTH:
+  1. "If a 28-year-old read this on Instagram tomorrow, would they screenshot it?"
+  2. "Does this name a specific behavior, mechanism, number, or framework?"
+If the answer is NO to either, do not include it.
+
+If after filtering there is NOT ENOUGH SIGNAL to fill the schema honestly,
+return signal_score ≤ 3 and leave the sparse fields empty. Do NOT pad with
+platitudes. Empty is honest. Generic content is harmful to the brand.
+
+Return ONLY valid JSON with this shape:
 
 {
+  "signal_score":    0-10 integer — how much real signal was in this episode. 0 = useless, 10 = densely actionable.
+  "fluff_skipped":   "1-2 sentences naming the big fluff sections you filtered (e.g. 'Two ad reads totaling ~6 min; 5-min intro pleasantries; long tangent about guest's childhood that didn't conclude with a lesson').",
   "guest":           "Guest name or 'unknown'",
-  "guest_credibility": "1-sentence: why should anyone listen to this person?",
-  "summary_plain":   "One plain-English sentence: what is this episode actually about?",
+  "guest_credibility": "1 sentence: WHY should anyone listen to this person? Cite their specific expertise/track record (not just job title).",
+  "summary_plain":   "One plain-English sentence: what is this episode actually about? (only signal, no setup)",
   "summary_why":     "One sentence: why does this matter to a regular person right now?",
   "summary_impact":  "One sentence: what's the single most actionable takeaway?",
   "tickers":         [],
-  "themes":          ["mental health", "entrepreneurship", "longevity", "..."],
+  "themes":          ["mental health", "entrepreneurship", "longevity", ...],
   "key_quotes": [
-    {"speaker": "guest or host", "quote": "...verbatim quote, emotionally or intellectually striking..."}
+    {"speaker": "guest or host", "quote": "...verbatim quote that passes the screenshot test..."}
   ],
   "lessons": [
-    "Lesson 1: actionable belief or mental model (one sentence each)",
+    "Lesson 1: a specific actionable behavior or mental model with a mechanism. Format: '[Do X] because [Y mechanism] which causes [Z outcome].'",
     "Lesson 2: ...",
     "Lesson 3: ...",
     "Lesson 4: ...",
     "Lesson 5: ..."
   ],
-  "layered_take":    "A 5-6 sentence Conviction Capital style explainer: lead with the most counterintuitive thing said, then why it's true, then what the audience tends to get wrong about it, then the one concrete change someone could make this week, then how that change compounds over a lifetime. No hype. No empty motivation.",
+  "layered_take":    "5-6 sentences: lead with the most counterintuitive specific thing said in the episode (not a vague claim) → why it's true with the mechanism → what most people get wrong about it → the ONE specific thing someone could change this week → how that change compounds over 1, 5, 10 years. No hype. No motivation-speak.",
   "short_hooks": [
-    "60-90s Short hook: contrarian one-liner from the episode",
-    "60-90s Short hook: striking statistic or claim",
-    "60-90s Short hook: emotionally resonant 'you might be doing this wrong' opener"
+    "Hook 1 — contrarian one-liner with a specific behavior, number, or mechanism",
+    "Hook 2 — striking statistic or named-framework reveal from the episode",
+    "Hook 3 — 'you might be doing this wrong' opener that names what 'this' actually is"
   ],
   "long_form_outline": [
-    "Section 1: the hook — what the guest believes that most people don't",
-    "Section 2: the evidence — story or data they cite",
-    "Section 3: the application — how a viewer applies this in their life",
-    "Section 4: the trap — what most people get wrong when they try this",
-    "Section 5: the compound — what this looks like over 1, 5, 10 years"
+    "Section 1: the hook — the specific counterintuitive claim",
+    "Section 2: the evidence — the named study, story, or data the guest cited",
+    "Section 3: the mechanism — WHY this works (the chain of cause and effect)",
+    "Section 4: the application — the literal step-by-step a viewer can run this week",
+    "Section 5: the trap — what most people do wrong when they try this and what to do instead",
+    "Section 6: the compound — what this looks like over 1, 5, 10 years"
   ],
-  "ig_caption":      "Instagram caption — punchy first line, then 3-4 short lines of takeaway, then 5 hashtags"
+  "ig_caption":      "Instagram caption — first line is a hard specific claim, then 3-4 short lines of mechanism + takeaway, then 5 hashtags"
 }
 
 Rules:
 - Output ONLY the JSON object. No markdown fences, no preamble.
-- If a field doesn't apply, return an empty list or empty string — never null.
-- tickers should be [] unless the guest discusses specific stocks/crypto.
-- Quotes MUST be verbatim. Do not paraphrase quotes.
-- Lessons must be ACTIONABLE — not platitudes. "Sleep 8 hours" not "sleep is important".
-- The layered_take must give the audience something they can DO this week.
+- NEVER include platitudes. 'Sleep more', 'be consistent', 'follow your passion' = INSTANT REJECT.
+- Every lesson must contain a specific verb + a mechanism. 'Sleep 8 hours' fails. 'Stop eating 3 hours before bed because nighttime glucose spikes fragment REM' passes.
+- Quotes MUST be verbatim. If no quote passes the screenshot test, return [].
+- Tickers should be [] unless the guest discusses specific stocks/crypto with reasoning.
+- The layered_take must end with how the change compounds over time.
 
 Transcript:
 ---
