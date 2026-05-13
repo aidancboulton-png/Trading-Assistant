@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mainframe · Conviction Capital</title>
+<style>
+  :root {
+    --bg:        #0a0a0a;
+    --panel:     #111;
+    --panel-2:   #181818;
+    --border:    #2a2a2a;
+    --text:      #e8e8e8;
+    --muted:     #888;
+    --gold:      #c9a44c;
+    --gold-2:    #f0c75e;
+    --green:     #4ade80;
+    --red:       #ef4444;
+    --gemini:    #4a86e8;
+    --claude:    #d97757;
+    --openai:    #10a37f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+  }
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px; margin-bottom: 18px;
+  }
+  h1 { font-size: 20px; color: var(--gold); letter-spacing: 1px; }
+  .uptime { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px; margin-bottom: 16px;
+  }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--muted); margin-bottom: 10px; font-weight: 600;
+  }
+  .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .row .label { color: var(--muted); }
+  .row .val { font-variant-numeric: tabular-nums; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block; margin-right: 6px;
+  }
+  .dot.gemini { background: var(--gemini); }
+  .dot.claude { background: var(--claude); }
+  .dot.openai { background: var(--openai); }
+  .status-ok { color: var(--green); }
+  .status-no { color: var(--red); }
+
+  .feed {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .feed h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--muted); margin-bottom: 12px;
+  }
+  .event {
+    display: grid;
+    grid-template-columns: 80px 90px 1fr 90px 60px;
+    gap: 10px; padding: 7px 0;
+    border-top: 1px solid var(--panel-2);
+    font-size: 12px;
+    align-items: baseline;
+  }
+  .event:first-of-type { border-top: 0; }
+  .event .time { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .event .provider { font-weight: 600; }
+  .event .provider.gemini { color: var(--gemini); }
+  .event .provider.claude { color: var(--claude); }
+  .event .label { color: var(--text); }
+  .event .preview { color: var(--muted); font-size: 11px; margin-top: 2px;
+                    grid-column: 3 / 4; }
+  .event .tokens { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+  .event .elapsed { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+  .event.error { background: rgba(239, 68, 68, 0.07); }
+  .event.error .label { color: var(--red); }
+
+  .empty { color: var(--muted); font-style: italic; padding: 20px; text-align: center; }
+  .pulse {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green); margin-right: 8px;
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  footer { color: var(--muted); font-size: 11px; margin-top: 18px; text-align: center; }
+  a { color: var(--gold); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="pulse"></span>MAINFRAME · CONVICTION CAPITAL</h1>
+  <div class="uptime" id="uptime">uptime —</div>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h3>AI Brain Status</h3>
+    <div class="row"><span class="label"><span class="dot gemini"></span>Gemini</span> <span class="val" id="gemini-status">—</span></div>
+    <div class="row"><span class="label"><span class="dot claude"></span>Claude</span> <span class="val" id="claude-status">—</span></div>
+    <div class="row"><span class="label"><span class="dot openai"></span>OpenAI</span> <span class="val" id="openai-status">—</span></div>
+  </div>
+
+  <div class="card">
+    <h3>Gemini Activity</h3>
+    <div class="row"><span class="label">Calls</span> <span class="val" id="gemini-calls">—</span></div>
+    <div class="row"><span class="label">Tokens</span> <span class="val" id="gemini-tokens">—</span></div>
+    <div class="row"><span class="label">Errors</span> <span class="val" id="gemini-errors">—</span></div>
+  </div>
+
+  <div class="card">
+    <h3>Claude Activity</h3>
+    <div class="row"><span class="label">Calls</span> <span class="val" id="claude-calls">—</span></div>
+    <div class="row"><span class="label">Tokens</span> <span class="val" id="claude-tokens">—</span></div>
+    <div class="row"><span class="label">Errors</span> <span class="val" id="claude-errors">—</span></div>
+  </div>
+</div>
+
+<div class="feed">
+  <h3>Live Call Feed · most recent first</h3>
+  <div id="feed"><div class="empty">Waiting for AI activity…</div></div>
+</div>
+
+<footer>
+  Mainframe refreshes every 2s · <a href="/">Dashboard</a> ·
+  <a href="/movers.html">Movers</a> ·
+  <a href="/intel-bot.html">Intel-Bot</a> ·
+  <a href="/content.html">Content</a>
+</footer>
+
+<script>
+const fmtTime = t => {
+  const d = new Date(t * 1000);
+  return d.toTimeString().slice(0, 8);
+};
+const fmtUptime = s => {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+};
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/mainframe', { cache: 'no-store' });
+    const d = await r.json();
+
+    document.getElementById('uptime').textContent = 'uptime ' + fmtUptime(d.uptime_s);
+
+    // Key status
+    const setStatus = (id, ok) => {
+      const el = document.getElementById(id);
+      el.textContent = ok ? 'ONLINE' : 'OFFLINE';
+      el.className = 'val ' + (ok ? 'status-ok' : 'status-no');
+    };
+    setStatus('gemini-status', d.keys.gemini);
+    setStatus('claude-status', d.keys.claude);
+    setStatus('openai-status', d.openai_key_set);
+
+    // Counters
+    document.getElementById('gemini-calls').textContent  = d.stats.gemini_calls || 0;
+    document.getElementById('gemini-tokens').textContent = (d.stats.gemini_tokens || 0).toLocaleString();
+    document.getElementById('gemini-errors').textContent = d.stats.gemini_errors || 0;
+    document.getElementById('claude-calls').textContent  = d.stats.claude_calls || 0;
+    document.getElementById('claude-tokens').textContent = (d.stats.claude_tokens || 0).toLocaleString();
+    document.getElementById('claude-errors').textContent = d.stats.claude_errors || 0;
+
+    // Feed
+    const feed = document.getElementById('feed');
+    if (!d.recent || d.recent.length === 0) {
+      feed.innerHTML = '<div class="empty">Waiting for AI activity…</div>';
+    } else {
+      feed.innerHTML = d.recent.map(e => `
+        <div class="event ${e.ok ? '' : 'error'}">
+          <div class="time">${fmtTime(e.ts)}</div>
+          <div class="provider ${e.provider}">${e.provider}</div>
+          <div>
+            <div class="label">${e.label || '—'}</div>
+            ${e.preview ? `<div class="preview">${escapeHtml(e.preview)}</div>` : ''}
+            ${e.error ? `<div class="preview" style="color:var(--red)">⚠ ${escapeHtml(e.error)}</div>` : ''}
+          </div>
+          <div class="tokens">${(e.tokens_in||0)+(e.tokens_out||0)} tok</div>
+          <div class="elapsed">${e.elapsed_ms || 0}ms</div>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    console.warn('mainframe fetch fail', e);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

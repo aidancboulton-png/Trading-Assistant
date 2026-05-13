@@ -40,21 +40,19 @@ for d in (_AUDIO_DIR, _TRANSCRIPT_DIR, _INTEL_DIR):
 
 
 # ── Subscribed shows ────────────────────────────────────────────────────────
-# Each entry: id → { name, rss_url, kind, keep_audio (bool) }
-# "kind" picks the right intelligence-extraction prompt:
-#   - "news"   → financial/market news (Bloomberg News Now)
-#   - "wisdom" → long-form interviews focused on life/business/health (DOAC)
+# Each entry: id → { name, rss_url, keep_audio (bool) }
+# Every source flows into ONE unified "Market Intel & Alpha" feed — there is
+# no "wisdom" vs "news" split. Everything is filtered through the same lens:
+# "what in this is actionable market intel or alpha right now?"
 SUBSCRIBED = {
     "bloomberg_news_now": {
         "name":       "Bloomberg News Now",
         "rss_url":    "https://www.omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/d9566f78-0464-4367-9dcc-b05700aeec6f/7f880b3c-7f67-4b4b-b520-b05700af9172/podcast.rss",
-        "kind":       "news",
         "keep_audio": False,
     },
     "diary_of_a_ceo": {
         "name":       "The Diary of a CEO",
         "rss_url":    "https://rss2.flightcast.com/xmsftuzjjykcmqwolaqn6mdn",
-        "kind":       "wisdom",
         "keep_audio": False,
     },
 }
@@ -195,168 +193,98 @@ def transcribe(ep: dict, audio_path: Path) -> Optional[str]:
 
 
 # ── Claude extraction ───────────────────────────────────────────────────────
-# Two prompt variants: news-driven shorts (Bloomberg News Now) and long-form
-# wisdom interviews (Diary of a CEO). The wisdom prompt deliberately mirrors
-# what DOAC does well — distill lessons, frame them as actionable life
-# intelligence, extract emotional/quotable beats. Output schema is identical
-# so the UI can render them the same way.
+# ONE unified prompt. Every source (Bloomberg, DOAC, TrendSpider, anything we
+# add later) flows through the same lens: "what in this transcript is
+# actionable market intel or alpha?" — not life-wisdom, not motivation,
+# not show pleasantries. If a source has no market signal, signal_score is
+# low and we don't fabricate one.
 
-_INTEL_PROMPT_NEWS = """You are the intelligence extractor for Conviction Capital — a platform
-that translates financial news into layered intelligence for retail investors.
+_INTEL_PROMPT = """You are the intelligence extractor for Conviction Capital — a paid
+market-intelligence platform. Every piece of content you process gets
+filtered through ONE question:
+
+  "What in this transcript is actionable market intel or alpha right now?"
+
+That is the ONLY thing that matters. Health tips, life advice, motivation,
+guest backstory, business memoir — all FLUFF unless it directly translates
+to a market-actionable take (a sector view, a ticker, a macro thesis, a
+flow signal, a regulatory shift, an industry inflection).
 
 YOUR FIRST JOB IS TO FILTER OUT FLUFF.
 
-Before extracting anything, mentally classify every section of the transcript as
-SIGNAL or FLUFF. Then ONLY extract from SIGNAL sections.
+Before extracting anything, classify every section of the transcript as
+SIGNAL or FLUFF. Then ONLY extract from SIGNAL.
 
-FLUFF (ignore completely — never include in any output):
-- Ad reads / sponsor segments ("This episode brought to you by…")
-- Show intros / outros ("Welcome to Bloomberg News Now…")
-- Host pleasantries, weather chatter, "thanks for listening"
-- Promo CTAs (subscribe, follow, like)
-- Repetition where the same fact is restated without new context
-- Generic market-color filler ("stocks moved today on light volume")
-- Vague macro takes with no specifics ("the economy is uncertain")
+FLUFF — IGNORE COMPLETELY:
+- Ad reads, sponsor segments
+- Show intros / outros / "thanks for listening" / "subscribe"
+- Host pleasantries, weather, small-talk
+- Guest CV, book promo, social handles
+- Life advice with no market angle (sleep, exercise, mindset, relationships)
+- Motivational platitudes ("follow your dreams", "consistency is key")
+- Vague macro takes ("the economy is uncertain", "markets are volatile")
+- Repetition of the same point without new context
 - Anything you could find on the front page of any news site
 
-SIGNAL (extract from these):
-- Specific facts: dollar amounts, percentages, dates, named parties
-- Concrete actions: who did what, what was announced, what was signed
-- Causal claims: "X happened because Y" with stated reasoning
-- Forward-looking specifics: deadlines, scheduled events, named risks
-- Contrarian or non-obvious takes from named analysts/officials
-- Real quotes from real people (not the host's transitional patter)
-
-If after filtering there is NOT ENOUGH SIGNAL to fill the schema honestly,
-return signal_score ≤ 3 and leave fields with sparse content empty.
-DO NOT FABRICATE to fill the schema.
-
-Return ONLY valid JSON with this shape:
-
-{
-  "signal_score":    0-10 integer — how much real signal was in the transcript. 0 = pure fluff, 10 = dense actionable intel.
-  "fluff_skipped":   "1-2 sentences naming what you filtered out (e.g. '2-min Indeed ad read; 30s intro pleasantries').",
-  "summary_plain":   "One plain-English sentence: what's the news? (only from SIGNAL)",
-  "summary_why":     "One sentence: why does this matter beyond the headline?",
-  "summary_impact":  "One sentence: most likely market/economic impact — with specifics if available.",
-  "tickers":         ["TICKER1", "TICKER2"],
-  "themes":          ["Fed policy", "geopolitics", ...],
-  "key_quotes": [
-    {"speaker": "name or unknown", "quote": "...verbatim, non-trivial..."}
-  ],
-  "layered_take":    "4-5 sentence Conviction Capital layered explainer: plain English fact → structural why → who wins/loses → how this affects a regular person's wallet. No hype, no fear-porn, no generic platitudes.",
-  "short_hooks": [
-    "Short hook 1 — hard claim with a specific number, name, or date",
-    "Short hook 2 — contrarian framing of the same news",
-    "Short hook 3 — 'here's what they're not telling you' angle"
-  ],
-  "long_form_outline": [
-    "Section 1: ...", "Section 2: ...", "Section 3: ..."
-  ],
-  "ig_caption":      "Instagram caption — punchy first line, then 2-3 short lines, then 5 hashtags"
-}
-
-Rules:
-- Output ONLY the JSON object. No markdown fences, no preamble.
-- If a field would only have fluff, return [] or "" — empty is honest, padded is harmful.
-- Tickers must be REAL companies/ETFs from the SIGNAL (never invent).
-- Quotes must be VERBATIM. If you can't find a non-trivial verbatim quote, return [].
-- The layered_take ALWAYS ends with how this affects a regular person's life.
-- Short hooks must each contain a specific number, name, date, or claim — never generic ("Here's what happened today" is FLUFF; "Iran just rejected a 12-month nuclear deal — what it means for oil" is SIGNAL).
-
-Transcript:
----
-{TRANSCRIPT}
----
-"""
-
-
-_INTEL_PROMPT_WISDOM = """You are the intelligence extractor for Conviction Capital — a platform
-helping people level up their understanding of money, business, health, and life.
-
-This is a long-form interview podcast (Diary of a CEO style). These episodes
-run 1-3 hours and are MOSTLY FLUFF. Your most important job is to find the
-20% that's signal and ignore the rest.
-
-YOUR FIRST JOB IS TO FILTER OUT FLUFF.
-
-FLUFF — IGNORE COMPLETELY (do not extract anything from these sections):
-- Sponsor / ad reads ("This episode is brought to you by Huel / Whoop / Shopify…")
-- Show intros, outros, "if you enjoyed this please leave a 5-star review"
-- Host pleasantries, "thank you so much for being here", "before we start"
-- Guest's CV / book promotion / "you can find me on Instagram at…"
-- Restating the same belief 5 different ways with no new information
-- Personal anecdotes that don't conclude with a transferable principle
-- Generic motivational platitudes — "follow your dreams", "believe in yourself",
-  "consistency is key", "the journey is the reward"
-- Vague advice with no mechanism — "be a better person", "communicate more"
-- Filler exchanges — "yeah", "100%", "wow that's interesting", "tell me more"
-- Therapist-mode emotional venting with no extractable lesson
-
 SIGNAL — EXTRACT FROM THESE:
-- Specific, replicable behaviors with mechanisms ("I cold plunge at 50°F for 3 minutes every morning because…")
-- Counterintuitive claims that challenge conventional wisdom and explain why
-- Data points, studies, dollar amounts, exact ages, exact timeframes
-- A story where the lesson is CRYSTAL CLEAR by the end and the listener can act on it
-- Frameworks, decision rules, or mental models the guest names explicitly
-- Verbatim quotes that would make someone STOP scrolling — earned through specificity or contrarianism, not theatrics
+- Named tickers, sectors, ETFs, commodities, currencies, rates
+- Specific dollar amounts, percentages, dates, named parties
+- Earnings drivers, guidance changes, capex shifts, M&A specifics
+- Forward-looking specifics: scheduled events, deadlines, catalyst dates
+- Causal claims: "X happened because Y" with reasoning a trader can use
+- Contrarian / non-consensus views from named analysts, CEOs, officials
+- Flow / positioning data, technicals with levels, regulatory shifts
+- Quotes that name something specific (not host transitional patter)
 
-THE QUALITY BAR:
-For EVERY lesson, hook, and quote you include, you must be able to answer YES to BOTH:
-  1. "If a 28-year-old read this on Instagram tomorrow, would they screenshot it?"
-  2. "Does this name a specific behavior, mechanism, number, or framework?"
-If the answer is NO to either, do not include it.
-
-If after filtering there is NOT ENOUGH SIGNAL to fill the schema honestly,
-return signal_score ≤ 3 and leave the sparse fields empty. Do NOT pad with
-platitudes. Empty is honest. Generic content is harmful to the brand.
+If after filtering there is NOT ENOUGH MARKET SIGNAL to fill the schema
+honestly, return signal_score ≤ 3 and leave fields empty. DO NOT FABRICATE.
+A DOAC episode about childhood trauma with no market angle should return
+signal_score 1 and almost-empty fields. That is correct behavior.
 
 Return ONLY valid JSON with this shape:
 
 {
-  "signal_score":    0-10 integer — how much real signal was in this episode. 0 = useless, 10 = densely actionable.
-  "fluff_skipped":   "1-2 sentences naming the big fluff sections you filtered (e.g. 'Two ad reads totaling ~6 min; 5-min intro pleasantries; long tangent about guest's childhood that didn't conclude with a lesson').",
-  "guest":           "Guest name or 'unknown'",
-  "guest_credibility": "1 sentence: WHY should anyone listen to this person? Cite their specific expertise/track record (not just job title).",
-  "summary_plain":   "One plain-English sentence: what is this episode actually about? (only signal, no setup)",
-  "summary_why":     "One sentence: why does this matter to a regular person right now?",
-  "summary_impact":  "One sentence: what's the single most actionable takeaway?",
-  "tickers":         [],
-  "themes":          ["mental health", "entrepreneurship", "longevity", ...],
+  "signal_score":    0-10 integer — how much actionable market signal. 0 = pure life/motivation/fluff with no market angle, 10 = dense tradeable intel.
+  "fluff_skipped":   "1-2 sentences naming what you filtered (e.g. '2-min Whoop ad read; 40-min discussion of guest's morning routine with no market relevance').",
+  "headline":        "One-line plain-English statement of THE market-relevant thing in this content. If signal_score ≤ 3, write 'No material market signal.'",
+  "summary_why":     "One sentence: why a trader/investor should care.",
+  "summary_impact":  "One sentence: most likely market/economic impact — with sectors, tickers, or levels if available.",
+  "tickers":         ["TICKER1", "TICKER2"],
+  "sectors":         ["Energy", "Semis", "Banks", ...],
+  "themes":          ["Fed policy", "AI capex", "Trade war", ...],
+  "catalysts": [
+    {"date": "YYYY-MM-DD or 'unknown'", "event": "what's scheduled", "matters_because": "why it moves things"}
+  ],
   "key_quotes": [
-    {"speaker": "guest or host", "quote": "...verbatim quote that passes the screenshot test..."}
+    {"speaker": "name or unknown", "quote": "...verbatim non-trivial market-relevant quote..."}
   ],
-  "lessons": [
-    "Lesson 1: a specific actionable behavior or mental model with a mechanism. Format: '[Do X] because [Y mechanism] which causes [Z outcome].'",
-    "Lesson 2: ...",
-    "Lesson 3: ...",
-    "Lesson 4: ...",
-    "Lesson 5: ..."
+  "layered_take":    "4-6 sentences in Conviction Capital house style: plain-English fact → structural why → who wins / who loses (named) → how this shows up in a regular portfolio. No hype, no fear-porn, no platitudes.",
+  "watch_list": [
+    "Specific thing to monitor: ticker / level / data release / date / spread / ratio"
   ],
-  "layered_take":    "5-6 sentences: lead with the most counterintuitive specific thing said in the episode (not a vague claim) → why it's true with the mechanism → what most people get wrong about it → the ONE specific thing someone could change this week → how that change compounds over 1, 5, 10 years. No hype. No motivation-speak.",
   "short_hooks": [
-    "Hook 1 — contrarian one-liner with a specific behavior, number, or mechanism",
-    "Hook 2 — striking statistic or named-framework reveal from the episode",
-    "Hook 3 — 'you might be doing this wrong' opener that names what 'this' actually is"
+    "Hook 1 — hard claim with a specific number, name, ticker, or date",
+    "Hook 2 — contrarian framing of the same intel",
+    "Hook 3 — 'what they're not telling you' angle, with specifics"
   ],
   "long_form_outline": [
-    "Section 1: the hook — the specific counterintuitive claim",
-    "Section 2: the evidence — the named study, story, or data the guest cited",
-    "Section 3: the mechanism — WHY this works (the chain of cause and effect)",
-    "Section 4: the application — the literal step-by-step a viewer can run this week",
-    "Section 5: the trap — what most people do wrong when they try this and what to do instead",
-    "Section 6: the compound — what this looks like over 1, 5, 10 years"
+    "Section 1: the hook — specific claim",
+    "Section 2: the evidence — data / quote / event cited",
+    "Section 3: the mechanism — why this moves markets",
+    "Section 4: the trade / position implication",
+    "Section 5: what to watch next — named catalyst or level"
   ],
-  "ig_caption":      "Instagram caption — first line is a hard specific claim, then 3-4 short lines of mechanism + takeaway, then 5 hashtags"
+  "ig_caption":      "Instagram caption — punchy first line with a specific number/ticker, then 2-3 short lines, then 5 hashtags"
 }
 
 Rules:
 - Output ONLY the JSON object. No markdown fences, no preamble.
-- NEVER include platitudes. 'Sleep more', 'be consistent', 'follow your passion' = INSTANT REJECT.
-- Every lesson must contain a specific verb + a mechanism. 'Sleep 8 hours' fails. 'Stop eating 3 hours before bed because nighttime glucose spikes fragment REM' passes.
-- Quotes MUST be verbatim. If no quote passes the screenshot test, return [].
-- Tickers should be [] unless the guest discusses specific stocks/crypto with reasoning.
-- The layered_take must end with how the change compounds over time.
+- Empty is honest. Padded is harmful to the brand. Empty arrays / empty strings are FINE.
+- Tickers must be REAL companies/ETFs explicitly tied to the SIGNAL — never invent.
+- Quotes MUST be verbatim. If no quote passes the bar, return [].
+- Every short hook must contain at least one specific number, ticker, name, or date.
+- The layered_take always ends with how this shows up for a regular investor.
+- If the content is a long-form life/wisdom podcast with NO market angle, return signal_score ≤ 3 with mostly-empty fields and a one-line headline saying so. Do not try to "save" it by inventing market relevance.
 
 Transcript:
 ---
@@ -365,16 +293,30 @@ Transcript:
 """
 
 
-def _prompt_for_kind(kind: str) -> str:
-    return _INTEL_PROMPT_WISDOM if kind == "wisdom" else _INTEL_PROMPT_NEWS
+# Default watchlist tickers used for triage when no caller-provided list is
+# supplied. Matches the dashboard WATCHLIST in web/app.py. Kept local to avoid
+# a circular import.
+_DEFAULT_WATCHLIST = [
+    "SPY", "QQQ", "DIA", "IWM", "VIXY",
+    "USO", "GLD", "UUP", "TLT",
+    "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA",
+    "JPM", "BAC", "WFC", "GS", "MS",
+    "XOM", "CVX", "COP",
+    "BTC", "ETH",
+]
 
 
-def extract_intel(ep: dict, transcript: str) -> Optional[dict]:
-    """Run Claude over the transcript. Returns intel dict or None on failure."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if not api_key:
-        print(f"[podcasts] ANTHROPIC_API_KEY not set — skipping intel extraction")
-        return None
+def extract_intel(ep: dict, transcript: str,
+                  watchlist: Optional[list[str]] = None) -> Optional[dict]:
+    """
+    Two-stage hybrid extraction:
+      Stage 1 (Gemini Flash, cheap): triage — does this transcript have
+          market signal for any watchlist ticker? Score 0-10.
+      Stage 2 (Claude Opus, expensive): only if triage scored >= 5,
+          write the full Conviction Capital layered take.
+
+    Returns intel dict (with triage metadata merged in) or None on failure.
+    """
     if not transcript or len(transcript) < 100:
         return None
 
@@ -385,40 +327,65 @@ def extract_intel(ep: dict, transcript: str) -> Optional[dict]:
         except Exception:
             pass
 
-    model = os.environ.get("INTELLIGENCE_MODEL", "claude-opus-4-6")
-    show = SUBSCRIBED.get(ep.get("show_id", ""), {})
-    kind = show.get("kind", "news")
-    prompt_tpl = _prompt_for_kind(kind)
-    prompt = prompt_tpl.replace("{TRANSCRIPT}", transcript[:60_000])
-
+    # Lazy import to avoid circular deps and to keep this module importable
+    # even if llm_router is missing in some environments.
     try:
-        r = requests.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json={
-                "model": model,
-                "max_tokens": 2000,
-                "messages": [{"role": "user", "content": prompt}],
-            },
-            timeout=90,
-        )
-        r.raise_for_status()
-        data = r.json()
-        text = "".join(b.get("text", "") for b in data.get("content", []))
-        # Trim to first { … last }
-        a, b = text.find("{"), text.rfind("}")
-        if a < 0 or b < 0:
-            return None
-        intel = json.loads(text[a:b+1])
-        out_path.write_text(json.dumps(intel, indent=2))
-        return intel
+        from web.llm_router import filter_for_tickers, write_layered_take
     except Exception as e:
-        print(f"[podcasts] intel extraction error {ep['episode_id']}: {e}")
+        print(f"[podcasts] llm_router unavailable: {e}")
         return None
+
+    wl = watchlist or _DEFAULT_WATCHLIST
+    source_label = f"{ep.get('show_name','')} — {ep.get('title','')}"
+
+    # ── Stage 1: Gemini triage ──────────────────────────────────────────────
+    triage = filter_for_tickers(transcript, wl, source_label=source_label)
+    if not triage:
+        print(f"[podcasts] triage failed for {ep['episode_id']}")
+        return None
+
+    score = int(triage.get("signal_score", 0) or 0)
+    # Below 5 → not worth Claude's compute. Save a stub so the UI can show
+    # "we looked at this, nothing material" without re-processing later.
+    if score < 5:
+        stub = {
+            "signal_score":   score,
+            "headline":       triage.get("one_liner") or "No material market signal.",
+            "summary_why":    "",
+            "summary_impact": "",
+            "tickers":        triage.get("tickers", []) or [],
+            "sectors":        [],
+            "themes":         triage.get("themes", []) or [],
+            "catalysts":      [],
+            "key_quotes":     [],
+            "layered_take":   "",
+            "watch_list":     [],
+            "short_hooks":    [],
+            "source":         source_label,
+            "stage":          "triage_only",
+        }
+        out_path.write_text(json.dumps(stub, indent=2))
+        return stub
+
+    # ── Stage 2: Claude full writeup ────────────────────────────────────────
+    intel = write_layered_take(transcript, triage, source_label=source_label)
+    if not intel:
+        print(f"[podcasts] claude writeup failed for {ep['episode_id']}")
+        # Still save the triage so the UI shows something useful.
+        intel = {
+            "signal_score":   score,
+            "headline":       triage.get("one_liner") or "",
+            "tickers":        triage.get("tickers", []) or [],
+            "themes":         triage.get("themes", []) or [],
+            "stage":          "triage_only",
+        }
+    else:
+        intel["signal_score"] = score
+        intel["stage"] = "full"
+
+    intel["source"] = source_label
+    out_path.write_text(json.dumps(intel, indent=2))
+    return intel
 
 
 # ── Orchestrator ────────────────────────────────────────────────────────────

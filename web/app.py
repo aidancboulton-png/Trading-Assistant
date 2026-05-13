@@ -1046,6 +1046,33 @@ async def api_alerts():
 async def api_insider(symbol: str):
     return {"data": await asyncio.to_thread(get_insider_activity, symbol.upper())}
 
+# ── Live ticker grounding (Gemini + Google Search) ─────────────────────────
+_LIVE_CACHE: dict = {}
+_LIVE_TTL = 600  # 10 min — live news refresh window
+
+@app.get("/api/ticker/{symbol}/live")
+async def api_ticker_live(symbol: str):
+    """
+    Live web-grounded snippet for a ticker. Uses Gemini with Google Search
+    grounding to return 2-3 sentences of today's market-relevant news.
+    Cached 10 min to keep cost down.
+    """
+    sym = symbol.upper().strip()
+    now = time.time()
+    cached = _LIVE_CACHE.get(sym)
+    if cached and now - cached["ts"] < _LIVE_TTL:
+        return {"symbol": sym, "summary": cached["summary"], "ts": cached["ts"], "cached": True}
+
+    try:
+        from web.llm_router import ground_ticker
+        summary = await asyncio.to_thread(ground_ticker, sym)
+    except Exception as e:
+        return {"symbol": sym, "summary": None, "error": str(e)}
+
+    if summary:
+        _LIVE_CACHE[sym] = {"summary": summary, "ts": now}
+    return {"symbol": sym, "summary": summary, "ts": now, "cached": False}
+
 @app.get("/api/technicals")
 async def api_technicals():
     return {"data": await asyncio.to_thread(lambda: cached("technicals", get_technicals_all)),
@@ -1168,6 +1195,140 @@ async def api_podcasts_refresh():
     """Force a podcast refresh (manual trigger from the UI)."""
     asyncio.create_task(_podcast_refresh_bg())
     return {"started": True}
+
+
+# ── Mainframe — live telemetry for every LLM call ──────────────────────────
+@app.get("/api/mainframe")
+async def api_mainframe():
+    """
+    Live view of the AI brain. Returns:
+      - stats: lifetime counters per provider
+      - recent: last ~60 LLM calls with model, label, tokens, elapsed, preview
+      - models: which models are configured
+      - keys:   which API keys are present (booleans only — no secrets)
+    """
+    from web.llm_router import telemetry, health
+    tel = telemetry()
+    h   = health()
+    return {
+        "stats":   tel["stats"],
+        "recent":  tel["recent"],
+        "uptime_s": tel["uptime_s"],
+        "models":  {p: v["model"] for p, v in h.items()},
+        "keys":    {p: v["key_set"] for p, v in h.items()},
+        "openai_key_set": bool(os.environ.get("OPENAI_API_KEY", "").strip()),
+        "ts": time.time(),
+    }
+
+
+# ── Daily scripts (for IG/Twitter/TikTok content) ──────────────────────────
+_SCRIPTS_CACHE: dict = {}
+_SCRIPTS_TTL = 6 * 3600   # 6 hours
+
+@app.get("/api/scripts/today")
+async def api_scripts_today():
+    """
+    Returns 3 ready-to-shoot 30-second video scripts pulled from today's
+    top intel. Format: hook → fact → tickers → CTA. Refreshed every 6 hours.
+    """
+    now = time.time()
+    cached = _SCRIPTS_CACHE.get("payload")
+    if cached and (now - _SCRIPTS_CACHE.get("ts", 0)) < _SCRIPTS_TTL:
+        return cached
+
+    from web.llm_router import gemini_json
+    prompt = """You write 30-second vertical-video scripts for Conviction Capital,
+a market intelligence platform. The goal: a viewer on Instagram Reels / TikTok
+hooks within 1.5 seconds, learns one specific market-relevant fact, sees
+named tickers, and is told to visit convictioncapital.com for the full play.
+
+Generate THREE scripts based on the most important market intel for the
+last 48 hours. Each script must be specific, not generic. Each must contain
+real named tickers, a real dollar amount or percentage, and a real catalyst.
+
+Output ONLY this JSON:
+{
+  "scripts": [
+    {
+      "topic":   "one-line topic",
+      "hook":    "1.5-second opener — bold claim with a number/name",
+      "body":    "20-second main script — fact, structural why, named tickers, the play",
+      "cta":     "5-second close — 'link in bio for the full breakdown'",
+      "tickers": ["TICKER1", "TICKER2"],
+      "caption": "Instagram caption — punchy first line, 2-3 short lines, 5 hashtags",
+      "hashtags": ["#hash1", "#hash2", "#hash3", "#hash4", "#hash5"]
+    },
+    ...
+  ]
+}
+
+Rules:
+- Every hook must have a specific number, ticker, name, or date.
+- No platitudes. No "the market is moving today."
+- Real catalysts only. If you don't know one, say so in the topic but DO NOT fabricate.
+- Voice: confident, plain-English, no jargon, no hype-bro tone."""
+
+    payload = await asyncio.to_thread(
+        gemini_json, prompt, None, 3000, "scripts:daily"
+    )
+    if not payload:
+        return JSONResponse({"error": "script generation failed"}, status_code=503)
+
+    payload["ts"] = now
+    _SCRIPTS_CACHE["payload"] = payload
+    _SCRIPTS_CACHE["ts"] = now
+    return payload
+
+
+# ── Intel-Bot — public-facing AI Person Q&A (conversion funnel) ────────────
+# Free tier: 1 question per IP per day. Answers come from Gemini grounded
+# in the live web. Anything they ask becomes a lead.
+_INTELBOT_LOG: dict = {}   # ip → { last_ts, count_today, day }
+_INTELBOT_DAILY_LIMIT = 3
+
+@app.post("/api/intelbot/ask")
+async def api_intelbot_ask(payload: dict):
+    """
+    Public-facing AI Person endpoint. POST { question: str }.
+    Rate-limited per IP. Uses Gemini with web grounding so answers are current.
+    """
+    from web.llm_router import gemini_call
+    from fastapi import Request
+    q = (payload.get("question") or "").strip()
+    if not q or len(q) < 5:
+        return JSONResponse({"error": "ask a real question"}, status_code=400)
+    if len(q) > 400:
+        return JSONResponse({"error": "keep questions under 400 chars"}, status_code=400)
+
+    ip = payload.get("_ip") or "anon"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    rec = _INTELBOT_LOG.get(ip) or {"day": today, "count": 0}
+    if rec["day"] != today:
+        rec = {"day": today, "count": 0}
+    if rec["count"] >= _INTELBOT_DAILY_LIMIT:
+        return {
+            "answer": ("You've hit today's free limit (3 questions/day). "
+                       "Sign up at convictioncapital.com for unlimited intel."),
+            "rate_limited": True,
+        }
+
+    prompt = f"""You are the public-facing AI analyst for Conviction Capital, a market intel platform.
+A visitor asked: "{q}"
+
+Answer in 4-6 sentences. Be specific — name tickers, dates, dollar amounts.
+Be honest if you don't know. End with: "For the full breakdown including conviction scores and the layered take, visit convictioncapital.com."
+
+If the question is off-topic (not markets/economics/policy/companies), politely steer them back: "I focus on market intelligence — try asking about a stock, sector, or macro event."
+"""
+    answer = await asyncio.to_thread(
+        gemini_call, prompt, None, 800, True, "intelbot:ask"
+    )
+    if not answer:
+        return JSONResponse({"error": "intel-bot is busy, try again"}, status_code=503)
+
+    rec["count"] += 1
+    _INTELBOT_LOG[ip] = rec
+    return {"answer": answer, "remaining": _INTELBOT_DAILY_LIMIT - rec["count"]}
 
 
 _NEWS_CACHE: dict = {}

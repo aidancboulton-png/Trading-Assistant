@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ask Conviction · Free Market Intel AI</title>
+<style>
+  :root {
+    --bg:        #0a0a0a;
+    --panel:     #141414;
+    --panel-2:   #1a1a1a;
+    --border:    #2a2a2a;
+    --text:      #f0f0f0;
+    --muted:     #888;
+    --gold:      #c9a44c;
+    --gold-2:    #f0c75e;
+    --accent:    #4a86e8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    background:
+      radial-gradient(ellipse at top, rgba(201,164,76,0.08) 0%, transparent 50%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 32px 16px 80px;
+  }
+  .container { max-width: 720px; width: 100%; }
+  .brand {
+    text-align: center; margin-bottom: 28px;
+  }
+  .brand .logo {
+    font-size: 32px; font-weight: 800; letter-spacing: 2px;
+    color: var(--gold);
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .brand .tag {
+    color: var(--muted); margin-top: 6px; font-size: 13px; letter-spacing: 0.5px;
+  }
+  .hero {
+    text-align: center; margin-bottom: 32px;
+  }
+  .hero h1 {
+    font-size: 36px; font-weight: 800; line-height: 1.15;
+    margin-bottom: 14px;
+  }
+  .hero h1 .accent {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p { color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 540px; margin: 0 auto; }
+
+  .chat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .conversation {
+    padding: 22px 22px 6px;
+    min-height: 200px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  .bubble {
+    padding: 13px 16px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+  .bubble.user {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    align-self: flex-end;
+    max-width: 85%;
+    margin-left: auto;
+  }
+  .bubble.bot {
+    background: linear-gradient(135deg, rgba(201,164,76,0.08) 0%, rgba(201,164,76,0.03) 100%);
+    border: 1px solid rgba(201,164,76,0.25);
+    max-width: 100%;
+  }
+  .bubble.bot::before {
+    content: 'CONVICTION';
+    display: block; font-size: 9px; letter-spacing: 2px;
+    color: var(--gold); font-weight: 700; margin-bottom: 6px;
+  }
+  .empty-state {
+    color: var(--muted); text-align: center;
+    padding: 30px 20px; font-size: 13px;
+  }
+  .empty-state .examples {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    margin-top: 14px;
+  }
+  .ex-chip {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    padding: 7px 12px; border-radius: 20px;
+    font-size: 12px; cursor: pointer;
+    color: var(--text);
+    transition: all .15s;
+  }
+  .ex-chip:hover { border-color: var(--gold); color: var(--gold); }
+
+  .composer {
+    display: flex; gap: 10px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--panel-2);
+  }
+  .composer textarea {
+    flex: 1;
+    background: transparent;
+    border: 0; outline: 0; resize: none;
+    color: var(--text);
+    font-size: 14px; line-height: 1.5;
+    min-height: 24px; max-height: 100px;
+    font-family: inherit;
+  }
+  .composer textarea::placeholder { color: var(--muted); }
+  .composer button {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    color: #000;
+    border: 0;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+  }
+  .composer button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .meta {
+    text-align: center; color: var(--muted); font-size: 12px;
+    margin-top: 8px;
+  }
+  .upsell {
+    background: linear-gradient(135deg, rgba(201,164,76,0.10) 0%, rgba(201,164,76,0.04) 100%);
+    border: 1px solid rgba(201,164,76,0.3);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-top: 24px;
+    text-align: center;
+  }
+  .upsell h3 { font-size: 16px; color: var(--gold); margin-bottom: 6px; }
+  .upsell p { color: var(--text); font-size: 13px; line-height: 1.6; margin-bottom: 14px; }
+  .upsell a.btn {
+    display: inline-block;
+    background: var(--gold);
+    color: #000;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .typing { color: var(--muted); font-style: italic; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="brand">
+    <div class="logo">CONVICTION</div>
+    <div class="tag">MARKET INTEL · POWERED BY AI · FREE TIER</div>
+  </div>
+
+  <div class="hero">
+    <h1>Ask the <span class="accent">Conviction AI</span> anything about markets.</h1>
+    <p>Live web-grounded intel. Named tickers. Real catalysts. No fluff.
+       Three free questions per day. No signup needed to try.</p>
+  </div>
+
+  <div class="chat">
+    <div class="conversation" id="conv">
+      <div class="empty-state">
+        Ask me about a stock, sector, macro event, or smart-money move.
+        <div class="examples">
+          <div class="ex-chip" onclick="askExample(this)">What's driving NVDA right now?</div>
+          <div class="ex-chip" onclick="askExample(this)">Is Bill Gates still buying farmland?</div>
+          <div class="ex-chip" onclick="askExample(this)">Top BTC mining stock with AI optionality</div>
+          <div class="ex-chip" onclick="askExample(this)">What bills moving could move crypto prices?</div>
+        </div>
+      </div>
+    </div>
+    <div class="composer">
+      <textarea id="q" placeholder="Type your question…" rows="1"></textarea>
+      <button id="send" onclick="ask()">ASK</button>
+    </div>
+  </div>
+
+  <div class="meta" id="meta">3 free questions remaining today</div>
+
+  <div class="upsell">
+    <h3>Want the full breakdown?</h3>
+    <p>Conviction Capital members get unlimited questions, 12-vector convergence scores,
+       smart-money tracking, and daily intel video briefs.</p>
+    <a class="btn" href="/">Open Dashboard →</a>
+  </div>
+</div>
+
+<script>
+const $conv = document.getElementById('conv');
+const $q    = document.getElementById('q');
+const $send = document.getElementById('send');
+const $meta = document.getElementById('meta');
+
+let conversationStarted = false;
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+
+function addBubble(text, who) {
+  if (!conversationStarted) {
+    $conv.innerHTML = '';
+    conversationStarted = true;
+  }
+  const div = document.createElement('div');
+  div.className = 'bubble ' + who;
+  div.textContent = text;
+  $conv.appendChild(div);
+  $conv.scrollTop = $conv.scrollHeight;
+  return div;
+}
+
+function askExample(el) {
+  $q.value = el.textContent;
+  ask();
+}
+
+async function ask() {
+  const q = $q.value.trim();
+  if (!q) return;
+  $q.value = '';
+  $send.disabled = true;
+  addBubble(q, 'user');
+  const typing = addBubble('thinking…', 'bot');
+  typing.classList.add('typing');
+
+  try {
+    const r = await fetch('/api/intelbot/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q })
+    });
+    const d = await r.json();
+    typing.remove();
+    if (d.error) {
+      addBubble('⚠ ' + d.error, 'bot');
+    } else {
+      addBubble(d.answer || '(no answer)', 'bot');
+      if (typeof d.remaining === 'number') {
+        $meta.textContent = d.remaining + ' free question' +
+                            (d.remaining === 1 ? '' : 's') + ' remaining today';
+      }
+      if (d.rate_limited) {
+        $meta.textContent = 'Daily limit reached. Visit the dashboard for unlimited intel.';
+      }
+    }
+  } catch (e) {
+    typing.remove();
+    addBubble('⚠ Network error. Try again.', 'bot');
+  } finally {
+    $send.disabled = false;
+    $q.focus();
+  }
+}
+
+$q.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    ask();
+  }
+});
+
+// Auto-resize textarea
+$q.addEventListener('input', () => {
+  $q.style.height = 'auto';
+  $q.style.height = Math.min($q.scrollHeight, 100) + 'px';
+});
+</script>
+</body>
+</html>
