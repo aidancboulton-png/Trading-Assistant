@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.A.R.V.I.S. — World Brief</title>
+<style>
+  :root {
+    --bg:      #0a0c0f;
+    --surface: #0f1318;
+    --surface2:#161b22;
+    --border:  #1e2530;
+    --text:    #d4dce8;
+    --muted:   #5a6880;
+    --accent:  #4a9eff;
+    --gold:    #c8a84b;
+    --red:     #e05a5a;
+    --green:   #4caf7a;
+    --scan:    rgba(74,158,255,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Scanline overlay ── */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── HUD Header ── */
+  .hud {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .hud-left { display: flex; align-items: center; gap: 18px; }
+  .back-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: color 0.2s, border-color 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .back-link:hover { color: var(--text); border-color: var(--muted); }
+  .hud-title {
+    font-size: 13px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .hud-title span { color: var(--gold); }
+  .hud-right { display: flex; align-items: center; gap: 16px; }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2.5s infinite;
+  }
+  .status-dot.loading { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+  .status-dot.error   { background: var(--red);  box-shadow: 0 0 6px var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  .hud-status { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px;
+    padding: 5px 14px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .btn:hover { color: var(--text); border-color: var(--muted); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn.primary:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+
+  /* ── Feed counter strip ── */
+  .feed-strip {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 28px;
+    display: flex;
+    gap: 20px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    overflow-x: auto;
+  }
+  .feed-strip span { white-space: nowrap; }
+  .feed-strip .val { color: var(--accent); font-weight: 700; }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    height: calc(100vh - 58px - 34px);
+  }
+
+  /* ── Left panel: story list ── */
+  .story-list {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .story-list-header {
+    padding: 14px 18px 10px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 10;
+  }
+  .story-item {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .story-item:hover { background: var(--surface2); }
+  .story-item.active { background: var(--scan); border-left: 2px solid var(--accent); }
+  .si-cat {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 5px;
+    font-weight: 700;
+  }
+  .si-headline {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.45;
+    margin-bottom: 6px;
+  }
+  .si-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .si-sources { color: var(--accent); }
+
+  /* ── Right panel: story detail ── */
+  .story-detail {
+    overflow-y: auto;
+    padding: 28px 36px;
+    max-width: 860px;
+  }
+  .sd-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted);
+    gap: 12px;
+    text-align: center;
+  }
+  .sd-empty .icon { font-size: 32px; opacity: 0.4; }
+  .sd-empty p { font-size: 12px; line-height: 1.6; max-width: 280px; opacity: 0.7; }
+
+  .sd-cat {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .sd-headline {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.35;
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+  .sd-meta {
+    display: flex;
+    gap: 14px;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .sd-meta .tag {
+    background: var(--surface2);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Perspective blocks ── */
+  .perspectives { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
+  .persp-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .persp-header {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .persp-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+  .persp-source {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .persp-body {
+    padding: 12px 16px;
+  }
+  .persp-title {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+  .persp-summary {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .persp-link {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+  }
+  .persp-link:hover { text-decoration: underline; }
+
+  /* Bias color coding */
+  .bias-western_mainstream  { color: #4a9eff; border-color: rgba(74,158,255,0.25) !important; }
+  .bias-western_alternative { color: #7ba5d0; border-color: rgba(123,165,208,0.25) !important; }
+  .bias-eastern             { color: #e05a5a; border-color: rgba(224,90,90,0.25) !important; }
+  .bias-middle_east         { color: #c8a84b; border-color: rgba(200,168,75,0.25) !important; }
+  .bias-european            { color: #6a9f7a; border-color: rgba(106,159,122,0.25) !important; }
+  .bias-asian               { color: #b08adb; border-color: rgba(176,138,219,0.25) !important; }
+  .bias-latin               { color: #e07840; border-color: rgba(224,120,64,0.25) !important; }
+  .bias-african             { color: #c09a60; border-color: rgba(192,154,96,0.25) !important; }
+
+  /* ── Script panel (bottom sheet) ── */
+  .script-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+    max-height: 75vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .script-panel.open { transform: translateY(0); }
+  .script-header {
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .script-header h2 {
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .script-tabs {
+    display: flex;
+    gap: 8px;
+  }
+  .script-tab {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .script-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .script-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .script-close:hover { color: var(--text); }
+  .script-body {
+    overflow-y: auto;
+    padding: 24px 28px;
+    flex: 1;
+  }
+  .script-text {
+    white-space: pre-wrap;
+    line-height: 2;
+    font-size: 14px;
+    color: var(--text);
+    max-width: 800px;
+  }
+  .script-text .section-tag {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    display: block;
+    margin-top: 20px;
+    margin-bottom: 4px;
+  }
+  .script-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    padding: 20px 0;
+  }
+  .mini-spin {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--text); }
+
+  /* ── Bottom action bar ── */
+  .action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+  }
+  .action-bar.hidden-by-script { display: none; }
+  .action-left { display: flex; gap: 10px; align-items: center; }
+  .action-right { display: flex; gap: 10px; align-items: center; font-size: 10px; color: var(--muted); }
+
+  /* ── Loading / Error states ── */
+  .global-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: calc(100vh - 92px);
+    gap: 16px;
+  }
+  .big-spin {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  .load-label { font-size: 13px; color: var(--muted); letter-spacing: 0.08em; }
+  .load-sub { font-size: 11px; color: #2a3348; }
+
+  /* ── Category pills (filter) ── */
+  .cat-filters {
+    display: flex;
+    gap: 6px;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .cf-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.12s;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .cf-btn:hover { color: var(--text); border-color: var(--muted); }
+  .cf-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    .story-list { height: 40vh; }
+    .story-detail { padding: 16px; }
+    .sd-headline { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HUD Header ── -->
+<div class="hud">
+  <div class="hud-left">
+    <a class="back-link" href="/">← Dashboard</a>
+    <div class="hud-title">J.A.R.V.I.S. <span>WORLD BRIEF</span></div>
+  </div>
+  <div class="hud-right">
+    <div class="status-dot loading" id="status-dot"></div>
+    <span class="hud-status" id="hud-status">Initialising…</span>
+    <button class="btn" id="refresh-btn" onclick="loadStories(true)">Refresh</button>
+  </div>
+</div>
+
+<!-- ── Feed strip ── -->
+<div class="feed-strip" id="feed-strip">
+  <span>Feeds: <span class="val" id="fs-feeds">—</span></span>
+  <span>Articles: <span class="val" id="fs-articles">—</span></span>
+  <span>Stories: <span class="val" id="fs-stories">—</span></span>
+  <span>Perspectives: <span class="val" id="fs-persp">—</span></span>
+  <span id="fs-time"></span>
+</div>
+
+<!-- ── Loading state ── -->
+<div class="global-loading" id="global-loading">
+  <div class="big-spin"></div>
+  <div class="load-label">Scanning 40 global news outlets…</div>
+  <div class="load-sub">Al Jazeera · RT · CGTN · BBC · DW · The Hindu · TeleSUR · AllAfrica · and 32 more</div>
+</div>
+
+<!-- ── Main Layout (hidden until loaded) ── -->
+<div class="layout" id="main-layout" style="display:none">
+  <!-- Left: story list -->
+  <div class="story-list">
+    <div class="story-list-header">
+      <span>Stories</span>
+      <span id="story-count" style="color:var(--accent)">0</span>
+    </div>
+    <div class="cat-filters" id="cat-filters">
+      <button class="cf-btn active" data-cat="all" onclick="filterCat(this)">All</button>
+    </div>
+    <div id="story-items"></div>
+  </div>
+
+  <!-- Right: story detail -->
+  <div class="story-detail" id="story-detail">
+    <div class="sd-empty">
+      <div class="icon">◈</div>
+      <p>Select a story from the left panel.<br>Each story shows you every side of the narrative.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Action bar ── -->
+<div class="action-bar" id="action-bar">
+  <div class="action-left">
+    <button class="btn primary" id="script-btn" onclick="openScript()">
+      ◆ Generate Jarvis Script
+    </button>
+    <button class="btn" onclick="openScript('short')">
+      60-sec Short
+    </button>
+  </div>
+  <div class="action-right">
+    <span>Powered by Claude claude-sonnet-4-6 + 40 global RSS feeds</span>
+  </div>
+</div>
+
+<!-- ── Script panel ── -->
+<div class="script-panel" id="script-panel">
+  <div class="script-header">
+    <h2>Jarvis Briefing Script</h2>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="script-tabs">
+        <button class="script-tab active" id="tab-full" onclick="switchTab('full')">Full Brief</button>
+        <button class="script-tab" id="tab-short" onclick="switchTab('short')">60s Short</button>
+      </div>
+      <button class="copy-btn" onclick="copyScript()">Copy</button>
+      <button class="script-close" onclick="closeScript()">×</button>
+    </div>
+  </div>
+  <div class="script-body" id="script-body">
+    <div class="script-loading">
+      <div class="mini-spin"></div>
+      <span>Jarvis is reading the world's news and writing your briefing…</span>
+    </div>
+  </div>
+</div>
+
+<script>
+let allStories   = [];
+let activeStory  = null;
+let activeCat    = 'all';
+let scriptData   = null;
+let activeTab    = 'full';
+
+const CAT_COLORS = {
+  war_conflict:    '#e05a5a',
+  economics:       '#c8a84b',
+  politics:        '#4a9eff',
+  climate:         '#4caf7a',
+  technology:      '#b08adb',
+  health:          '#e07840',
+  finance_markets: '#6a9f7a',
+  society:         '#7ba5d0',
+  world:           '#5a6880',
+};
+
+const CAT_LABELS = {
+  war_conflict:    '⚔ War & Conflict',
+  economics:       '$ Economics',
+  politics:        '⬡ Politics',
+  climate:         '◍ Climate',
+  technology:      '◈ Technology',
+  health:          '+ Health',
+  finance_markets: '▲ Markets',
+  society:         '◉ Society',
+  world:           '⊕ World',
+};
+
+function catColor(cat) { return CAT_COLORS[cat] || '#5a6880'; }
+function catLabel(cat) { return CAT_LABELS[cat] || cat.replace(/_/g,' ').toUpperCase(); }
+
+const BIAS_ORDER = [
+  'western_mainstream','western_alternative','european',
+  'middle_east','eastern','asian','latin','african'
+];
+const BIAS_LABELS = {
+  western_mainstream:  'Western Mainstream',
+  western_alternative: 'Western Alt Media',
+  european:            'European Press',
+  middle_east:         'Middle East',
+  eastern:             'Eastern / State',
+  asian:               'Asia-Pacific',
+  latin:               'Latin America',
+  african:             'African Press',
+};
+
+function sortPerspectives(persp) {
+  return [...persp].sort((a,b) => {
+    const ai = BIAS_ORDER.indexOf(a.bias);
+    const bi = BIAS_ORDER.indexOf(b.bias);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+}
+
+// ── Story list ──────────────────────────────────────────────────────────────
+
+function buildCatFilters(stories) {
+  const cats = {};
+  stories.forEach(s => cats[s.category] = (cats[s.category]||0) + 1);
+  const cf = document.getElementById('cat-filters');
+  let html = `<button class="cf-btn active" data-cat="all" onclick="filterCat(this)">All (${stories.length})</button>`;
+  Object.entries(cats).sort((a,b) => b[1]-a[1]).forEach(([cat,n]) => {
+    html += `<button class="cf-btn" data-cat="${cat}" onclick="filterCat(this)"
+      style="--c:${catColor(cat)}">${catLabel(cat)} (${n})</button>`;
+  });
+  cf.innerHTML = html;
+}
+
+function filterCat(btn) {
+  document.querySelectorAll('.cf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCat = btn.dataset.cat;
+  renderStoryList();
+}
+
+function renderStoryList() {
+  const filtered = activeCat === 'all'
+    ? allStories
+    : allStories.filter(s => s.category === activeCat);
+
+  document.getElementById('story-count').textContent = filtered.length;
+  const container = document.getElementById('story-items');
+  container.innerHTML = filtered.map((s, i) => `
+    <div class="story-item ${activeStory?.id === s.id ? 'active' : ''}"
+         onclick="selectStory('${s.id}')">
+      <div class="si-cat" style="color:${catColor(s.category)}">${catLabel(s.category)}</div>
+      <div class="si-headline">${escHtml(s.headline)}</div>
+      <div class="si-meta">
+        <span class="si-sources">${s.perspective_count} perspectives</span>
+        <span>${s.source_count} outlets</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectStory(id) {
+  activeStory = allStories.find(s => s.id === id);
+  renderStoryList();
+  renderDetail();
+}
+
+// ── Story detail ─────────────────────────────────────────────────────────────
+
+function renderDetail() {
+  if (!activeStory) return;
+  const s = activeStory;
+  const sorted = sortPerspectives(s.perspectives || []);
+
+  const perspHtml = sorted.map(p => `
+    <div class="persp-block bias-${p.bias}" style="border-color:${catColor(s.category)}22">
+      <div class="persp-header">
+        <span class="persp-label bias-${p.bias}">${BIAS_LABELS[p.bias] || p.label}</span>
+        <span class="persp-source">${escHtml(p.source)} · ${p.region}</span>
+      </div>
+      <div class="persp-body">
+        <div class="persp-title">${escHtml(p.title)}</div>
+        <div class="persp-summary">${escHtml(p.summary)}</div>
+        ${p.url ? `<a class="persp-link" href="${escHtml(p.url)}" target="_blank" rel="noopener">Read original ↗</a>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('story-detail').innerHTML = `
+    <div class="sd-cat" style="color:${catColor(s.category)}">${catLabel(s.category)}</div>
+    <div class="sd-headline">${escHtml(s.headline)}</div>
+    <div class="sd-meta">
+      <span class="tag">${s.source_count} outlets covering this</span>
+      <span class="tag">${s.perspective_count} distinct viewpoints</span>
+      ${s.sources.slice(0,5).map(src => `<span class="tag">${escHtml(src)}</span>`).join('')}
+      ${s.sources.length > 5 ? `<span class="tag">+${s.sources.length - 5} more</span>` : ''}
+    </div>
+    <div class="perspectives">${perspHtml}</div>
+  `;
+}
+
+// ── Script panel ──────────────────────────────────────────────────────────────
+
+async function openScript(tab = 'full') {
+  const panel = document.getElementById('script-panel');
+  document.getElementById('action-bar').classList.add('hidden-by-script');
+  panel.classList.add('open');
+  switchTab(tab);
+  if (!scriptData) {
+    await fetchScript();
+  }
+  renderScriptContent();
+}
+
+function closeScript() {
+  document.getElementById('script-panel').classList.remove('open');
+  document.getElementById('action-bar').classList.remove('hidden-by-script');
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-full').classList.toggle('active', tab === 'full');
+  document.getElementById('tab-short').classList.toggle('active', tab === 'short');
+  if (scriptData) renderScriptContent();
+}
+
+async function fetchScript() {
+  const body = document.getElementById('script-body');
+  body.innerHTML = `<div class="script-loading">
+    <div class="mini-spin"></div>
+    <span>Jarvis is reading ${allStories.length} stories from ${document.getElementById('fs-feeds').textContent} feeds…</span>
+  </div>`;
+  try {
+    const res = await fetch('/api/newsbrief/script');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    scriptData = await res.json();
+    if (scriptData.error) throw new Error(scriptData.error);
+  } catch (err) {
+    body.innerHTML = `<div style="color:var(--red);padding:20px 0">
+      Error generating script: ${escHtml(err.message)}<br><br>
+      Make sure ANTHROPIC_API_KEY is set in config.json.
+    </div>`;
+    scriptData = null;
+  }
+}
+
+function renderScriptContent() {
+  const body   = document.getElementById('script-body');
+  const isShort = activeTab === 'short';
+  const raw    = isShort ? scriptData?.short_script : scriptData?.script;
+
+  if (!raw) {
+    body.innerHTML = `<div style="color:var(--muted);padding:20px 0">
+      ${isShort ? 'Short-form script not available.' : 'Script not available.'}
+    </div>`;
+    return;
+  }
+
+  // Highlight [SECTION] markers
+  const highlighted = raw
+    .replace(/\[(INTRO|OUTRO|STORY[^\]]*|HOOK|BRIEF|CLOSE)\]/g,
+      (m) => `<span class="section-tag">${m}</span>`)
+    .replace(/(HEADLINE:|WESTERN VIEW:|COUNTER NARRATIVE:|WHAT'S MISSING:|WHAT THIS MEANS FOR YOU:)/g,
+      '<strong style="color:var(--gold)">$1</strong>');
+
+  const wc = isShort
+    ? (scriptData?.short_word_count || scriptData?.word_count || '—')
+    : (scriptData?.word_count || '—');
+
+  body.innerHTML = `
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;font-size:10px;color:var(--muted)">
+      <span>Date: <strong style="color:var(--text)">${scriptData?.date || '—'}</strong></span>
+      <span>Words: <strong style="color:var(--accent)">${wc}</strong></span>
+      ${!isShort ? `<span>Tokens: <strong>${scriptData?.input_tokens||0}in / ${scriptData?.output_tokens||0}out</strong></span>` : ''}
+      ${!isShort ? `<span>Model: ${scriptData?.model || '—'}</span>` : ''}
+    </div>
+    <div class="script-text">${highlighted}</div>`;
+}
+
+function copyScript() {
+  const raw = activeTab === 'short' ? scriptData?.short_script : scriptData?.script;
+  if (!raw) return;
+  navigator.clipboard.writeText(raw).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+// ── Data loading ──────────────────────────────────────────────────────────────
+
+async function loadStories(force = false) {
+  const dot = document.getElementById('status-dot');
+  const btn = document.getElementById('refresh-btn');
+  dot.className = 'status-dot loading';
+  document.getElementById('hud-status').textContent = 'Scanning…';
+  btn.disabled = true;
+  scriptData = null; // invalidate cached script on refresh
+
+  const url = force ? '/api/newsbrief/raw?bust=' + Date.now() : '/api/newsbrief/raw';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    allStories = data.stories || [];
+
+    // Update feed strip
+    document.getElementById('fs-feeds').textContent    = data.feed_count  ?? '—';
+    document.getElementById('fs-articles').textContent = data.total_articles ?? '—';
+    document.getElementById('fs-stories').textContent  = data.total_stories  ?? '—';
+    const totalPersp = allStories.reduce((n, s) => n + s.perspective_count, 0);
+    document.getElementById('fs-persp').textContent    = totalPersp;
+    document.getElementById('fs-time').textContent     = `Updated: ${new Date().toLocaleTimeString()}`;
+
+    buildCatFilters(allStories);
+    renderStoryList();
+
+    // Show layout
+    document.getElementById('global-loading').style.display = 'none';
+    document.getElementById('main-layout').style.display    = 'grid';
+
+    dot.className = 'status-dot';
+    document.getElementById('hud-status').textContent =
+      `${allStories.length} stories · ${data.feed_count} feeds live`;
+
+  } catch (err) {
+    dot.className = 'status-dot error';
+    document.getElementById('hud-status').textContent = 'Error — ' + err.message;
+    document.getElementById('global-loading').innerHTML = `
+      <div style="color:var(--red);font-size:13px">Feed error: ${escHtml(err.message)}</div>
+      <button class="btn" onclick="loadStories(true)">Retry</button>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function escHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Boot
+loadStories();
+// Refresh every 12 minutes
+setInterval(() => loadStories(), 12 * 60 * 1000);
+</script>
+</body>
+</html>

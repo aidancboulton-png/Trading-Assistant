@@ -3,436 +3,463 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prediction Market Scanner</title>
+<title>Conviction · Prediction Market Edge</title>
 <style>
   :root {
-    /* Conviction Capital — black · brown · gold · grey */
-    --bg: #0e0c0a;
-    --surface: #15110d;
-    --surface2: #1c1814;
-    --border: #2e2820;
-    --text: #e8e0d0;
-    --muted: #8a8275;
-    --accent: #c9a55c;
-    --green: #6b9b6b;
-    --red: #b87055;
-    --orange: #c9a55c;
-    --yellow: #e0c084;
+    --bg:        #0b0b0d;
+    --panel:     #14141a;
+    --panel-2:   #1a1a22;
+    --row:       #131318;
+    --row-alt:   #16161d;
+    --border:    #25252e;
+    --border-2:  #2f2f3a;
+    --text:      #f2f2f5;
+    --muted:     #8a8a96;
+    --muted-2:   #5e5e68;
+    --gold:      #c9a44c;
+    --gold-2:    #f0c75e;
+    --green:     #22c55e;
+    --green-soft:#16a34a;
+    --red:       #ef4444;
+    --amber:     #f59e0b;
+    --blue:      #4a86e8;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; min-height: 100vh; }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
 
-  /* ── Header ── */
-  .header {
-    background: var(--surface);
+  /* ── Top nav ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px;
     border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .header-left { display: flex; align-items: center; gap: 16px; }
-  .back-btn {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 12px;
-    padding: 4px 10px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    transition: color 0.2s, border-color 0.2s;
-  }
-  .back-btn:hover { color: var(--text); border-color: var(--muted); }
-  .header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.05em; color: var(--text); }
-  .header h1 span { color: var(--accent); }
-  .status-row { display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--muted); }
-  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; display: inline-block; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .refresh-btn {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 5px 14px;
-    font-size: 11px;
-    cursor: pointer;
-    font-family: inherit;
-    transition: opacity 0.2s;
-  }
-  .refresh-btn:hover { opacity: 0.85; }
-  .refresh-btn:disabled { opacity: 0.4; cursor: default; }
-
-  /* ── Stats bar ── */
-  .stats-bar {
-    display: flex;
-    gap: 24px;
-    padding: 14px 24px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-  }
-  .stat { text-align: center; white-space: nowrap; }
-  .stat-val { font-size: 20px; font-weight: 700; color: var(--text); }
-  .stat-val.green { color: var(--green); }
-  .stat-val.orange { color: var(--orange); }
-  .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
-  .stat-sep { width: 1px; background: var(--border); align-self: stretch; }
-
-  /* ── Filter tabs ── */
-  .tabs {
-    display: flex;
-    gap: 6px;
-    padding: 14px 24px;
-    overflow-x: auto;
     background: var(--bg);
-    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
   }
-  .tab {
-    padding: 5px 14px;
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .logo {
+    font-weight: 800; letter-spacing: 1.5px; font-size: 14px;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .back {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+    transition: all .15s;
+  }
+  .back:hover { color: var(--text); border-color: var(--muted); }
+  .status {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--muted); font-size: 12px;
+  }
+  .pulse {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+    animation: pulse 1.8s infinite ease-in-out;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .refresh {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    color: #000; border: 0; padding: 8px 16px; border-radius: 8px;
+    font-weight: 700; font-size: 12px; letter-spacing: 0.5px; cursor: pointer;
+  }
+  .refresh:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Hero header ── */
+  .hero {
+    padding: 32px 28px 20px;
+    max-width: 1400px; margin: 0 auto;
+  }
+  .hero h1 {
+    font-size: 32px; font-weight: 800; letter-spacing: -0.5px;
+    line-height: 1.1; margin-bottom: 8px;
+  }
+  .hero h1 .accent {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    color: var(--muted); font-size: 14px; max-width: 640px; line-height: 1.55;
+  }
+
+  /* ── Stat strip ── */
+  .strip {
+    max-width: 1400px; margin: 18px auto 0; padding: 0 28px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .stat .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat .v.green { color: var(--green); }
+  .stat .v.gold  { color: var(--gold-2); }
+  .stat .l {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted); margin-top: 4px;
+  }
+  @media (max-width: 900px) {
+    .strip { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ── Source picker ── */
+  .sources {
+    max-width: 1400px; margin: 22px auto 0; padding: 0 28px;
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .src-tile {
+    flex: 1; min-width: 160px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .src-tile:hover { border-color: var(--gold); }
+  .src-tile.active {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, rgba(201,164,76,0.12) 0%, rgba(201,164,76,0.04) 100%);
+  }
+  .src-tile .name { font-weight: 700; font-size: 13px; letter-spacing: 0.3px; }
+  .src-tile .count { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .src-tile.active .count { color: var(--gold-2); }
+
+  /* ── Category chips ── */
+  .chips {
+    max-width: 1400px; margin: 16px auto 0; padding: 0 28px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .chip {
+    padding: 6px 14px;
     border-radius: 20px;
     border: 1px solid var(--border);
-    background: var(--surface);
+    background: var(--panel);
     color: var(--muted);
-    cursor: pointer;
-    font-size: 11px;
-    white-space: nowrap;
-    transition: all 0.15s;
-    font-family: inherit;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .12s;
   }
-  .tab:hover { color: var(--text); border-color: var(--muted); }
-  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip:hover { color: var(--text); border-color: var(--muted); }
+  .chip.active {
+    background: var(--text); color: #000;
+    border-color: var(--text);
+  }
 
-  /* ── Controls ── */
+  /* ── Controls row ── */
   .controls {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 10px 24px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
+    max-width: 1400px; margin: 14px auto 0; padding: 0 28px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
   }
-  .controls label { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-  .controls input[type=range] { accent-color: var(--accent); width: 100px; }
-  #edge-val { color: var(--text); font-weight: 600; min-width: 30px; }
+  .controls label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .controls input[type=range] { accent-color: var(--gold); width: 130px; }
+  #edge-val { color: var(--text); font-weight: 700; min-width: 38px; font-variant-numeric: tabular-nums; }
+  .hint { color: var(--muted-2); font-size: 11px; }
 
-  /* ── Cards grid ── */
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 20px 24px;
-    max-width: 1400px;
-    margin: 0 auto;
+  /* ── Table card ── */
+  .wrap {
+    max-width: 1400px; margin: 18px auto 60px; padding: 0 28px;
   }
-
-  /* ── Pair card ── */
-  .pair-card {
-    background: var(--surface);
+  .table-card {
+    background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 20px;
-    transition: border-color 0.2s;
+    border-radius: 14px;
+    overflow: hidden;
   }
-  .pair-card:hover { border-color: var(--accent); }
-  .pair-card.edge-huge  { border-left: 3px solid var(--red); }
-  .pair-card.edge-large { border-left: 3px solid var(--orange); }
-  .pair-card.edge-mid   { border-left: 3px solid var(--yellow); }
-  .pair-card.edge-small { border-left: 3px solid var(--muted); }
-
-  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-  .bet-headline {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.35;
-    margin: 6px 0 4px;
-  }
-  .bet-summary {
-    font-size: 12px;
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.3px;
     color: var(--muted);
-    line-height: 1.5;
-    margin-bottom: 10px;
+    padding: 14px 16px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border-2);
+    font-weight: 700;
+    white-space: nowrap;
   }
-  .bet-summary .yes { color: var(--green); font-weight: 600; }
-  .bet-summary .no  { color: var(--red);   font-weight: 600; }
-  .bet-summary .mark { color: var(--accent); font-weight: 600; }
-  .cat-badge {
+  thead th.num { text-align: right; }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .12s;
+  }
+  tbody tr:hover { background: var(--row-alt); }
+  tbody tr:last-child { border-bottom: 0; }
+  tbody td {
+    padding: 14px 16px;
+    vertical-align: middle;
+    font-size: 13px;
+  }
+  tbody td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+  .cat-tag {
+    display: inline-block;
     font-size: 9px;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 700;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .edge-pill {
-    font-size: 13px;
-    font-weight: 800;
-    padding: 4px 12px;
-    border-radius: 6px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .edge-pill.huge  { background: rgba(239,68,68,0.15);  color: var(--red); }
-  .edge-pill.large { background: rgba(245,158,11,0.15); color: var(--orange); }
-  .edge-pill.mid   { background: rgba(234,179,8,0.15);  color: var(--yellow); }
-  .edge-pill.small { background: rgba(100,116,139,0.1); color: var(--muted); }
-
-  .platforms { display: flex; gap: 12px; margin: 10px 0; }
-  .platform-block {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px 14px;
-    display: flex;
-    flex-direction: column;
-    color: inherit;
-    text-decoration: none;
-    transition: border-color 0.15s, background 0.15s, transform 0.15s;
-    cursor: pointer;
-    position: relative;
-  }
-  .platform-block:hover {
-    border-color: var(--accent);
-    background: #221d16;
-    transform: translateY(-1px);
-  }
-  .platform-block:active { transform: translateY(0); }
-  .plat-name { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 4px; }
-  .plat-prob {
-    font-size: 24px;
-    font-weight: 800;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-  .plat-prob.higher { color: var(--green); }
-  .plat-prob.lower  { color: var(--muted); }
-  .plat-title { font-size: 11px; color: var(--text); line-height: 1.45; margin-bottom: 8px; opacity: 0.9; }
-  .plat-foot {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: auto;
-    padding-top: 6px;
-  }
-  .plat-vol { font-size: 9px; color: var(--muted); }
-  .plat-cta {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border: 1px solid var(--accent);
+    letter-spacing: 1px;
     padding: 3px 8px;
     border-radius: 4px;
-    background: rgba(201,165,92,0.08);
-  }
-  .platform-block:hover .plat-cta {
-    background: var(--accent);
-    color: #15110d;
-  }
-
-  .card-analysis {
-    background: rgba(59,130,246,0.05);
-    border: 1px solid rgba(59,130,246,0.15);
-    border-radius: 6px;
-    padding: 10px 14px;
-    font-size: 11px;
-    color: #94a3b8;
-    line-height: 1.6;
-    margin-top: 8px;
-  }
-  .card-analysis strong { color: var(--text); }
-
-  /* ── Reality check block ── */
-  .reality-check {
-    margin-top: 10px;
-    background: rgba(201,165,92,0.04);
-    border: 1px solid rgba(201,165,92,0.18);
-    border-radius: 6px;
-    padding: 10px 14px;
-  }
-  .rc-header {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--accent);
     font-weight: 700;
     margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
   }
-  .rc-header::before {
-    content: "◆";
-    font-size: 9px;
+  .market-title {
+    font-weight: 600; color: var(--text); line-height: 1.4;
+    margin-bottom: 4px;
+    max-width: 460px;
   }
-  .rc-source {
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-    padding: 4px 0;
-    font-size: 11px;
-    border-top: 1px dashed rgba(201,165,92,0.12);
+  .market-sub { font-size: 11px; color: var(--muted); }
+
+  .pct-cell {
+    font-size: 18px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
   }
-  .rc-source:first-of-type { border-top: none; }
-  .rc-label {
-    color: var(--muted);
-    flex-shrink: 0;
-    min-width: 130px;
-    font-weight: 600;
+  .pct-cell.higher { color: var(--green); }
+  .pct-cell.lower  { color: var(--muted); }
+  .pct-cell .src   { display: block; font-size: 9px; color: var(--muted-2); font-weight: 600; letter-spacing: 1px; margin-top: 2px; text-transform: uppercase; }
+
+  .edge-cell {
+    font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums;
+    padding: 4px 10px; border-radius: 6px;
+    display: inline-block;
   }
+  .edge-cell.huge  { background: rgba(34,197,94,0.16);  color: var(--green); }
+  .edge-cell.large { background: rgba(34,197,94,0.10);  color: var(--green); }
+  .edge-cell.mid   { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .edge-cell.small { background: rgba(138,138,150,0.10); color: var(--muted); }
+
+  .kelly-cell { font-weight: 700; color: var(--gold-2); font-variant-numeric: tabular-nums; }
+
+  .verdict {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 16px;
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .verdict.buy-k {
+    background: rgba(74,134,232,0.14); color: var(--blue);
+  }
+  .verdict.buy-p {
+    background: rgba(201,164,76,0.16); color: var(--gold-2);
+  }
+  .verdict::before {
+    content: "▲"; font-size: 8px;
+  }
+
+  .btn-view {
+    display: inline-block;
+    background: var(--text); color: #000;
+    border: 0; padding: 8px 18px; border-radius: 20px;
+    font-weight: 700; font-size: 12px;
+    text-decoration: none; cursor: pointer;
+    letter-spacing: 0.4px;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn-view:hover { background: var(--gold-2); }
+  .btn-view.secondary {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border-2);
+    padding: 7px 14px;
+  }
+  .btn-view.secondary:hover { color: var(--text); border-color: var(--muted); }
+  .btn-stack { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+
+  /* ── Expanded row (reality check) ── */
+  tr.detail-row { background: var(--row); }
+  tr.detail-row td { padding: 0; }
+  .detail-inner {
+    padding: 16px 24px 20px;
+    border-top: 1px dashed var(--border-2);
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 900px) { .detail-inner { grid-template-columns: 1fr; } }
+  .detail-block h4 {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.4px;
+    color: var(--gold); margin-bottom: 8px; font-weight: 700;
+  }
+  .detail-block p { color: var(--text); font-size: 13px; line-height: 1.6; }
+  .rc-row {
+    display: flex; gap: 10px; padding: 6px 0;
+    border-top: 1px dashed var(--border);
+    font-size: 12px;
+  }
+  .rc-row:first-of-type { border-top: 0; }
+  .rc-label { color: var(--muted); min-width: 130px; font-weight: 600; }
   .rc-value { color: var(--text); flex: 1; }
-  .rc-meta { font-size: 9px; color: var(--muted); margin-left: 8px; }
   .rc-verdict {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(201,165,92,0.18);
-    font-size: 11px;
-    color: var(--yellow);
-    font-weight: 600;
-    line-height: 1.5;
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border-2);
+    color: var(--gold-2); font-size: 12px; font-weight: 600; line-height: 1.5;
   }
 
-  .card-bottom {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-    font-size: 10px;
-    color: var(--muted);
+  .expand-toggle {
+    background: transparent; border: 0; color: var(--muted);
+    cursor: pointer; font-size: 11px; padding: 4px;
   }
-  .kelly-tag {
-    background: rgba(16,185,129,0.1);
-    color: var(--green);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-  }
-  .match-tag {
-    color: #334155;
-    font-size: 10px;
-  }
+  .expand-toggle:hover { color: var(--gold); }
 
-  /* ── Empty / Loading states ── */
-  .loading, .empty {
-    text-align: center;
-    padding: 80px 24px;
-    color: var(--muted);
+  /* ── Empty / Loading ── */
+  .state {
+    padding: 80px 24px; text-align: center; color: var(--muted);
   }
-  .loading { font-size: 14px; }
   .spinner {
-    width: 32px;
-    height: 32px;
+    width: 36px; height: 36px;
     border: 3px solid var(--border);
-    border-top-color: var(--accent);
+    border-top-color: var(--gold);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.9s linear infinite;
     margin: 0 auto 16px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .state .big { font-size: 16px; color: var(--text); font-weight: 700; margin-bottom: 6px; }
 
-  /* ── Error banner ── */
   .error-banner {
-    margin: 16px 24px;
-    background: rgba(239,68,68,0.08);
-    border: 1px solid rgba(239,68,68,0.25);
-    color: var(--red);
-    border-radius: 6px;
-    padding: 12px 16px;
-    font-size: 12px;
+    max-width: 1400px; margin: 16px auto 0; padding: 0 28px;
     display: none;
   }
   .error-banner.show { display: block; }
-
-  @media (min-width: 900px) {
-    .grid { grid-template-columns: 1fr 1fr; }
+  .error-banner .inner {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    color: var(--red);
+    border-radius: 8px; padding: 12px 16px; font-size: 12px;
   }
-  @media (min-width: 1300px) {
-    .grid { grid-template-columns: 1fr 1fr 1fr; }
+
+  /* ── Mobile: collapse some columns ── */
+  @media (max-width: 768px) {
+    thead th.col-kelly, tbody td.col-kelly,
+    thead th.col-verdict, tbody td.col-verdict { display: none; }
+    .market-title { max-width: 100%; }
+    .hero h1 { font-size: 24px; }
+    .pct-cell { font-size: 15px; }
   }
 </style>
 </head>
 <body>
 
-<!-- ── Header ── -->
-<div class="header">
-  <div class="header-left">
-    <a class="back-btn" href="/">← Dashboard</a>
-    <h1>PREDICTION MARKET <span>SCANNER</span></h1>
+<!-- ── Top bar ── -->
+<div class="topbar">
+  <div class="brand">
+    <a class="back" href="/">← Dashboard</a>
+    <div class="logo">CONVICTION CAPITAL</div>
   </div>
-  <div class="status-row">
+  <div class="status">
     <span class="pulse"></span>
     <span id="scan-status">Loading…</span>
     <span id="last-scan"></span>
-    <button class="refresh-btn" id="refresh-btn" onclick="loadData(true)">Refresh</button>
+    <button class="refresh" id="refresh-btn" onclick="loadData(true)">Refresh</button>
   </div>
 </div>
 
-<!-- ── Stats bar ── -->
-<div class="stats-bar" id="stats-bar">
-  <div class="stat"><div class="stat-val" id="s-kalshi">—</div><div class="stat-lbl">Kalshi Markets</div></div>
-  <div class="stat-sep"></div>
-  <div class="stat"><div class="stat-val" id="s-poly">—</div><div class="stat-lbl">Polymarket Markets</div></div>
-  <div class="stat-sep"></div>
-  <div class="stat"><div class="stat-val" id="s-matches">—</div><div class="stat-lbl">Matched Pairs</div></div>
-  <div class="stat-sep"></div>
-  <div class="stat"><div class="stat-val green" id="s-large">—</div><div class="stat-lbl">Edge ≥5%</div></div>
-  <div class="stat-sep"></div>
-  <div class="stat"><div class="stat-val orange" id="s-showing">—</div><div class="stat-lbl">Showing</div></div>
+<!-- ── Hero ── -->
+<section class="hero">
+  <h1>Prediction Market <span class="accent">Edge Sheet</span></h1>
+  <p>Same question, two markets, two prices. We surface the gaps in real time —
+     largest discrepancies first, Kelly-sized for the bankroll.</p>
+</section>
+
+<!-- ── Stats ── -->
+<div class="strip">
+  <div class="stat"><div class="v" id="s-kalshi">—</div><div class="l">Kalshi Markets</div></div>
+  <div class="stat"><div class="v" id="s-poly">—</div><div class="l">Polymarket Markets</div></div>
+  <div class="stat"><div class="v gold" id="s-matches">—</div><div class="l">Matched Pairs</div></div>
+  <div class="stat"><div class="v green" id="s-large">—</div><div class="l">Edge ≥ 5pp</div></div>
+  <div class="stat"><div class="v" id="s-showing">—</div><div class="l">Showing</div></div>
 </div>
 
-<!-- ── Tabs ── -->
-<div class="tabs" id="tabs">
-  <button class="tab active" data-cat="all" onclick="setCategory(this)">All Markets</button>
-  <button class="tab" data-cat="economics"   onclick="setCategory(this)">Economics</button>
-  <button class="tab" data-cat="weather"     onclick="setCategory(this)">Weather</button>
-  <button class="tab" data-cat="sports"      onclick="setCategory(this)">Sports</button>
-  <button class="tab" data-cat="finance"     onclick="setCategory(this)">Finance</button>
-  <button class="tab" data-cat="geopolitics" onclick="setCategory(this)">Geopolitics</button>
-  <button class="tab" data-cat="science_tech" onclick="setCategory(this)">Science & Tech</button>
-  <button class="tab" data-cat="other"       onclick="setCategory(this)">Other</button>
+<!-- ── Source picker tiles ── -->
+<div class="sources" id="sources">
+  <div class="src-tile active" data-side="all">
+    <div><div class="name">All Sources</div><div class="count" id="src-all">—</div></div>
+    <div style="font-size:18px;color:var(--gold)">●●</div>
+  </div>
+  <div class="src-tile" data-side="kalshi">
+    <div><div class="name">Kalshi Edge</div><div class="count" id="src-k">—</div></div>
+    <div style="font-size:18px;color:var(--blue)">●</div>
+  </div>
+  <div class="src-tile" data-side="polymarket">
+    <div><div class="name">Polymarket Edge</div><div class="count" id="src-p">—</div></div>
+    <div style="font-size:18px;color:var(--gold-2)">●</div>
+  </div>
+</div>
+
+<!-- ── Category chips ── -->
+<div class="chips" id="chips">
+  <button class="chip active" data-cat="all" onclick="setCategory(this)">All</button>
+  <button class="chip" data-cat="economics"    onclick="setCategory(this)">Economics</button>
+  <button class="chip" data-cat="finance"      onclick="setCategory(this)">Finance</button>
+  <button class="chip" data-cat="geopolitics"  onclick="setCategory(this)">Geopolitics</button>
+  <button class="chip" data-cat="science_tech" onclick="setCategory(this)">Tech</button>
+  <button class="chip" data-cat="weather"      onclick="setCategory(this)">Weather</button>
+  <button class="chip" data-cat="sports"       onclick="setCategory(this)">Sports</button>
+  <button class="chip" data-cat="other"        onclick="setCategory(this)">Other</button>
 </div>
 
 <!-- ── Controls ── -->
 <div class="controls">
   <label>
-    Min edge:
+    Min edge
     <input type="range" id="edge-slider" min="0" max="20" step="1" value="2" oninput="updateEdgeFilter(this.value)">
-    <span id="edge-val">2%</span>
+    <span id="edge-val">2pp</span>
   </label>
-  <span style="color:var(--muted);font-size:11px;">Sorted by largest discrepancy first</span>
+  <span class="hint">Sorted by largest discrepancy first · Click any row for the Reality Check</span>
 </div>
 
 <!-- ── Error ── -->
-<div class="error-banner" id="error-banner"></div>
+<div class="error-banner" id="error-banner"><div class="inner" id="error-msg"></div></div>
 
-<!-- ── Main grid ── -->
-<div class="grid" id="grid">
-  <div class="loading">
-    <div class="spinner"></div>
-    Scanning Kalshi and Polymarket — this takes ~15 seconds on first load…
+<!-- ── Table ── -->
+<div class="wrap">
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:42%">Market</th>
+          <th class="num">Kalshi</th>
+          <th class="num">Polymarket</th>
+          <th class="num">Edge</th>
+          <th class="num col-kelly">¼-Kelly</th>
+          <th class="col-verdict">Verdict</th>
+          <th style="text-align:right;min-width:200px">Action</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="7">
+          <div class="state">
+            <div class="spinner"></div>
+            <div class="big">Scanning Kalshi + Polymarket</div>
+            <div>First scan takes about 15 seconds.</div>
+          </div>
+        </td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
 <script>
 let allPairs = [];
 let activeCategory = 'all';
+let activeSide = 'all';
 let minEdge = 2;
+let expanded = new Set();
 
 const CAT_COLORS = {
-  economics:    '#c9a55c',  /* gold */
-  weather:      '#8a8275',  /* warm grey */
-  sports:       '#e0c084',  /* light gold */
-  finance:      '#6b9b6b',  /* muted green */
-  geopolitics:  '#b87055',  /* brown-red */
-  science_tech: '#8a6f3a',  /* deep gold */
-  other:        '#5c4a3a',  /* brown */
+  economics:    '#c9a44c',
+  weather:      '#8a8275',
+  sports:       '#e0c084',
+  finance:      '#22c55e',
+  geopolitics:  '#ef4444',
+  science_tech: '#4a86e8',
+  other:        '#5c4a3a',
 };
 
 function edgeClass(pct) {
@@ -442,149 +469,177 @@ function edgeClass(pct) {
   return 'small';
 }
 
-function fmtVol(v) {
-  if (!v) return '';
-  if (v >= 1_000_000) return `$${(v/1_000_000).toFixed(1)}M vol`;
-  if (v >= 1_000)     return `$${(v/1_000).toFixed(0)}K vol`;
-  return `$${v} vol`;
-}
-
-function pickHeadline(k, pm) {
-  // Prefer the longer, more descriptive title
-  const a = (k.title || '').trim();
-  const b = (pm.title || '').trim();
-  return a.length >= b.length ? a : b;
-}
-
-function buildSummary(k, pm, edgePct) {
-  const kPct  = (k.yes_prob  * 100).toFixed(1);
-  const pmPct = (pm.yes_prob * 100).toFixed(1);
-  const kHigher = k.yes_prob > pm.yes_prob;
-  const cheap = kHigher ? 'Polymarket' : 'Kalshi';
-  const expensive = kHigher ? 'Kalshi' : 'Polymarket';
-  const cheapPct = kHigher ? pmPct : kPct;
-  const expensivePct = kHigher ? kPct : pmPct;
-  return `
-    The bet: <span class="mark">YES this happens.</span>
-    <br>
-    <span class="mark">${expensive}</span> says it's <span class="yes">${expensivePct}%</span> likely.
-    <span class="mark">${cheap}</span> says it's only <span class="no">${cheapPct}%</span> likely.
-    <br>
-    Buy <span class="yes">YES on ${cheap}</span> (cheap) — sell or skip on ${expensive}.
-    Edge: <strong style="color:var(--accent)">${edgePct.toFixed(1)} percentage points.</strong>
-  `;
-}
-
 function escapeHtml(s) {
   return (s || '').replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[c]));
 }
 
-function renderRealityCheck(p) {
-  const rc = p.reality_check;
-  if (!rc || !rc.sources || rc.sources.length === 0) return '';
-
-  const rows = rc.sources.map(s => {
-    const meta = s.match ? `<span class="rc-meta">match ${(s.match*100).toFixed(0)}%</span>` : '';
-    const titleLine = s.title ? `<div class="rc-meta" style="margin-left:0;margin-top:2px">${escapeHtml(s.title)}</div>` : '';
-    return `
-      <div class="rc-source">
-        <span class="rc-label">${escapeHtml(s.label)}</span>
-        <span class="rc-value">${escapeHtml(s.value)}${meta}${titleLine}</span>
-      </div>`;
-  }).join('');
-
-  const verdict = rc.verdict
-    ? `<div class="rc-verdict">${escapeHtml(rc.verdict)}</div>`
-    : '';
-
-  return `
-    <div class="reality-check">
-      <div class="rc-header">Reality Check</div>
-      ${rows}
-      ${verdict}
-    </div>`;
+function pickHeadline(k, pm) {
+  const a = (k.title || '').trim();
+  const b = (pm.title || '').trim();
+  return a.length >= b.length ? a : b;
 }
 
-function renderCard(p) {
+function renderRealityCheck(p) {
+  const rc = p.reality_check;
+  if (!rc || !rc.sources || rc.sources.length === 0) {
+    return '<p style="color:var(--muted);font-size:12px">No reality-check sources available for this market yet.</p>';
+  }
+  const rows = rc.sources.map(s => `
+    <div class="rc-row">
+      <span class="rc-label">${escapeHtml(s.label)}</span>
+      <span class="rc-value">${escapeHtml(s.value)}</span>
+    </div>`).join('');
+  const verdict = rc.verdict
+    ? `<div class="rc-verdict">${escapeHtml(rc.verdict)}</div>` : '';
+  return rows + verdict;
+}
+
+function renderRow(p, idx) {
   const k  = p.kalshi;
   const pm = p.polymarket;
   const ec = edgeClass(p.edge_pct);
   const kHigher = k.yes_prob > pm.yes_prob;
-  const color = CAT_COLORS[p.category] || '#5c4a3a';
+  const cheapSide = kHigher ? 'polymarket' : 'kalshi';
+  const color = CAT_COLORS[p.category] || '#8a8275';
   const headline = pickHeadline(k, pm);
+  const isOpen = expanded.has(idx);
+
+  // Which platform to direct user to (the cheap side = the BUY YES side)
+  const buyUrl   = kHigher ? pm.url : k.url;
+  const buyLabel = kHigher ? 'BUY YES · POLY' : 'BUY YES · KALSHI';
+  const verdictCls = kHigher ? 'buy-p' : 'buy-k';
+  const verdictTxt = kHigher ? 'Buy YES · Polymarket' : 'Buy YES · Kalshi';
+
+  const daysTxt = p.days_to_close != null ? `Resolves ~${p.days_to_close}d` : '';
+  const matchTxt = `${(p.match_score*100).toFixed(0)}% match`;
 
   return `
-  <div class="pair-card edge-${ec}">
-    <div class="card-top">
-      <span class="cat-badge" style="background:${color}22;color:${color}">${p.category_label}</span>
-      <span class="edge-pill ${ec}">${p.edge_pct.toFixed(1)}pp EDGE</span>
-    </div>
-    <div class="bet-headline">${headline}</div>
-    <div class="bet-summary">${buildSummary(k, pm, p.edge_pct)}</div>
-    <div class="platforms">
-      <a class="platform-block" href="${k.url}" target="_blank" rel="noopener">
-        <div class="plat-name">Kalshi · YES price</div>
-        <div class="plat-prob ${kHigher ? 'higher' : 'lower'}">${(k.yes_prob*100).toFixed(1)}%</div>
-        <div class="plat-title">${k.title}</div>
-        <div class="plat-foot">
-          <span class="plat-vol">${fmtVol(k.volume)}</span>
-          <span class="plat-cta">Open ↗</span>
+    <tr class="data-row" data-idx="${idx}">
+      <td>
+        <span class="cat-tag" style="background:${color}22;color:${color}">${escapeHtml(p.category_label || p.category)}</span>
+        <div class="market-title">${escapeHtml(headline)}</div>
+        <div class="market-sub">${matchTxt}${daysTxt ? ' · ' + daysTxt : ''}</div>
+      </td>
+      <td class="num">
+        <div class="pct-cell ${kHigher ? 'higher' : 'lower'}">
+          ${(k.yes_prob*100).toFixed(1)}%
+          <span class="src">Kalshi YES</span>
         </div>
-      </a>
-      <a class="platform-block" href="${pm.url}" target="_blank" rel="noopener">
-        <div class="plat-name">Polymarket · YES price</div>
-        <div class="plat-prob ${!kHigher ? 'higher' : 'lower'}">${(pm.yes_prob*100).toFixed(1)}%</div>
-        <div class="plat-title">${pm.title}</div>
-        <div class="plat-foot">
-          <span class="plat-vol">${fmtVol(pm.volume)}</span>
-          <span class="plat-cta">Open ↗</span>
+      </td>
+      <td class="num">
+        <div class="pct-cell ${!kHigher ? 'higher' : 'lower'}">
+          ${(pm.yes_prob*100).toFixed(1)}%
+          <span class="src">Poly YES</span>
         </div>
-      </a>
-    </div>
-    <div class="card-analysis">
-      <strong>What this means:</strong> ${p.plain_english}
-    </div>
-    ${renderRealityCheck(p)}
-    <div class="card-bottom">
-      <span class="match-tag">Match confidence: ${(p.match_score*100).toFixed(0)}% · Resolves in ~${p.days_to_close ?? '?'} days</span>
-      <span class="kelly-tag">Suggested size (¼-Kelly): ${(p.kelly*100).toFixed(1)}% of bankroll</span>
-    </div>
-  </div>`;
+      </td>
+      <td class="num">
+        <span class="edge-cell ${ec}">+${p.edge_pct.toFixed(1)}pp</span>
+      </td>
+      <td class="num col-kelly">
+        <span class="kelly-cell">${(p.kelly*100).toFixed(1)}%</span>
+      </td>
+      <td class="col-verdict">
+        <span class="verdict ${verdictCls}">${verdictTxt}</span>
+      </td>
+      <td style="text-align:right">
+        <div class="btn-stack">
+          <a class="btn-view" href="${buyUrl}" target="_blank" rel="noopener">${buyLabel}</a>
+          <button class="expand-toggle" onclick="toggleExpand(${idx})">${isOpen ? '▴ Hide check' : '▾ Reality check'}</button>
+        </div>
+      </td>
+    </tr>
+    ${isOpen ? `
+    <tr class="detail-row">
+      <td colspan="7">
+        <div class="detail-inner">
+          <div class="detail-block">
+            <h4>The Trade · Plain English</h4>
+            <p>${escapeHtml(p.plain_english || 'No plain-English summary available.')}</p>
+            <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+              <a class="btn-view secondary" href="${k.url}" target="_blank" rel="noopener">View on Kalshi ↗</a>
+              <a class="btn-view secondary" href="${pm.url}" target="_blank" rel="noopener">View on Polymarket ↗</a>
+            </div>
+          </div>
+          <div class="detail-block">
+            <h4>Reality Check</h4>
+            ${renderRealityCheck(p)}
+          </div>
+        </div>
+      </td>
+    </tr>` : ''}
+  `;
 }
 
-function renderGrid() {
-  const filtered = allPairs.filter(p => {
+function toggleExpand(idx) {
+  if (expanded.has(idx)) expanded.delete(idx);
+  else expanded.add(idx);
+  renderTable();
+}
+
+function filterPairs() {
+  return allPairs.filter(p => {
     if (activeCategory !== 'all' && p.category !== activeCategory) return false;
     if (p.edge_pct < minEdge) return false;
+    if (activeSide !== 'all') {
+      const kHigher = p.kalshi.yes_prob > p.polymarket.yes_prob;
+      // "kalshi" tile = edge is on Kalshi (Kalshi YES is the cheap buy) → kHigher=false
+      // "polymarket" tile = edge is on Polymarket buy side → kHigher=true
+      if (activeSide === 'kalshi'     && kHigher)  return false;
+      if (activeSide === 'polymarket' && !kHigher) return false;
+    }
     return true;
   });
+}
 
+function renderTable() {
+  const filtered = filterPairs();
   document.getElementById('s-showing').textContent = filtered.length;
 
-  const grid = document.getElementById('grid');
+  const tbody = document.getElementById('tbody');
   if (filtered.length === 0) {
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
-      <div style="font-weight:600;margin-bottom:6px">No pairs match your filters.</div>
-      <div style="color:var(--muted);font-size:13px">Try lowering the minimum edge or switching category.</div>
-    </div>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="state">
+      <div class="big">No edges match your filters.</div>
+      <div>Try lowering the minimum edge or switching category.</div>
+    </td></tr></tr>`;
     return;
   }
-  grid.innerHTML = filtered.map(renderCard).join('');
+  tbody.innerHTML = filtered.map((p, i) => renderRow(p, i)).join('');
 }
 
 function setCategory(btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
   activeCategory = btn.dataset.cat;
-  renderGrid();
+  expanded.clear();
+  renderTable();
 }
+
+function setSide(tile) {
+  document.querySelectorAll('.src-tile').forEach(t => t.classList.remove('active'));
+  tile.classList.add('active');
+  activeSide = tile.dataset.side;
+  expanded.clear();
+  renderTable();
+}
+
+document.querySelectorAll('.src-tile').forEach(tile => {
+  tile.addEventListener('click', () => setSide(tile));
+});
 
 function updateEdgeFilter(val) {
   minEdge = parseInt(val);
-  document.getElementById('edge-val').textContent = val + '%';
-  renderGrid();
+  document.getElementById('edge-val').textContent = val + 'pp';
+  renderTable();
+}
+
+function updateSourceCounts() {
+  const kEdge = allPairs.filter(p => p.kalshi.yes_prob <= p.polymarket.yes_prob && p.edge_pct >= minEdge).length;
+  const pEdge = allPairs.filter(p => p.kalshi.yes_prob >  p.polymarket.yes_prob && p.edge_pct >= minEdge).length;
+  document.getElementById('src-all').textContent = `${allPairs.length} pairs`;
+  document.getElementById('src-k').textContent   = `${kEdge} pairs`;
+  document.getElementById('src-p').textContent   = `${pEdge} pairs`;
 }
 
 let _retryTimer = null;
@@ -601,24 +656,20 @@ async function loadData(force = false) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-
     if (data.error) throw new Error(data.error);
 
-    // Backend reports first scan still running — show progress UI + auto-retry
     if (data.scanning === true && (!data.pairs || data.pairs.length === 0)) {
       document.getElementById('s-kalshi').textContent  = '…';
       document.getElementById('s-poly').textContent    = '…';
       document.getElementById('s-matches').textContent = '…';
       document.getElementById('s-large').textContent   = '…';
-      document.getElementById('grid').innerHTML =
-        `<div class="empty" style="grid-column:1/-1">
-          <div style="margin-bottom:14px;font-size:18px;font-weight:600">Scanning prediction markets…</div>
-          <div style="color:var(--muted);font-size:14px;margin-bottom:6px">
-            Pulling thousands of contracts from Kalshi + Polymarket and matching equivalent questions.
-          </div>
-          <div style="color:var(--muted);font-size:13px">First scan takes ~30-60 seconds. Auto-retrying.</div>
-        </div>`;
-      document.getElementById('scan-status').textContent = 'First scan in progress…';
+      document.getElementById('tbody').innerHTML =
+        `<tr><td colspan="7"><div class="state">
+          <div class="spinner"></div>
+          <div class="big">First scan in progress</div>
+          <div>Matching thousands of contracts across Kalshi + Polymarket. Auto-retrying every 8s.</div>
+        </div></td></tr>`;
+      document.getElementById('scan-status').textContent = 'First scan…';
       clearTimeout(_retryTimer);
       _retryTimer = setTimeout(() => loadData(), 8000);
       return;
@@ -632,27 +683,28 @@ async function loadData(force = false) {
     document.getElementById('s-matches').textContent = stats.matches_found   ?? '—';
     document.getElementById('s-large').textContent   = stats.large_edges     ?? '—';
 
-    renderGrid();
+    updateSourceCounts();
+    expanded.clear();
+    renderTable();
 
-    const now = new Date();
     document.getElementById('last-scan').textContent =
-      `Last scan: ${now.toLocaleTimeString()}`;
+      'Updated ' + new Date().toLocaleTimeString();
     document.getElementById('scan-status').textContent =
-      `${allPairs.length} pairs found`;
-
+      `${allPairs.length} pairs · ${stats.large_edges || 0} edges ≥5pp`;
   } catch (err) {
     const banner = document.getElementById('error-banner');
-    banner.textContent = `Scan error: ${err.message}. Retrying in 10s…`;
+    document.getElementById('error-msg').textContent =
+      `Scan error: ${err.message}. Auto-retrying in 10s.`;
     banner.classList.add('show');
     document.getElementById('scan-status').textContent = 'Error — retry';
     clearTimeout(_retryTimer);
     _retryTimer = setTimeout(() => loadData(), 10000);
     if (allPairs.length === 0) {
-      document.getElementById('grid').innerHTML =
-        `<div class="empty" style="grid-column:1/-1">
-          <div style="margin-bottom:10px;font-weight:600">Could not reach the scanner.</div>
-          Auto-retrying every 10 seconds.
-        </div>`;
+      document.getElementById('tbody').innerHTML =
+        `<tr><td colspan="7"><div class="state">
+          <div class="big">Could not reach the scanner.</div>
+          <div>Auto-retrying every 10 seconds.</div>
+        </div></td></tr>`;
     }
   } finally {
     btn.disabled = false;
@@ -660,7 +712,6 @@ async function loadData(force = false) {
   }
 }
 
-// Auto-refresh every 4 minutes
 loadData();
 setInterval(() => loadData(), 4 * 60 * 1000);
 </script>

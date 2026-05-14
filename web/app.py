@@ -16,6 +16,11 @@ from web.podcasts import (
     poll_and_process as podcast_poll,
     SUBSCRIBED as PODCAST_SUBSCRIBED,
 )
+from web.sports import (
+    league_board as sports_board,
+    event_props as sports_event_props,
+    leagues_index as sports_leagues,
+)
 from jarvis.newsengine import aggregate as news_aggregate
 from jarvis.scriptwriter import generate_script, generate_short
 
@@ -1378,6 +1383,29 @@ async def api_newsbrief_script():
         return combined
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
+# ── Sports lines + props ────────────────────────────────────────────────────
+@app.get("/api/sports/leagues")
+async def api_sports_leagues():
+    return {"leagues": sports_leagues()}
+
+
+@app.get("/api/sports/{league}")
+async def api_sports_league(league: str):
+    try:
+        return await asyncio.to_thread(sports_board, league.lower())
+    except Exception as e:
+        return JSONResponse({"error": str(e), "games": [], "futures": []},
+                            status_code=500)
+
+
+@app.get("/api/sports/{league}/props/{event_id}")
+async def api_sports_props(league: str, event_id: str):
+    try:
+        return await asyncio.to_thread(sports_event_props, league.lower(), event_id)
+    except Exception as e:
+        return JSONResponse({"error": str(e), "props": []}, status_code=500)
+
 
 _static_dir = Path(__file__).parent / "static"
 

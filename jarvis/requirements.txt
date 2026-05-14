@@ -1,0 +1,31 @@
+# Core
+anthropic>=0.34.0
+requests>=2.31.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9
+
+# ML / prediction
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+xgboost>=2.0
+
+# Data sources
+feedparser>=6.0           # RSS
+praw>=7.7                 # Reddit
+tweepy>=4.14              # X/Twitter
+google-api-python-client>=2.120  # YouTube data API
+yt-dlp>=2024.4.9          # YouTube transcripts
+
+# Alerts
+twilio>=8.13
+
+# On-chain (Polymarket)
+web3>=6.15
+py-clob-client>=0.17      # Polymarket CLOB
+
+# Utilities
+pydantic>=2.6
+python-dateutil>=2.9
+tenacity>=8.2             # retries

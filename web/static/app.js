@@ -590,33 +590,76 @@ function connectWS() {
 // ── fetch helpers ──────────────────────────────────────────────────────────────
 const api = url => fetch(url).then(r => r.json());
 
+// ── Lazy section loader ─────────────────────────────────────────────────────
+// Sections register themselves; their fetch only fires the first time the
+// section scrolls within ~600px of the viewport. Massive perceived-speed win.
+const _lazyOnce = new Set();
+function lazyLoad(sectionId, fn) {
+  const el = document.getElementById(sectionId);
+  if (!el) { fn(); return; }
+  if ('IntersectionObserver' in window) {
+    const obs = new IntersectionObserver((entries, o) => {
+      entries.forEach(e => {
+        if (e.isIntersecting && !_lazyOnce.has(sectionId)) {
+          _lazyOnce.add(sectionId);
+          fn();
+          o.unobserve(e.target);
+        }
+      });
+    }, { rootMargin: '600px 0px' });
+    obs.observe(el);
+  } else {
+    fn();  // fallback
+  }
+}
+
 async function loadAll() {
   try {
-    const [snap, newsR, sentR, alertsR, rsiR, analysisR] = await Promise.all([
-      api('/api/snapshot'), api('/api/news'), api('/api/sentiment'),
-      api('/api/alerts'), api('/api/rsi'), api('/api/analysis'),
+    // CRITICAL — above-the-fold (always loads immediately)
+    const [snap, analysisR] = await Promise.all([
+      api('/api/snapshot'), api('/api/analysis'),
     ]);
     S.snapshot = snap.data;
-    S.news     = newsR.data || [];
-    S.alerts   = alertsR.data || [];
-    S.rsi      = rsiR.data || {};
     S.analysis = analysisR.data || {};
-
     renderTicker(S.snapshot);
     renderPrices(S.snapshot, S.rsi);
     renderBreadth(S.snapshot);
     renderHero(S.analysis);
     renderSignals(S.analysis);
-    renderFearGreed(sentR.fear_greed || {value:50});
-    renderSocial(sentR.social || {});
-    renderNews();
-    renderAlerts(S.alerts);
 
-    // Deferred heavy calls
-    setTimeout(loadCorrelations, 1000);
-    setTimeout(loadTechnicals, 2000);
-    setTimeout(loadAnalystRecs, 4000);
-    setTimeout(loadStructural, 6000);
+    // BELOW-THE-FOLD — lazy-loaded on scroll
+    lazyLoad('news', async () => {
+      const r = await api('/api/news').catch(()=>({}));
+      S.news = r.data || [];
+      renderNews();
+    });
+
+    lazyLoad('sentiment', async () => {
+      const r = await api('/api/sentiment').catch(()=>({}));
+      renderFearGreed(r.fear_greed || {value:50});
+      renderSocial(r.social || {});
+      // Also kick off the slow structural + correlations once Sentiment is in view
+      loadCorrelations();
+      loadStructural();
+      loadAnalystRecs();
+    });
+
+    lazyLoad('technicals', async () => {
+      const [rsiR, techR] = await Promise.all([
+        api('/api/rsi').catch(()=>({})),
+        api('/api/technicals').catch(()=>({})),
+      ]);
+      S.rsi = rsiR.data || {};
+      S.technicals = techR.data || {};
+      renderPrices(S.snapshot, S.rsi);   // re-render Prices RSI badges now that we have them
+      renderTechnicals(S.technicals);
+    });
+
+    lazyLoad('alerts', async () => {
+      const r = await api('/api/alerts').catch(()=>({}));
+      S.alerts = r.data || [];
+      renderAlerts(S.alerts);
+    });
   } catch(e) { console.error('Initial load error', e); }
 }
 

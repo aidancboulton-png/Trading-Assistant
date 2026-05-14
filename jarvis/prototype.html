@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>JARVIS // COMMAND</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#070a10; --panel:#0c111c; --panel2:#0f1626; --border:#1c2640;
+    --ink:#e6eefc; --dim:#7d8aa8; --mute:#4a5878;
+    --accent:#34d399; --accent2:#22d3ee; --warn:#fbbf24; --bad:#fb7185;
+    --good:#34d399; --buy:#10b981; --sell:#ef4444;
+    --chip:#101a2e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#11203a 0%,#070a10 60%) fixed;color:var(--ink);font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid var(--border);background:rgba(7,10,16,.85);backdrop-filter:blur(8px);position:sticky;top:0;z-index:10}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.18em;font-size:14px}
+  .brand .dot{width:10px;height:10px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent)}
+  .nav{display:flex;gap:18px;color:var(--dim);font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+  .nav a{color:var(--dim);text-decoration:none;cursor:pointer}
+  .nav a.on{color:var(--ink)}
+  .pill{padding:4px 10px;border:1px solid var(--border);border-radius:999px;color:var(--dim);font-size:11px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;padding:18px 22px}
+  .card{grid-column:span 6;background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+  .card.full{grid-column:span 12}
+  .card.third{grid-column:span 4}
+  .card.quarter{grid-column:span 3}
+  .card .title{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}
+  .title h2{margin:0;font-size:12px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;font-weight:700}
+  .title .sub{font-size:11px;color:var(--mute)}
+  .kpi{display:flex;gap:18px;flex-wrap:wrap}
+  .kpi .item{flex:1;min-width:120px;background:var(--chip);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .kpi .item .lbl{color:var(--dim);font-size:10px;letter-spacing:.18em;text-transform:uppercase}
+  .kpi .item .val{font-size:22px;font-weight:700;margin-top:6px}
+  .pos{color:var(--good)} .neg{color:var(--bad)} .warn{color:var(--warn)}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed #1a2440}
+  .row:last-child{border-bottom:0}
+  .tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+  .tag.b{color:var(--good);border-color:#0b3a2a;background:#062018}
+  .tag.s{color:var(--bad); border-color:#3a1320;background:#1c0610}
+  .tag.w{color:var(--warn);border-color:#3a2a0c;background:#1c1303}
+  .bar{position:relative;height:8px;background:#0a1124;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+  .bar > i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px}
+  .pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+  .stage{background:var(--chip);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+  .stage .n{font-size:24px;font-weight:700;color:var(--accent2)}
+  .stage .l{color:var(--dim);font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-top:4px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:9px 8px;text-align:left;font-size:12px;border-bottom:1px solid #14203a}
+  th{color:var(--dim);font-weight:600;font-size:10px;letter-spacing:.18em;text-transform:uppercase}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .agent-stack{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+  .agent{background:var(--chip);border:1px solid var(--border);border-radius:10px;padding:10px}
+  .agent .h{display:flex;justify-content:space-between;color:var(--dim);font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px}
+  .agent .v{font-size:18px;font-weight:700}
+  code.k{background:#0a1124;border:1px solid var(--border);padding:2px 6px;border-radius:4px;color:var(--accent2)}
+  .lights{display:flex;gap:6px}
+  .lights span{width:8px;height:8px;border-radius:50%;background:#1c2640}
+  .lights span.on{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .feed{max-height:240px;overflow:auto}
+  .feed .row .src{color:var(--mute);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-right:8px}
+  .footer{padding:14px 22px;color:var(--mute);font-size:11px;border-top:1px solid var(--border);display:flex;justify-content:space-between}
+  .ring{--p:73; width:96px;height:96px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),#1a2342 0);display:grid;place-items:center;position:relative}
+  .ring::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--panel2)}
+  .ring b{position:relative;font-size:22px}
+  .roundtrip{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:11px}
+  .roundtrip .step{padding:4px 10px;border:1px solid var(--border);border-radius:999px;background:var(--chip);color:var(--ink)}
+  .roundtrip .arr{color:var(--mute)}
+  .small{font-size:11px;color:var(--dim)}
+  @media (max-width:1100px){.card,.card.third,.card.quarter{grid-column:span 12}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="dot"></span>JARVIS // COMMAND OS</div>
+  <nav class="nav">
+    <a class="on">Dashboard</a><a>Markets</a><a>Predictions</a>
+    <a>Rules</a><a>Incidents</a><a>Settings</a>
+  </nav>
+  <div style="display:flex;gap:10px;align-items:center">
+    <span class="pill" id="bankrollPill">Bankroll $12,450</span>
+    <span class="pill" style="color:var(--good)">● Polygon Mainnet</span>
+  </div>
+</header>
+
+<section class="grid">
+
+  <!-- KPI strip -->
+  <div class="card full">
+    <div class="title"><h2>Bankroll &amp; Day</h2><div class="sub" id="ts"></div></div>
+    <div class="kpi">
+      <div class="item"><div class="lbl">Bankroll</div><div class="val" id="bankroll">$12,450</div></div>
+      <div class="item"><div class="lbl">Daily P&amp;L</div><div class="val pos" id="dailyPnl">+$284.10</div></div>
+      <div class="item"><div class="lbl">Open positions</div><div class="val" id="openN">7 / 10</div></div>
+      <div class="item"><div class="lbl">Sharpe (30d)</div><div class="val" id="sharpe">2.14</div></div>
+      <div class="item"><div class="lbl">Max DD</div><div class="val warn" id="dd">-4.2%</div></div>
+      <div class="item"><div class="lbl">Profit factor</div><div class="val pos" id="pf">1.84</div></div>
+    </div>
+    <div style="margin-top:12px" class="roundtrip">
+      <span class="step">1 · Research</span><span class="arr">→</span>
+      <span class="step">2 · Filter</span><span class="arr">→</span>
+      <span class="step">3 · Predict</span><span class="arr">→</span>
+      <span class="step">4 · Risk / Execute</span><span class="arr">→</span>
+      <span class="step">5 · Learn</span>
+    </div>
+  </div>
+
+  <!-- Step 2 — Market Filter -->
+  <div class="card">
+    <div class="title">
+      <h2>02 · Market Filter</h2>
+      <div class="lights"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div>
+    </div>
+    <div class="pipeline">
+      <div class="stage"><div class="n" id="f0">312</div><div class="l">Active</div></div>
+      <div class="stage"><div class="n" id="f1">147</div><div class="l">Liquidity ≥ $50K</div></div>
+      <div class="stage"><div class="n" id="f2">94</div><div class="l">Vol 24h ≥ $10K</div></div>
+      <div class="stage"><div class="n" id="f3">23</div><div class="l">≤ 14 days</div></div>
+    </div>
+    <div style="margin-top:10px;color:var(--dim);font-size:11px">Edge filter (>3% inefficiency)
+      <span class="tag b" style="margin-left:8px">7 qualified</span>
+    </div>
+  </div>
+
+  <!-- Step 3 — Prediction -->
+  <div class="card">
+    <div class="title"><h2>03 · Prediction</h2><div class="sub">XGBoost v1.7 + Claude Calibrator</div></div>
+    <div style="display:flex;gap:18px;align-items:center">
+      <div class="ring" id="ring"><b id="ringVal">73%</b></div>
+      <div style="flex:1">
+        <div class="row"><span>Raw probability</span><b id="raw">71.0%</b></div>
+        <div class="row"><span>Calibration adjustment</span><b class="pos" id="adj">+2.0%</b></div>
+        <div class="row"><span>Final true probability</span><b class="pos" id="final">73.0%</b></div>
+        <div class="row"><span>Market price (YES)</span><b id="mp">$0.62</b></div>
+        <div class="row"><span>Edge</span><b class="pos" id="edge">+11.0%</b></div>
+      </div>
+    </div>
+    <div class="agent-stack">
+      <div class="agent"><div class="h"><span>historical_accuracy</span><span>weight</span></div><div class="v">84.7%</div></div>
+      <div class="agent"><div class="h"><span>volume_momentum</span><span>+72%</span></div><div class="v">+0.42</div></div>
+      <div class="agent"><div class="h"><span>sentiment_score</span><span>0.68</span></div><div class="v">+0.18</div></div>
+      <div class="agent"><div class="h"><span>time_decay</span><span>-0.12</span></div><div class="v">-0.04</div></div>
+    </div>
+  </div>
+
+  <!-- Step 1 — Research Swarm -->
+  <div class="card full">
+    <div class="title"><h2>01 · Research Swarm</h2>
+      <div class="sub">Parallel sentiment · Twitter · Reddit · RSS · YouTube</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="agent">
+        <div class="h"><span>Twitter</span><span class="tag b">68%</span></div>
+        <div class="v" id="tw">847 posts</div>
+        <div class="bar"><i style="width:68%"></i></div>
+      </div>
+      <div class="agent">
+        <div class="h"><span>Reddit</span><span class="tag b">71%</span></div>
+        <div class="v" id="rd">234 posts</div>
+        <div class="bar"><i style="width:71%"></i></div>
+      </div>
+      <div class="agent">
+        <div class="h"><span>RSS</span><span class="tag w">59%</span></div>
+        <div class="v" id="rs">156 posts</div>
+        <div class="bar"><i style="width:59%"></i></div>
+      </div>
+      <div class="agent">
+        <div class="h"><span>YouTube</span><span class="tag b">63%</span></div>
+        <div class="v" id="yt">42 videos</div>
+        <div class="bar"><i style="width:63%"></i></div>
+      </div>
+    </div>
+    <div class="feed" style="margin-top:12px" id="feed"></div>
+  </div>
+
+  <!-- Step 4 — Risk / Execute -->
+  <div class="card">
+    <div class="title"><h2>04 · Risk &amp; Execution</h2>
+      <div class="sub">Kelly · Limits · On-chain</div></div>
+    <div class="kpi">
+      <div class="item"><div class="lbl">Edge</div><div class="val pos">+11.0%</div></div>
+      <div class="item"><div class="lbl">Win prob</div><div class="val">73%</div></div>
+      <div class="item"><div class="lbl">Full Kelly</div><div class="val">8.2%</div></div>
+      <div class="item"><div class="lbl">Half Kelly</div><div class="val pos">4.1%</div></div>
+    </div>
+    <table style="margin-top:10px">
+      <tr><td class="small">Max position</td><td class="num">5.0% of bankroll</td></tr>
+      <tr><td class="small">Max open</td><td class="num">10 positions</td></tr>
+      <tr><td class="small">Min edge</td><td class="num">5.0%</td></tr>
+      <tr><td class="small">Max daily DD</td><td class="num">10.0%</td></tr>
+      <tr><td class="small">Suggested size</td><td class="num pos"><b>$510 · YES @ 0.62</b></td></tr>
+      <tr><td class="small">Status</td><td class="num pos"><b>APPROVED</b></td></tr>
+    </table>
+  </div>
+
+  <!-- Step 5 — Post-mortem -->
+  <div class="card">
+    <div class="title"><h2>05 · Post-Mortem · Learn</h2>
+      <div class="sub">Last loss: NVDA Earnings Beat · -$445</div></div>
+    <table>
+      <tr><th>Agent</th><th>Finding</th><th class="num">Sev</th></tr>
+      <tr><td>Data</td><td>Historical beat-rate dropped post-2024 guidance change</td><td class="num warn">med</td></tr>
+      <tr><td>Sentiment</td><td>Chinese forums turning bearish 36h prior — missed</td><td class="num neg">high</td></tr>
+      <tr><td>Timing</td><td>Entry within 48h of event window</td><td class="num warn">med</td></tr>
+      <tr><td>Model</td><td>sentiment_score over-weighted vs. analyst consensus</td><td class="num neg">high</td></tr>
+      <tr><td>Risk</td><td>Geopolitical flag was raised 2d before — bypassed</td><td class="num neg">high</td></tr>
+    </table>
+    <div style="margin-top:10px;color:var(--dim);font-size:11px">Auto-installed rules</div>
+    <div style="margin-top:6px">
+      <code class="k">rules.add("block_if_geopolitical_flag")</code>
+      <code class="k" style="margin-left:6px">memory.save("incident_NVDA_2026Q1")</code>
+    </div>
+  </div>
+
+  <!-- Open positions -->
+  <div class="card full">
+    <div class="title"><h2>Open positions</h2><div class="sub">Live · 7 of 10</div></div>
+    <table>
+      <thead><tr><th>Market</th><th>Side</th><th class="num">Price</th><th class="num">True p</th><th class="num">Edge</th><th class="num">Size</th><th class="num">Conf</th><th class="num">Resolves</th></tr></thead>
+      <tbody id="positions"></tbody>
+    </table>
+  </div>
+
+  <!-- Alerts -->
+  <div class="card">
+    <div class="title"><h2>Alerts feed</h2><div class="sub">Twitter · News · YouTube · RSS</div></div>
+    <div class="feed" id="alerts"></div>
+  </div>
+
+  <!-- Active rules -->
+  <div class="card">
+    <div class="title"><h2>Active rules</h2><div class="sub">Memory · auto-grown by post-mortems</div></div>
+    <table>
+      <thead><tr><th>Rule</th><th>Scope</th><th class="num">Action</th></tr></thead>
+      <tbody id="rules"></tbody>
+    </table>
+  </div>
+
+</section>
+
+<div class="footer">
+  <span>JARVIS v0.1 · COMMAND OS</span>
+  <span>connected · LLM <code class="k">claude-sonnet-4-6</code> · DB <code class="k">jarvis.db</code></span>
+</div>
+
+<script>
+  // Mock data — when wired to web.py, swap to fetch('/api/...').
+  const mock = {
+    positions: [
+      ["fed-rate-cut-jun-2026", "YES", 0.62, 0.73, "+11.0%", "$510", "84%", "39d"],
+      ["nvda-q2-beat-est",      "YES", 0.71, 0.78, "+7.0%",  "$420", "79%", "12d"],
+      ["btc-eth-flip-2026",     "NO",  0.18, 0.09, "+9.0%",  "$310", "82%", "210d"],
+      ["us-recession-2026h2",   "NO",  0.35, 0.27, "+8.0%",  "$285", "76%", "150d"],
+      ["spy-close-above-540",   "YES", 0.55, 0.64, "+9.0%",  "$340", "78%", "5d"],
+      ["fomc-hawkish-jul",      "NO",  0.42, 0.34, "+8.0%",  "$295", "81%", "60d"],
+      ["uk-pm-resign-q3",       "YES", 0.21, 0.31, "+10.0%", "$220", "73%", "85d"],
+    ],
+    rules: [
+      ["block_if_geopolitical_flag", "global", "block"],
+      ["shrink_if_low_liquidity",    "domain:prediction_market", "shrink:0.5"],
+      ["block_if_event_window<48h",  "domain:prediction_market", "block"],
+      ["warn_if_sentiment_diverges", "global", "warn"],
+    ],
+    alerts: [
+      ["twitter", "@WSJmarkets",      "Fed minutes hint at slower path of cuts"],
+      ["news",    "Reuters",          "OPEC+ extends voluntary cuts another quarter"],
+      ["youtube", "Bloomberg Markets","Live: ECB press conference"],
+      ["rss",     "Federal Reserve",  "FOMC statement released"],
+      ["twitter", "@DeItaone",        "BREAKING: NVDA guides above consensus"],
+    ],
+  };
+
+  const $ = (s)=>document.querySelector(s);
+  $("#ts").textContent = new Date().toUTCString();
+
+  // Positions
+  const pTbody = $("#positions");
+  for(const [m,s,pr,tp,e,sz,c,r] of mock.positions){
+    const tr=document.createElement("tr");
+    tr.innerHTML = `<td>${m}</td>
+      <td><span class="tag ${s==='YES'?'b':'s'}">${s}</span></td>
+      <td class="num">$${pr.toFixed(2)}</td>
+      <td class="num">${(tp*100).toFixed(0)}%</td>
+      <td class="num pos">${e}</td>
+      <td class="num">${sz}</td>
+      <td class="num">${c}</td>
+      <td class="num">${r}</td>`;
+    pTbody.appendChild(tr);
+  }
+
+  // Rules
+  const rTbody = $("#rules");
+  for(const [k,s,a] of mock.rules){
+    const tr=document.createElement("tr");
+    const cls = a.startsWith("block")? "tag s" : a.startsWith("shrink")? "tag w" : "tag";
+    tr.innerHTML=`<td><code class="k">${k}</code></td><td class="small">${s}</td><td class="num"><span class="${cls}">${a}</span></td>`;
+    rTbody.appendChild(tr);
+  }
+
+  // Alerts
+  const aFeed = $("#alerts");
+  for(const [ch,src,msg] of mock.alerts){
+    const row=document.createElement("div");row.className="row";
+    row.innerHTML=`<span><span class="src">${ch}</span><b>${src}</b> · ${msg}</span>
+                   <span class="small">just now</span>`;
+    aFeed.appendChild(row);
+  }
+
+  // Research feed (sample headlines)
+  const feed = $("#feed");
+  [
+    ["TWTR","68% bullish",   "“NVDA setup looking clean into earnings — calls flowing”"],
+    ["RDDT","71% bullish",   "r/wallstreetbets: NVDA DD megathread (1.2k upvotes)"],
+    ["RSS", "59% mixed",     "Reuters · NVDA outlook hinges on hyperscaler capex"],
+    ["YT",  "63% bullish",   "Bloomberg Markets · 'Why NVDA's Q earnings matter'"]
+  ].forEach(([s,t,m])=>{
+    const r=document.createElement("div");r.className="row";
+    r.innerHTML=`<span><span class="src">${s}</span><span class="tag b">${t}</span> · ${m}</span><span class="small">last 24h</span>`;
+    feed.appendChild(r);
+  });
+
+  // If served by web.py, hydrate from API
+  async function hydrate(){
+    try{
+      const [b,p,r,a] = await Promise.all([
+        fetch('/api/bankroll').then(x=>x.ok&&x.json()),
+        fetch('/api/predictions').then(x=>x.ok&&x.json()),
+        fetch('/api/rules').then(x=>x.ok&&x.json()),
+        fetch('/api/alerts').then(x=>x.ok&&x.json()),
+      ]);
+      if(b && b.bankroll_usd){
+        $("#bankroll").textContent = "$" + b.bankroll_usd.toLocaleString();
+        $("#bankrollPill").textContent = "Bankroll $" + b.bankroll_usd.toLocaleString();
+        const pnl = b.daily_pnl||0;
+        const el = $("#dailyPnl"); el.textContent = (pnl>=0?"+":"") + "$" + pnl.toFixed(2);
+        el.className = "val " + (pnl>=0?"pos":"neg");
+      }
+    }catch(_){ /* offline mock mode */ }
+  }
+  hydrate();
+</script>
+</body>
+</html>

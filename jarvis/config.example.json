@@ -1,0 +1,46 @@
+{
+  "anthropic_api_key": "sk-ant-...",
+  "anthropic_model": "claude-sonnet-4-6",
+
+  "finnhub_api_key": "",
+  "polymarket_api_key": "",
+  "polymarket_funder": "0x...",
+  "wallet_private_key": "",
+
+  "twitter_bearer_token": "",
+  "reddit_client_id": "",
+  "reddit_secret": "",
+  "reddit_user_agent": "jarvis/1.0",
+  "youtube_api_key": "",
+
+  "rss_feeds": [
+    "https://feeds.reuters.com/reuters/businessNews",
+    "https://www.federalreserve.gov/feeds/press_all.xml",
+    "https://feeds.bloomberg.com/markets/news.rss"
+  ],
+  "twitter_watch": ["@federalreserve", "@WSJmarkets", "@DeItaone"],
+  "youtube_watch": ["UCvJJ_dzjViJCoLf5uKUTwoA"],
+
+  "twilio_account_sid": "",
+  "twilio_auth_token": "",
+  "twilio_from_number": "+18776657614",
+  "your_phone_number": "+18052493269",
+
+  "bankroll_usd": 12450,
+  "limits": {
+    "max_position_pct": 0.05,
+    "max_open_positions": 10,
+    "min_edge_pct": 0.05,
+    "max_daily_drawdown_pct": 0.10,
+    "kelly_fraction": 0.5
+  },
+
+  "watchlist_equities": {
+    "CL":  {"name": "Crude Oil", "finnhub": "USO",             "alert_pct": 0.8},
+    "ES":  {"name": "SP500",     "finnhub": "SPY",             "alert_pct": 0.4},
+    "NQ":  {"name": "Nasdaq",    "finnhub": "QQQ",             "alert_pct": 0.5},
+    "GC":  {"name": "Gold",      "finnhub": "GLD",             "alert_pct": 0.5},
+    "BTC": {"name": "Bitcoin",   "finnhub": "BINANCE:BTCUSDT", "alert_pct": 2.0},
+    "DXY": {"name": "Dollar",    "finnhub": "UUP",             "alert_pct": 0.3}
+  }
+}

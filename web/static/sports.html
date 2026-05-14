@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conviction · Sports Edge Sheet</title>
+<style>
+  :root {
+    --bg:        #0b0b0d;
+    --panel:     #14141a;
+    --panel-2:   #1a1a22;
+    --row:       #131318;
+    --row-alt:   #16161d;
+    --border:    #25252e;
+    --border-2:  #2f2f3a;
+    --text:      #f2f2f5;
+    --muted:     #8a8a96;
+    --muted-2:   #5e5e68;
+    --gold:      #c9a44c;
+    --gold-2:    #f0c75e;
+    --green:     #22c55e;
+    --red:       #ef4444;
+    --amber:     #f59e0b;
+    --blue:      #4a86e8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    font-weight: 800; letter-spacing: 1.5px; font-size: 14px;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .back {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+    transition: all .15s;
+  }
+  .back:hover { color: var(--text); border-color: var(--muted); }
+  .status { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.8s infinite ease-in-out; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .refresh {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    color: #000; border: 0; padding: 8px 16px; border-radius: 8px;
+    font-weight: 700; font-size: 12px; letter-spacing: 0.5px; cursor: pointer;
+  }
+  .refresh:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Hero ── */
+  .hero { padding: 32px 28px 20px; max-width: 1400px; margin: 0 auto; }
+  .hero h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 8px; }
+  .hero h1 .accent {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p { color: var(--muted); font-size: 14px; max-width: 640px; line-height: 1.55; }
+
+  /* ── League tiles ── */
+  .leagues {
+    max-width: 1400px; margin: 22px auto 0; padding: 0 28px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+  }
+  @media (max-width: 900px) { .leagues { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 540px) { .leagues { grid-template-columns: repeat(2, 1fr); } }
+  .lg-tile {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s;
+  }
+  .lg-tile:hover { border-color: var(--gold); }
+  .lg-tile.active {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, rgba(201,164,76,0.14) 0%, rgba(201,164,76,0.04) 100%);
+  }
+  .lg-tile .emo { font-size: 22px; line-height: 1; margin-bottom: 4px; }
+  .lg-tile .name { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+
+  /* ── Section heads ── */
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 0 28px; }
+  .section { margin-top: 28px; margin-bottom: 14px; display: flex; align-items: baseline; justify-content: space-between; }
+  .section h2 { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+  .section .sub { color: var(--muted); font-size: 12px; }
+
+  /* ── Game card / table ── */
+  .table-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.3px;
+    color: var(--muted);
+    padding: 14px 16px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border-2);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  thead th.num { text-align: right; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+  tbody tr:hover { background: var(--row-alt); }
+  tbody tr:last-child { border-bottom: 0; }
+  tbody td { padding: 14px 16px; vertical-align: middle; font-size: 13px; }
+  tbody td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+  .matchup { display: flex; flex-direction: column; gap: 4px; min-width: 220px; }
+  .team { display: flex; align-items: center; gap: 8px; }
+  .team .abbr { font-weight: 700; font-size: 13px; min-width: 38px; }
+  .team .name { color: var(--muted); font-size: 11px; }
+  .team .sc   { color: var(--gold-2); font-weight: 800; font-variant-numeric: tabular-nums; margin-left: auto; }
+  .start { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .book-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .book-cell .ml { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .book-cell .ml.pos { color: var(--green); }
+  .book-cell .ml.neg { color: var(--text); }
+  .book-cell .lab { font-size: 9px; color: var(--muted-2); letter-spacing: 1px; text-transform: uppercase; }
+
+  .edge-cell {
+    font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums;
+    padding: 4px 10px; border-radius: 6px;
+    display: inline-block;
+  }
+  .edge-cell.huge  { background: rgba(34,197,94,0.16);  color: var(--green); }
+  .edge-cell.large { background: rgba(34,197,94,0.10);  color: var(--green); }
+  .edge-cell.mid   { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .edge-cell.none  { background: rgba(138,138,150,0.10); color: var(--muted); }
+
+  .verdict {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 16px;
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .verdict.dk { background: rgba(74,134,232,0.14); color: var(--blue); }
+  .verdict.espn { background: rgba(201,164,76,0.16); color: var(--gold-2); }
+  .verdict.none { background: rgba(138,138,150,0.10); color: var(--muted); }
+
+  .btn-view {
+    display: inline-block;
+    background: var(--text); color: #000;
+    border: 0; padding: 8px 16px; border-radius: 20px;
+    font-weight: 700; font-size: 12px;
+    text-decoration: none; cursor: pointer;
+    letter-spacing: 0.4px; white-space: nowrap;
+    transition: all .15s;
+  }
+  .btn-view:hover { background: var(--gold-2); }
+  .expand-toggle {
+    background: transparent; border: 0; color: var(--muted);
+    cursor: pointer; font-size: 11px; padding: 4px;
+  }
+  .expand-toggle:hover { color: var(--gold); }
+  .btn-stack { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+
+  /* ── Detail (props) ── */
+  tr.detail-row { background: var(--row); }
+  tr.detail-row td { padding: 0; }
+  .detail-inner {
+    padding: 16px 24px 20px;
+    border-top: 1px dashed var(--border-2);
+  }
+  .detail-inner h4 {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.4px;
+    color: var(--gold); margin-bottom: 10px; font-weight: 700;
+  }
+  .props-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+  }
+  .prop-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .prop-mkt { font-size: 10px; color: var(--gold-2); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  .prop-player { font-size: 13px; font-weight: 700; margin: 4px 0; }
+  .prop-line { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+  .prop-line .v { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ── Futures ── */
+  .futures-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .fut-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .fut-name {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--gold); font-weight: 700; margin-bottom: 10px;
+  }
+  .fut-entry {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 6px 0;
+    border-top: 1px dashed var(--border);
+    font-size: 12px;
+  }
+  .fut-entry:first-of-type { border-top: 0; }
+  .fut-team { color: var(--text); }
+  .fut-val { color: var(--gold-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ── States ── */
+  .state { padding: 80px 24px; text-align: center; color: var(--muted); }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .state .big { font-size: 16px; color: var(--text); font-weight: 700; margin-bottom: 6px; }
+  .warn {
+    max-width: 1400px; margin: 16px auto 0; padding: 0 28px;
+  }
+  .warn .inner {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.25);
+    color: var(--amber);
+    border-radius: 8px; padding: 12px 16px; font-size: 12px;
+  }
+
+  @media (max-width: 768px) {
+    thead th.col-edge, tbody td.col-edge,
+    thead th.col-verdict, tbody td.col-verdict { display: none; }
+    .hero h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a class="back" href="/">← Dashboard</a>
+    <div class="logo">CONVICTION CAPITAL</div>
+  </div>
+  <div class="status">
+    <span class="pulse"></span>
+    <span id="scan-status">Loading…</span>
+    <button class="refresh" id="refresh-btn" onclick="loadBoard(true)">Refresh</button>
+  </div>
+</div>
+
+<section class="hero">
+  <h1>Sports <span class="accent">Edge Sheet</span></h1>
+  <p>Live game lines from ESPN BET + DraftKings side-by-side. Edge is the implied-probability gap on the same outcome —
+     bet the cheap side. Click a game for player props.</p>
+</section>
+
+<div class="leagues" id="leagues"></div>
+
+<div class="warn" id="dk-warn" style="display:none">
+  <div class="inner" id="dk-warn-msg"></div>
+</div>
+
+<div class="wrap">
+  <div class="section">
+    <h2 id="board-title">Games</h2>
+    <div class="sub" id="board-sub"></div>
+  </div>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:240px">Matchup</th>
+          <th class="num">ESPN BET ML</th>
+          <th class="num">DraftKings ML</th>
+          <th class="num">DK Spread</th>
+          <th class="num">DK Total</th>
+          <th class="num col-edge">Edge</th>
+          <th class="col-verdict">Bet Side</th>
+          <th style="text-align:right;min-width:160px">Action</th>
+        </tr>
+      </thead>
+      <tbody id="games-tbody">
+        <tr><td colspan="8">
+          <div class="state">
+            <div class="spinner"></div>
+            <div class="big">Pulling lines</div>
+            <div>ESPN BET + DraftKings.</div>
+          </div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Futures &amp; Awards</h2>
+    <div class="sub">Champion · MVP · ROY · season awards</div>
+  </div>
+  <div id="futures" class="futures-grid">
+    <div class="state" style="grid-column:1/-1">Loading futures…</div>
+  </div>
+</div>
+
+<script>
+let activeLeague = 'nba';
+let leaguesList  = [];
+let currentBoard = null;
+let expanded     = new Set();
+let propsCache   = {};
+
+const SPORT_DEFAULT_ORDER = ['nfl','nba','mlb','nhl','ncaaf','ncaab'];
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+function fmtOdds(o) {
+  if (o === null || o === undefined || o === '') return '—';
+  const n = Number(o);
+  if (Number.isNaN(n)) return o;
+  return n > 0 ? '+' + n : String(n);
+}
+function fmtTime(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' });
+  } catch(e) { return iso; }
+}
+function edgeClass(pp) {
+  if (pp >= 5) return 'huge';
+  if (pp >= 2) return 'large';
+  if (pp >= 1) return 'mid';
+  return 'none';
+}
+
+async function loadLeagues() {
+  try {
+    const r = await fetch('/api/sports/leagues');
+    const d = await r.json();
+    leaguesList = d.leagues || [];
+    leaguesList.sort((a,b) =>
+      SPORT_DEFAULT_ORDER.indexOf(a.id) - SPORT_DEFAULT_ORDER.indexOf(b.id));
+    renderLeagueTiles();
+  } catch(e) {
+    console.warn('leagues fetch fail', e);
+  }
+}
+
+function renderLeagueTiles() {
+  const wrap = document.getElementById('leagues');
+  wrap.innerHTML = leaguesList.map(l => `
+    <div class="lg-tile ${l.id === activeLeague ? 'active' : ''}" data-id="${l.id}">
+      <div class="emo">${l.emoji}</div>
+      <div class="name">${escapeHtml(l.label)}</div>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('.lg-tile').forEach(t => {
+    t.addEventListener('click', () => {
+      activeLeague = t.dataset.id;
+      renderLeagueTiles();
+      loadBoard(true);
+    });
+  });
+}
+
+async function loadBoard(force = false) {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  document.getElementById('scan-status').textContent = 'Fetching ' + activeLeague.toUpperCase() + '…';
+  document.getElementById('dk-warn').style.display = 'none';
+  document.getElementById('games-tbody').innerHTML = `
+    <tr><td colspan="8"><div class="state">
+      <div class="spinner"></div>
+      <div class="big">Loading ${activeLeague.toUpperCase()} lines</div>
+    </div></td></tr>`;
+  document.getElementById('futures').innerHTML =
+    `<div class="state" style="grid-column:1/-1">Loading futures…</div>`;
+
+  try {
+    const url = `/api/sports/${activeLeague}` + (force ? '?_=' + Date.now() : '');
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    currentBoard = d;
+    expanded.clear();
+    propsCache = {};
+
+    if (!d.dk_ok) {
+      const w = document.getElementById('dk-warn');
+      w.style.display = 'block';
+      document.getElementById('dk-warn-msg').textContent =
+        'DraftKings is not responding from the server right now — showing ESPN BET only. ' +
+        'Edge column will be empty until DK comes back.';
+    }
+
+    document.getElementById('board-title').textContent = `${d.label} Games`;
+    document.getElementById('board-sub').textContent =
+      `${(d.games || []).length} games · updated ${new Date().toLocaleTimeString()}`;
+    document.getElementById('scan-status').textContent =
+      `${(d.games || []).length} games · ${(d.futures || []).length} futures`;
+
+    renderGames(d.games || []);
+    renderFutures(d.futures || []);
+  } catch (err) {
+    document.getElementById('games-tbody').innerHTML =
+      `<tr><td colspan="8"><div class="state">
+        <div class="big">Could not load ${activeLeague.toUpperCase()}.</div>
+        <div>${escapeHtml(err.message)}</div>
+      </div></td></tr>`;
+    document.getElementById('scan-status').textContent = 'Error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Refresh';
+  }
+}
+
+function renderGames(games) {
+  const tbody = document.getElementById('games-tbody');
+  if (!games.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="state">
+      <div class="big">No games scheduled.</div>
+      <div>Switch leagues above.</div>
+    </div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = games.map((g, i) => renderGameRow(g, i)).join('');
+}
+
+function renderGameRow(g, idx) {
+  const e = g.espn_bet || {};
+  const dk = g.dk || {};
+  const edge = g.edge || {};
+  const ec = edge.has_edge ? edgeClass(edge.pp) : 'none';
+  const isOpen = expanded.has(idx);
+
+  // Verdict
+  let verdictHtml = '<span class="verdict none">No edge</span>';
+  if (edge.has_edge) {
+    const cls = edge.cheap_book === 'DraftKings' ? 'dk' : 'espn';
+    const sideLabel = edge.side === 'home' ? g.home.abbr : g.away.abbr;
+    verdictHtml = `<span class="verdict ${cls}">${sideLabel} · ${escapeHtml(edge.cheap_book)}</span>`;
+  }
+
+  const homeScore = g.home.score ? `<span class="sc">${g.home.score}</span>` : '';
+  const awayScore = g.away.score ? `<span class="sc">${g.away.score}</span>` : '';
+
+  // Action button — link to DK event page if we have it
+  const action = g.dk_url
+    ? `<a class="btn-view" href="${g.dk_url}" target="_blank" rel="noopener">Open on DK ↗</a>`
+    : `<span style="color:var(--muted);font-size:11px">DK link unavailable</span>`;
+
+  return `
+    <tr class="data-row" data-idx="${idx}">
+      <td>
+        <div class="matchup">
+          <div class="team"><span class="abbr">${escapeHtml(g.away.abbr || '?')}</span><span class="name">${escapeHtml(g.away.name || '')}</span>${awayScore}</div>
+          <div class="team"><span class="abbr">${escapeHtml(g.home.abbr || '?')}</span><span class="name">@ ${escapeHtml(g.home.name || '')}</span>${homeScore}</div>
+          <div class="start">${fmtTime(g.start)} · ${escapeHtml(g.status || '')}</div>
+        </div>
+      </td>
+      <td class="num">
+        <div class="book-cell">
+          <span class="ml ${edge.side === 'away' && edge.cheap_book === 'ESPN BET' ? 'pos' : 'neg'}">${fmtOdds(e.away_ml)}</span>
+          <span class="ml ${edge.side === 'home' && edge.cheap_book === 'ESPN BET' ? 'pos' : 'neg'}">${fmtOdds(e.home_ml)}</span>
+          <span class="lab">Away / Home</span>
+        </div>
+      </td>
+      <td class="num">
+        <div class="book-cell">
+          <span class="ml ${edge.side === 'away' && edge.cheap_book === 'DraftKings' ? 'pos' : 'neg'}">${fmtOdds(dk.away_ml)}</span>
+          <span class="ml ${edge.side === 'home' && edge.cheap_book === 'DraftKings' ? 'pos' : 'neg'}">${fmtOdds(dk.home_ml)}</span>
+          <span class="lab">Away / Home</span>
+        </div>
+      </td>
+      <td class="num">${dk.spread_away != null ? (dk.spread_away > 0 ? '+' : '') + dk.spread_away : '—'}</td>
+      <td class="num">${dk.total != null ? dk.total : '—'}</td>
+      <td class="num col-edge">
+        <span class="edge-cell ${ec}">${edge.has_edge ? '+' + edge.pp + 'pp' : '—'}</span>
+      </td>
+      <td class="col-verdict">${verdictHtml}</td>
+      <td style="text-align:right">
+        <div class="btn-stack">
+          ${action}
+          <button class="expand-toggle" onclick="toggleProps(${idx}, '${g.espn_id || ''}')">${isOpen ? '▴ Hide props' : '▾ Player props'}</button>
+        </div>
+      </td>
+    </tr>
+    ${isOpen ? `<tr class="detail-row"><td colspan="8"><div class="detail-inner" id="props-${idx}">
+      <h4>Player Props (DraftKings)</h4>
+      <div class="state" style="padding:20px"><div class="spinner"></div>Loading props…</div>
+    </div></td></tr>` : ''}
+  `;
+}
+
+async function toggleProps(idx, espnId) {
+  if (expanded.has(idx)) {
+    expanded.delete(idx);
+    renderGames(currentBoard.games || []);
+    return;
+  }
+  expanded.add(idx);
+  renderGames(currentBoard.games || []);
+
+  // Look up by DraftKings event id — we don't have it from ESPN, so we match
+  // game by team abbr against the cached DK rows.
+  const game = (currentBoard.games || [])[idx];
+  if (!game) return;
+  let dkEventId = null;
+  if (game.dk_url) {
+    // dk_url ends with /event/<id>
+    const m = game.dk_url.match(/event\/(\d+)/);
+    if (m) dkEventId = m[1];
+  }
+
+  const container = document.getElementById('props-' + idx);
+  if (!container) return;
+
+  if (!dkEventId) {
+    container.innerHTML = `<h4>Player Props (DraftKings)</h4>
+      <div class="state" style="padding:20px">DK event link unavailable for this game.</div>`;
+    return;
+  }
+
+  if (propsCache[dkEventId]) {
+    renderProps(container, propsCache[dkEventId]);
+    return;
+  }
+
+  try {
+    const r = await fetch(`/api/sports/${activeLeague}/props/${dkEventId}`);
+    const d = await r.json();
+    propsCache[dkEventId] = d.props || [];
+    renderProps(container, d.props || []);
+  } catch(e) {
+    container.innerHTML = `<h4>Player Props (DraftKings)</h4>
+      <div class="state" style="padding:20px">Could not load props.</div>`;
+  }
+}
+
+function renderProps(container, props) {
+  if (!props.length) {
+    container.innerHTML = `<h4>Player Props (DraftKings)</h4>
+      <div class="state" style="padding:20px">No props listed yet for this game.</div>`;
+    return;
+  }
+  const cards = props.map(p => `
+    <div class="prop-card">
+      <div class="prop-mkt">${escapeHtml(p.market || '')}</div>
+      <div class="prop-player">${escapeHtml(p.player || '')}</div>
+      <div class="prop-line"><span>Line</span><span class="v">${p.line ?? '—'}</span></div>
+      <div class="prop-line"><span>Over</span><span class="v">${fmtOdds(p.over_odds)}</span></div>
+      <div class="prop-line"><span>Under</span><span class="v">${fmtOdds(p.under_odds)}</span></div>
+    </div>
+  `).join('');
+  container.innerHTML = `<h4>Player Props (DraftKings · ${props.length})</h4>
+    <div class="props-grid">${cards}</div>`;
+}
+
+function renderFutures(futures) {
+  const wrap = document.getElementById('futures');
+  if (!futures.length) {
+    wrap.innerHTML = `<div class="state" style="grid-column:1/-1">No futures markets right now.</div>`;
+    return;
+  }
+  wrap.innerHTML = futures.map(f => `
+    <div class="fut-card">
+      <div class="fut-name">${escapeHtml(f.name)} <span style="color:var(--muted-2);font-weight:600">· ${escapeHtml(f.provider)}</span></div>
+      ${f.entries.map(e => `
+        <div class="fut-entry">
+          <span class="fut-team">${escapeHtml(e.team)}</span>
+          <span class="fut-val">${fmtOdds(e.value)}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+loadLeagues().then(() => loadBoard());
+setInterval(() => loadBoard(), 90 * 1000);
+</script>
+</body>
+</html>
