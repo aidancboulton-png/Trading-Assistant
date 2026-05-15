@@ -87,15 +87,48 @@ def fh(path: str, params: dict) -> dict:
     r = requests.get(f"https://finnhub.io/api/v1{path}", params=params, timeout=12)
     return r.json()
 
+_quote_cache: dict = {}  # last-known-good quotes, never evicted
+
+def _yahoo_quote(symbol: str) -> dict | None:
+    """Fallback: fetch current quote from Yahoo Finance (free, no key)."""
+    ticker = _YAHOO_SYMBOL_MAP.get(symbol, symbol.replace("BINANCE:", "").replace("USDT", "-USD"))
+    try:
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+        r = requests.get(url, params={"interval": "1d", "range": "5d"},
+                         headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        d = r.json()
+        res = d["chart"]["result"][0]
+        meta = res["meta"]
+        c = meta.get("regularMarketPrice") or meta.get("previousClose") or 0
+        pc = meta.get("chartPreviousClose") or meta.get("previousClose") or 1
+        h = meta.get("regularMarketDayHigh") or c
+        lo = meta.get("regularMarketDayLow") or c
+        return {"current": round(c, 4), "prev_close": round(pc, 4),
+                "high": round(h, 4), "low": round(lo, 4),
+                "change_pct": round(((c - pc) / pc) * 100, 2) if pc else 0}
+    except:
+        return None
+
 def get_quote(symbol: str) -> dict:
     try:
         d = fh("/quote", {"symbol": symbol})
+        # 429 rate limit — Finnhub returns {"error": "..."}
+        if "error" in d or not d.get("c"):
+            raise ValueError("finnhub_limit")
         c, pc = d.get("c") or 0, d.get("pc") or 1
-        return {"current": round(c, 4), "prev_close": round(pc, 4),
-                "high": round(d.get("h") or 0, 4), "low": round(d.get("l") or 0, 4),
-                "change_pct": round(((c - pc) / pc) * 100, 2) if pc else 0}
+        q = {"current": round(c, 4), "prev_close": round(pc, 4),
+             "high": round(d.get("h") or 0, 4), "low": round(d.get("l") or 0, 4),
+             "change_pct": round(((c - pc) / pc) * 100, 2) if pc else 0}
+        _quote_cache[symbol] = q  # store last-known-good
+        return q
     except:
-        return {"current": 0, "prev_close": 0, "high": 0, "low": 0, "change_pct": 0}
+        # Try Yahoo Finance fallback
+        yq = _yahoo_quote(symbol)
+        if yq and yq["current"] > 0:
+            _quote_cache[symbol] = yq
+            return yq
+        # Return last-known-good if available, otherwise zeros
+        return _quote_cache.get(symbol, {"current": 0, "prev_close": 0, "high": 0, "low": 0, "change_pct": 0})
 
 def build_snapshot() -> dict:
     """Parallel fetch of all WATCHLIST quotes. ~6s → ~0.5s."""
@@ -942,7 +975,7 @@ def load_alerts() -> list:
 
 _cache: dict = {}
 _cache_ts: dict = {}
-TTL = {"snapshot": 30, "news": 300, "fear_greed": 3600, "rsi": 3600,
+TTL = {"snapshot": 90, "news": 300, "fear_greed": 3600, "rsi": 3600,
        "social": 1800, "technicals": 7200, "analyst_recs": 7200, "analysis": 300,
        "insider_trades": 3600, "earnings_cal": 1800, "upgrades": 3600,
        "correlations": 60}
@@ -1270,19 +1303,20 @@ async def api_warroom():
     snap_cached = _cache.get("snapshot", {})
     market_summary: dict = {}
     if snap_cached:
-        prices = snap_cached.get("prices", {})
+        prices = snap_cached.get("data", {})
         for sym in ["ES", "BTC", "VIX", "NVDA", "DXY"]:
             if sym in prices:
                 p = prices[sym]
                 market_summary[sym] = {
-                    "price": p.get("price"),
-                    "chg_pct": p.get("chg_pct"),
+                    "price":   p.get("current"),
+                    "chg_pct": p.get("change_pct"),
                 }
 
-    # Analysis mood (from shared cache)
-    analysis_cached = _cache.get("analysis", {})
-    mood = analysis_cached.get("mood", "") if analysis_cached else ""
-    mood_signal = analysis_cached.get("signal", "") if analysis_cached else ""
+    # Analysis mood (from shared cache) — response shape: {data: {mood, ...}}
+    analysis_raw    = _cache.get("analysis", {})
+    analysis_cached = analysis_raw.get("data", analysis_raw) if analysis_raw else {}
+    mood        = analysis_cached.get("mood", "")
+    mood_signal = analysis_cached.get("mood_desc", "")
 
     # Scripts status
     scripts_cached = bool(_SCRIPTS_CACHE.get("payload"))
