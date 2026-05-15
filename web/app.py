@@ -1012,6 +1012,7 @@ _latest: dict = {"snapshot": {}, "alerts": []}
 async def startup():
     asyncio.create_task(market_loop())
     asyncio.create_task(warm_caches())
+    asyncio.create_task(jarvis_loop())
 
 async def warm_caches():
     """Pre-populate slow caches so the first visitor doesn't wait."""
@@ -1265,6 +1266,136 @@ async def api_mainframe():
         "models":  {p: v["model"] for p, v in h.items()},
         "keys":    {p: v["key_set"] for p, v in h.items()},
         "openai_key_set": bool(os.environ.get("OPENAI_API_KEY", "").strip()),
+        "ts": time.time(),
+    }
+
+
+# ── Jarvis autonomous task engine ────────────────────────────────────────────
+
+_JARVIS_BRIEFS: list = []   # last 20 completed tasks
+_JARVIS_RUNNING: dict = {}  # task_type → {"started_at": ts, "status": "running"}
+
+def _run_jarvis_task(task_type: str, snap: dict, analysis: dict, news: list) -> dict | None:
+    """Run one Claude-powered Jarvis task and return a brief dict."""
+    from web.llm_router import claude_call, _record
+    import time
+
+    ts = time.time()
+    _JARVIS_RUNNING[task_type] = {"started_at": ts, "status": "running"}
+
+    # Build context
+    mood = analysis.get("mood", "UNKNOWN")
+    summary = analysis.get("simple_summary", "")
+    signals = [s.get("title", "") for s in analysis.get("signals", []) if s.get("title")]
+    top_news = [h.get("headline", "") for h in (news or [])[:12] if h.get("headline")]
+
+    prices = {}
+    for sym in ["ES", "BTC", "VIX", "NVDA", "DXY", "GC"]:
+        if sym in snap:
+            p = snap[sym]
+            prices[sym] = f"{p.get('current', 0):.2f} ({p.get('change_pct', 0):+.2f}%)"
+
+    if task_type == "news_synthesis":
+        prompt = (
+            f"You are Jarvis, the market intelligence engine for Conviction Capital.\n"
+            f"Market mood: {mood}. {summary}\n"
+            f"Key signals: {', '.join(signals)}\n"
+            f"Prices: {prices}\n"
+            f"Latest headlines:\n" + "\n".join(f"- {h}" for h in top_news) + "\n\n"
+            "In 2-3 sentences: what is actually happening in markets right now and WHY? "
+            "Name specific tickers, data points, and causal relationships. No fluff. "
+            "Then on a new line: ONE specific thing a trader should watch in the next 2 hours."
+        )
+        label = "jarvis:news_synthesis"
+
+    elif task_type == "earnings_scan":
+        earnings = analysis.get("stats", {})
+        prompt = (
+            f"You are Jarvis. Current market: {mood}. VIX: {prices.get('VIX', 'unknown')}.\n"
+            f"Recent news about earnings:\n" + "\n".join(f"- {h}" for h in top_news if any(w in h.lower() for w in ["earn","revenue","profit","beat","miss","guidance","eps","quarter"])) + "\n\n"
+            "Identify 2-3 specific companies from SPX that are near earnings and explain: "
+            "(1) what consensus expects, (2) what the price action says is priced in, "
+            "(3) which direction has the asymmetric risk. Be specific with tickers."
+        )
+        label = "jarvis:earnings_scan"
+
+    elif task_type == "correlation_brief":
+        prompt = (
+            f"You are Jarvis. Today's prices: {prices}\n"
+            f"Market mood: {mood}. Signals: {', '.join(signals)}\n\n"
+            "In 3 sentences explain the key cross-asset relationship driving markets TODAY. "
+            "Why is [X] moving when [Y] does? What does the DXY/Gold relationship signal? "
+            "What is BTC telling us about risk appetite? Name numbers."
+        )
+        label = "jarvis:correlation_brief"
+    else:
+        _JARVIS_RUNNING.pop(task_type, None)
+        return None
+
+    result = claude_call(prompt, max_tokens=400)
+    elapsed = int((time.time() - ts) * 1000)
+    _JARVIS_RUNNING.pop(task_type, None)
+
+    if not result:
+        return None
+
+    lines = result.strip().split("\n")
+    headline = lines[0].strip() if lines else result[:80]
+    body = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
+
+    return {
+        "id": int(ts),
+        "task_type": task_type,
+        "label": {
+            "news_synthesis":   "Market Synthesis",
+            "earnings_scan":    "Earnings Scan",
+            "correlation_brief":"Cross-Asset Correlations",
+        }.get(task_type, task_type),
+        "ts": ts,
+        "elapsed_ms": elapsed,
+        "headline": headline[:200],
+        "body": body[:500],
+        "mood": mood,
+        "prices": prices,
+    }
+
+async def jarvis_loop():
+    """Run Jarvis intelligence tasks on a schedule using Claude."""
+    await asyncio.sleep(30)   # let server warm up first
+    loop_count = 0
+    while True:
+        try:
+            snap     = _cache.get("snapshot", {})
+            bucket   = f"analysis_{int(time.time())//300}"
+            analysis = _cache.get(bucket) or next(
+                (_cache[k] for k in sorted(_cache) if k.startswith("analysis_")), {})
+            news     = _cache.get("news", [])
+
+            if not snap and not analysis:
+                await asyncio.sleep(60)
+                continue
+
+            # Task schedule: cycle through task types
+            task_type = ["news_synthesis", "earnings_scan", "correlation_brief"][loop_count % 3]
+
+            brief = await asyncio.to_thread(_run_jarvis_task, task_type, snap, analysis, news)
+            if brief:
+                _JARVIS_BRIEFS.insert(0, brief)
+                if len(_JARVIS_BRIEFS) > 20:
+                    _JARVIS_BRIEFS.pop()
+
+        except Exception as e:
+            print(f"[jarvis_loop] error: {e}")
+
+        loop_count += 1
+        await asyncio.sleep(900)   # 15 minutes between tasks
+
+
+@app.get("/api/jarvis/briefs")
+async def api_jarvis_briefs():
+    return {
+        "briefs": _JARVIS_BRIEFS[:20],
+        "running": dict(_JARVIS_RUNNING),
         "ts": time.time(),
     }
 
