@@ -58,17 +58,27 @@ WATCHLIST = {
     "XOM":  {"name": "ExxonMobil",   "finnhub": "XOM",              "alert_pct": 1.0,  "type": "stock"},
 }
 
-# Read API key from env var (Railway) or fall back to config.json (local dev)
-_fkey_env = os.environ.get("FINNHUB_API_KEY")
-if _fkey_env:
-    FKEY = _fkey_env
-else:
+# Read API keys from env vars (Railway) or fall back to config.json (local dev)
+def _read_cfg() -> dict:
     try:
-        _cfg_path = _BASE_DIR / "config.json"
-        with open(_cfg_path) as f:
-            FKEY = json.load(f)["finnhub_api_key"]
+        return json.load(open(_BASE_DIR / "config.json"))
     except Exception:
-        FKEY = ""
+        return {}
+
+_cfg = _read_cfg()
+
+def _key(env_name: str, cfg_name: str) -> str:
+    return os.environ.get(env_name, "").strip() or _cfg.get(cfg_name, "")
+
+FKEY = _key("FINNHUB_API_KEY", "finnhub_api_key")
+
+# Inject config.json keys into env so llm_router + discord_bot pick them up
+for _evar, _ckey in [
+    ("ANTHROPIC_API_KEY", "anthropic_api_key"),
+    ("GEMINI_API_KEY",    "gemini_api_key"),
+]:
+    if not os.environ.get(_evar) and _cfg.get(_ckey):
+        os.environ[_evar] = _cfg[_ckey]
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
