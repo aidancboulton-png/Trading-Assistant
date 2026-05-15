@@ -3,528 +3,713 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WAR ROOM · Conviction Capital</title>
+<title>CONVICTION CAPITAL · SOVEREIGN MAINFRAME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:      #070a0f;
-  --panel:   #0c1018;
-  --panel2:  #101520;
-  --border:  #1a2235;
-  --border2: #253048;
-  --text:    #d0ddf0;
-  --dim:     #5a6e8a;
-  --mute:    #2e3d54;
-  --gold:    #c9a44c;
-  --gold2:   #f0c75e;
-  --green:   #34d399;
-  --red:     #fb7185;
-  --warn:    #fbbf24;
-  --teal:    #22d3ee;
-  --blue:    #60a5fa;
+  --bg:           #050505;
+  --bg2:          #080808;
+  --bg3:          #0a0a0a;
+  --border:       #1a1a1a;
+  --border2:      #222;
+  --green:        #00ff41;
+  --green-dim:    #00c030;
+  --green-glow:   rgba(0,255,65,.12);
+  --gold:         #d4af37;
+  --gold-dim:     #a88820;
+  --gold-glow:    rgba(212,175,55,.15);
+  --red:          #ff3355;
+  --blue:         #4488ff;
+  --teal:         #00e5ff;
+  --dim:          #444;
+  --mute:         #2a2a2a;
+  --text:         #cccccc;
+  --text-bright:  #eeeeee;
+  --gemini-c:     #4488ff;
+  --claude-c:     #d97757;
+  --openai-c:     #10a37f;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 body {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-family: 'JetBrains Mono', 'Space Mono', 'Courier New', monospace;
   background: var(--bg);
   color: var(--text);
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  font-size: 11px;
 }
 
-/* TOP BAR */
+/* ── TOPBAR ── */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 46px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(7,10,15,.97);
+  padding: 0 16px;
+  height: 38px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--bg2);
   flex-shrink: 0;
+  letter-spacing: .05em;
 }
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .2em;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: .25em;
   color: var(--gold);
 }
-.pulse-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
+.brand-pulse {
+  width: 7px; height: 7px; border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 8px var(--green);
-  animation: pulse 2s infinite ease-in-out;
+  animation: blink 2s infinite;
 }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-.nav-links { display: flex; gap: 3px; }
-.nav-link {
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--dim);
-  text-decoration: none;
-  font-size: 10px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+.nav { display: flex; gap: 2px; }
+.nav a {
+  padding: 3px 10px;
+  border: 1px solid var(--border2);
+  color: var(--dim); font-size: 9px;
+  letter-spacing: .14em; text-transform: uppercase;
+  text-decoration: none; border-radius: 2px;
   transition: all .15s;
 }
-.nav-link:hover { color: var(--text); border-color: var(--border2); }
-.nav-link.here  { color: var(--gold); border-color: rgba(201,164,76,.4); background: rgba(201,164,76,.06); }
+.nav a:hover { color: var(--text); border-color: var(--dim); }
+.nav a.here  { color: var(--gold); border-color: var(--gold-dim); background: var(--gold-glow); }
 
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 10px;
-  color: var(--dim);
-  letter-spacing: .1em;
+.topbar-r {
+  display: flex; align-items: center; gap: 16px;
+  font-size: 9px; color: var(--dim); letter-spacing: .1em;
 }
-#clock { color: var(--gold); font-variant-numeric: tabular-nums; }
+.topbar-r .val { color: var(--text-bright); }
+#clock { color: var(--green); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* LAYOUT */
-.workspace {
+/* ── TOKEN COUNTER ── */
+.token-ctr {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9px; color: var(--dim);
+  border: 1px solid var(--border2);
+  padding: 2px 8px; border-radius: 2px;
+}
+.token-ctr .tval { color: var(--teal); font-variant-numeric: tabular-nums; }
+
+/* ── MAIN GRID ── */
+.grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 1px;
+  grid-template-columns: 300px 1fr 360px;
   flex: 1;
   overflow: hidden;
-  background: var(--border);
   min-height: 0;
+  gap: 0;
 }
 
-/* PANE */
-.pane {
-  background: var(--panel);
-  display: flex;
-  flex-direction: column;
+/* ── PANEL BASE ── */
+.panel {
+  display: flex; flex-direction: column;
   overflow: hidden;
+  border-right: 1px solid var(--border2);
+}
+.panel:last-child { border-right: none; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.panel-title {
+  font-size: 9px; font-weight: 700; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--dim);
+}
+.panel-title.live { color: var(--green); }
+.panel-title.gold { color: var(--gold); }
+.panel-status {
+  font-size: 9px; letter-spacing: .1em;
+  display: flex; align-items: center; gap: 5px;
+}
+.dot-green { width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px var(--green); }
+.dot-gold  { width: 5px; height: 5px; border-radius: 50%; background: var(--gold);  box-shadow: 0 0 5px var(--gold); animation: blink 1.5s infinite; }
+.dot-off   { width: 5px; height: 5px; border-radius: 50%; background: var(--dim); }
+
+/* ── LEFT: INGESTION STREAM ── */
+.source-bar {
+  display: flex; gap: 1px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--bg3);
+  flex-shrink: 0;
+}
+.source-chip {
+  flex: 1; padding: 4px 6px;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.sc-name { font-size: 8px; letter-spacing: .16em; color: var(--dim); text-transform: uppercase; }
+.sc-val  { font-size: 10px; font-weight: 600; }
+.sc-val.ok   { color: var(--green); }
+.sc-val.off  { color: var(--dim); }
+.sc-val.warn { color: var(--gold); }
+
+.tape {
+  flex: 1; overflow: hidden;
+  position: relative;
   min-height: 0;
 }
-.pane-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 14px;
-  border-bottom: 1px solid var(--border);
+.tape-inner {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+  display: flex; flex-direction: column-reverse;
+}
+.tape-inner::-webkit-scrollbar { width: 2px; }
+.tape-inner::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.tape-line {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 3px 12px;
+  border-bottom: 1px solid transparent;
+  transition: background .3s;
+  line-height: 1.4;
+  cursor: default;
+}
+.tape-line:hover { background: var(--mute); }
+.tape-line.signal {
+  background: var(--gold-glow);
+  border-bottom: 1px solid var(--gold-dim);
+  animation: flash-gold .6s ease-out;
+}
+.tape-line.signal .tape-msg { color: var(--gold); }
+@keyframes flash-gold {
+  0% { background: rgba(212,175,55,.4); }
+  100% { background: var(--gold-glow); }
+}
+.tape-ts  { color: var(--dim); font-size: 9px; flex-shrink: 0; font-variant-numeric: tabular-nums; min-width: 56px; }
+.tape-src { font-size: 8px; flex-shrink: 0; min-width: 36px; letter-spacing: .1em; text-transform: uppercase; }
+.tape-src.news  { color: var(--blue); }
+.tape-src.macro { color: var(--teal); }
+.tape-src.earn  { color: var(--gold-dim); }
+.tape-src.geo   { color: var(--red); }
+.tape-src.sys   { color: var(--green-dim); }
+.tape-msg { color: var(--text); font-size: 10px; flex: 1; }
+
+.tape-filter {
+  display: flex; gap: 1px;
+  padding: 5px 12px;
+  border-top: 1px solid var(--border2);
+  background: var(--bg2);
   flex-shrink: 0;
-  background: var(--panel2);
 }
-.pane-title { display: flex; align-items: center; gap: 9px; }
-.ind { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.ind.on   { background: var(--green); box-shadow: 0 0 5px var(--green); }
-.ind.off  { background: var(--mute); }
-.ind.idle { background: var(--warn);  box-shadow: 0 0 5px var(--warn); }
-.ind.run  { background: var(--teal);  box-shadow: 0 0 5px var(--teal); animation: pulse .8s infinite; }
-.pane-name { font-size: 10px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
-.pane-sub  { font-size: 9px; color: var(--dim); margin-top: 1px; }
-.pane-actions { display: flex; align-items: center; gap: 6px; }
-.badge {
-  font-size: 9px; padding: 2px 7px; border-radius: 4px;
-  border: 1px solid var(--border2); color: var(--dim);
-  letter-spacing: .1em; text-transform: uppercase;
-}
-.badge.on   { color: var(--green); border-color: #0b3025; background: #03100a; }
-.badge.off  { color: var(--dim);   border-color: var(--border); }
-.badge.idle { color: var(--warn);  border-color: #3a2a0c; background: #0f0a02; }
-.badge.hq   { color: var(--gold);  border-color: #3a2c10; background: #0c0800; }
-.badge.run  { color: var(--teal);  border-color: #0a3040; background: #030c10; }
-.open-btn {
-  font-size: 9px; padding: 2px 7px;
-  border: 1px solid var(--border); border-radius: 4px;
-  color: var(--dim); text-decoration: none;
-  letter-spacing: .1em; text-transform: uppercase;
+.tf-chip {
+  flex: 1; text-align: center;
+  padding: 3px 4px;
+  border: 1px solid var(--border2);
+  font-size: 8px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim); cursor: pointer; border-radius: 2px;
   transition: all .15s;
 }
-.open-btn:hover { color: var(--gold); border-color: rgba(201,164,76,.4); }
+.tf-chip.active { color: var(--green); border-color: var(--green-dim); background: var(--green-glow); }
+.tf-chip:hover  { color: var(--text); border-color: var(--dim); }
 
-/* TERMINAL */
-.terminal {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-height: 0;
-}
-.terminal::-webkit-scrollbar { width: 3px; }
-.terminal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-.line {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 1px 0;
-  font-size: 11px;
-  line-height: 1.55;
-}
-.ts  { color: var(--mute); font-size: 10px; flex-shrink: 0; font-variant-numeric: tabular-nums; min-width: 58px; }
-.lvl { font-size: 9px; flex-shrink: 0; min-width: 28px; letter-spacing: .06em; text-transform: uppercase; }
-.lvl.info { color: var(--blue); }
-.lvl.ok   { color: var(--green); }
-.lvl.warn { color: var(--warn); }
-.lvl.err  { color: var(--red); }
-.lvl.cmd  { color: var(--gold); }
-.lvl.data { color: var(--teal); }
-.msg { color: var(--text); flex: 1; word-break: break-word; }
-.msg .hi { color: var(--gold); }
-.msg .g  { color: var(--green); }
-.msg .d  { color: var(--dim); }
-.msg .r  { color: var(--red); }
-.msg .w  { color: var(--warn); }
+/* ── CENTER: PROCESSING FACTORY ── */
+.factory { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
-/* MARKET TICKER STRIP */
-.ticker-strip {
-  display: flex;
+.nodes-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
   gap: 1px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel2);
-  overflow: hidden;
+  border-bottom: 1px solid var(--border2);
 }
-.ticker-chip {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 5px 8px;
-  min-width: 0;
+.node {
+  padding: 12px;
+  background: var(--bg2);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  position: relative;
 }
-.tc-sym  { font-size: 9px; color: var(--dim); letter-spacing: .14em; text-transform: uppercase; }
-.tc-px   { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tc-chg  { font-size: 9px; font-variant-numeric: tabular-nums; }
-.tc-chg.up   { color: var(--green); }
-.tc-chg.down { color: var(--red); }
-.tc-chg.flat { color: var(--dim); }
+.node-ring {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  transition: box-shadow .3s;
+}
+.node-ring.gemini { border-color: var(--gemini-c); }
+.node-ring.claude { border-color: var(--claude-c); }
+.node-ring.openai { border-color: var(--openai-c); }
+.node-ring.active.gemini { box-shadow: 0 0 16px var(--gemini-c), inset 0 0 16px rgba(68,136,255,.08); }
+.node-ring.active.claude { box-shadow: 0 0 16px var(--claude-c), inset 0 0 16px rgba(217,119,87,.08); }
+.node-ring.active.openai { box-shadow: 0 0 16px var(--openai-c), inset 0 0 16px rgba(16,163,127,.08); }
+.node-ring.offline { opacity: .3; }
+.node-icon { font-size: 22px; font-weight: 700; }
+.node-icon.gemini { color: var(--gemini-c); }
+.node-icon.claude { color: var(--claude-c); }
+.node-icon.openai { color: var(--openai-c); }
 
-/* CMD BAR */
-.cmd-bar {
+/* Spinning ring for active */
+.node-ring.active::before {
+  content: '';
+  position: absolute; inset: -4px;
+  border-radius: 50%;
+  border: 1px dashed;
+  opacity: .4;
+  animation: spin 4s linear infinite;
+}
+.node-ring.active.gemini::before { border-color: var(--gemini-c); }
+.node-ring.active.claude::before { border-color: var(--claude-c); }
+.node-ring.active.openai::before { border-color: var(--openai-c); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.node-label  { font-size: 8px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); }
+.node-role   { font-size: 9px; font-weight: 600; color: var(--text-bright); letter-spacing: .12em; }
+.node-task   { font-size: 9px; color: var(--dim); text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node-stat   { font-size: 9px; font-variant-numeric: tabular-nums; }
+.node-stat.gemini { color: var(--gemini-c); }
+.node-stat.claude { color: var(--claude-c); }
+.node-stat.openai { color: var(--openai-c); }
+.node-badge  { font-size: 8px; padding: 1px 6px; border-radius: 2px; letter-spacing: .1em; text-transform: uppercase; }
+.node-badge.online  { color: var(--green); border: 1px solid var(--green-dim); background: var(--green-glow); }
+.node-badge.offline { color: var(--dim); border: 1px solid var(--border2); }
+
+/* Score meter */
+.score-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--bg3);
+  flex-shrink: 0;
+}
+.score-label { font-size: 9px; color: var(--dim); letter-spacing: .12em; text-transform: uppercase; flex-shrink: 0; }
+.score-bar-wrap { flex: 1; height: 4px; background: var(--mute); border-radius: 2px; overflow: hidden; }
+.score-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); transition: width .8s ease; box-shadow: 0 0 6px var(--gold); }
+.score-val { font-size: 9px; color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 32px; text-align: right; }
+
+/* Agent log */
+.agent-log {
+  flex: 1; overflow-y: auto;
+  padding: 8px 0;
+  min-height: 0;
+  display: flex; flex-direction: column; gap: 0;
+}
+.agent-log::-webkit-scrollbar { width: 2px; }
+.agent-log::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.log-entry {
+  display: flex; gap: 8px; align-items: baseline;
+  padding: 4px 14px;
+  border-bottom: 1px solid transparent;
+  transition: background .15s;
+  line-height: 1.5;
+}
+.log-entry:hover { background: var(--mute); }
+.log-ts   { color: var(--dim); font-size: 9px; flex-shrink: 0; font-variant-numeric: tabular-nums; min-width: 56px; }
+.log-who  { font-size: 9px; font-weight: 700; flex-shrink: 0; min-width: 58px; letter-spacing: .08em; }
+.log-who.gemini { color: var(--gemini-c); }
+.log-who.claude { color: var(--claude-c); }
+.log-who.openai { color: var(--openai-c); }
+.log-who.sys    { color: var(--green-dim); }
+.log-who.warn   { color: var(--gold); }
+.log-txt  { font-size: 10px; color: var(--text); flex: 1; }
+.log-txt .hi  { color: var(--gold); }
+.log-txt .g   { color: var(--green); }
+.log-txt .r   { color: var(--red); }
+.log-txt .b   { color: var(--teal); }
+
+/* Center cmd bar */
+.center-cmd {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 12px;
-  border-top: 1px solid var(--border);
-  background: var(--panel2);
+  border-top: 1px solid var(--border2);
+  background: var(--bg2);
   flex-shrink: 0;
 }
-.cmd-prompt { color: var(--gold); font-size: 11px; flex-shrink: 0; }
+.cmd-prompt { color: var(--green); font-size: 11px; flex-shrink: 0; }
 .cmd-in {
   flex: 1; background: transparent; border: none; outline: none;
-  color: var(--text); font-family: inherit; font-size: 11px;
-  caret-color: var(--gold);
+  color: var(--text-bright); font-family: inherit; font-size: 11px;
+  caret-color: var(--green);
 }
-.cmd-in::placeholder { color: var(--mute); }
+.cmd-in::placeholder { color: var(--dim); }
 .cmd-btn {
-  font-size: 9px; padding: 3px 9px;
-  border: 1px solid var(--border2); border-radius: 4px;
-  background: rgba(201,164,76,.07); color: var(--gold);
-  cursor: pointer; letter-spacing: .1em; text-transform: uppercase;
-  transition: background .15s;
+  font-size: 9px; padding: 3px 10px;
+  border: 1px solid var(--green-dim); border-radius: 2px;
+  background: var(--green-glow); color: var(--green);
+  cursor: pointer; letter-spacing: .12em; text-transform: uppercase;
+  transition: all .15s; font-family: inherit;
 }
-.cmd-btn:hover { background: rgba(201,164,76,.16); }
+.cmd-btn:hover { background: rgba(0,255,65,.2); }
 
-/* HQ CHAT */
-.hq-msgs {
-  flex: 1; overflow-y: auto;
-  padding: 12px 14px;
-  display: flex; flex-direction: column; gap: 10px;
-  min-height: 0;
-}
-.hq-msgs::-webkit-scrollbar { width: 3px; }
-.hq-msgs::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-.msg-wrap { display: flex; flex-direction: column; gap: 3px; max-width: 88%; }
-.msg-wrap.you { align-self: flex-end; align-items: flex-end; }
-.msg-wrap.sys { align-self: flex-start; }
-.msg-from { font-size: 9px; color: var(--dim); letter-spacing: .1em; }
-.msg-from .name { color: var(--teal); font-weight: 700; }
-.msg-from.you-label .name { color: var(--gold); }
-.bubble {
-  padding: 8px 11px; border-radius: 8px;
-  font-size: 11px; line-height: 1.5;
-}
-.bubble.you { background: rgba(201,164,76,.09); border: 1px solid rgba(201,164,76,.18); border-radius: 8px 2px 8px 8px; }
-.bubble.sys { background: var(--panel2); border: 1px solid var(--border); border-radius: 2px 8px 8px 8px; }
+/* ── RIGHT: OUTPUT PANEL ── */
+.output { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
-/* SKILLS */
-.skills-body {
-  flex: 1; overflow-y: auto;
-  padding: 10px 14px;
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 8px; align-content: start;
-  min-height: 0;
-}
-.skills-body::-webkit-scrollbar { width: 3px; }
-.sk {
-  background: var(--panel2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 11px;
-}
-.sk-name { font-size: 10px; font-weight: 700; color: var(--text); letter-spacing: .12em; text-transform: uppercase; }
-.sk-desc { font-size: 10px; color: var(--dim); margin-top: 3px; line-height: 1.4; }
-.sk-st   { font-size: 9px; margin-top: 6px; letter-spacing: .1em; }
-.sk-st.ready { color: var(--green); }
-.sk-st.pend  { color: var(--warn); }
-.sk-st.todo  { color: var(--mute); }
-
-/* STATUS BAR */
-.statusbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 20px;
-  border-top: 1px solid var(--border);
-  background: rgba(7,10,15,.97);
+/* Conviction Card */
+.conv-card {
   flex-shrink: 0;
-  font-size: 10px; color: var(--dim); letter-spacing: .1em;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--bg2);
+  position: relative;
+  overflow: hidden;
 }
-.statusbar .right { display: flex; gap: 18px; }
-.statusbar .val { color: var(--text); }
+.conv-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, var(--gold-glow), transparent 70%);
+  pointer-events: none;
+}
+.conv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.conv-ticker { font-size: 26px; font-weight: 700; color: var(--gold); letter-spacing: .05em; text-shadow: 0 0 20px var(--gold-dim); }
+.conviction-score {
+  font-size: 2.4rem; font-weight: 700;
+  color: var(--gold);
+  text-shadow: 0 0 10px var(--gold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.conv-sub { font-size: 8px; color: var(--dim); letter-spacing: .14em; text-transform: uppercase; text-align: right; margin-top: 2px; }
+.conv-thesis {
+  font-size: 10px; color: var(--text); line-height: 1.5;
+  border-left: 2px solid var(--gold-dim);
+  padding-left: 8px; margin-bottom: 8px;
+}
+.conv-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.conv-tag {
+  font-size: 8px; padding: 2px 7px;
+  border: 1px solid var(--border2);
+  border-radius: 2px; color: var(--dim);
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.conv-tag.signal { color: var(--green); border-color: var(--green-dim); background: var(--green-glow); }
+.conv-tag.gold   { color: var(--gold);  border-color: var(--gold-dim);  background: var(--gold-glow); }
 
-@media (max-width: 860px) {
-  .workspace { grid-template-columns: 1fr; grid-template-rows: none; }
-  .nav-links { display: none; }
+/* Scripts */
+.scripts-area {
+  flex: 1; overflow-y: auto; min-height: 0;
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.scripts-area::-webkit-scrollbar { width: 2px; }
+.scripts-area::-webkit-scrollbar-thumb { background: var(--border2); }
+.script-card {
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  padding: 10px;
+  background: var(--bg3);
+}
+.script-num {
+  font-size: 8px; color: var(--dim); letter-spacing: .16em;
+  text-transform: uppercase; margin-bottom: 5px;
+  display: flex; justify-content: space-between;
+}
+.script-num .copy-btn {
+  color: var(--dim); cursor: pointer; font-size: 8px;
+  border: 1px solid var(--border2); padding: 1px 6px; border-radius: 2px;
+  background: none; font-family: inherit; letter-spacing: .1em;
+  transition: all .15s;
+}
+.script-num .copy-btn:hover { color: var(--green); border-color: var(--green-dim); }
+.script-hook  { font-size: 11px; font-weight: 600; color: var(--text-bright); margin-bottom: 4px; line-height: 1.4; }
+.script-body  { font-size: 10px; color: var(--dim); line-height: 1.5; }
+.script-empty { font-size: 10px; color: var(--dim); padding: 12px; text-align: center; border: 1px dashed var(--border2); border-radius: 2px; }
+
+/* Health strip */
+.health {
+  flex-shrink: 0;
+  display: flex; gap: 1px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border2);
+  background: var(--bg2);
+}
+.health-chip {
+  flex: 1; padding: 5px 6px;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  display: flex; flex-direction: column; gap: 3px;
+  align-items: center;
+}
+.hc-name  { font-size: 8px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.hc-st    { font-size: 9px; font-weight: 600; letter-spacing: .08em; }
+.hc-st.on { color: var(--green); text-shadow: 0 0 6px var(--green); }
+.hc-st.off{ color: var(--red); }
+.hc-lat   { font-size: 8px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* Status bar */
+.statusbar {
+  height: 26px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  border-top: 1px solid var(--border2);
+  background: var(--bg2);
+  flex-shrink: 0;
+  font-size: 9px; color: var(--dim); letter-spacing: .1em;
+}
+.statusbar .r { display: flex; gap: 16px; }
+.statusbar .v { color: var(--text-bright); }
+.statusbar .ok { color: var(--green); }
+.statusbar .warn { color: var(--gold); }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .panel:not(.panel-center) { display: none; }
+  .nav { display: none; }
 }
 </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
+<!-- ── TOPBAR ── -->
 <div class="topbar">
   <div class="brand">
-    <span class="pulse-dot"></span>
-    WAR ROOM · CONVICTION CAPITAL
+    <span class="brand-pulse"></span>
+    CONVICTION CAPITAL · SOVEREIGN MAINFRAME
   </div>
-  <div class="nav-links">
-    <a class="nav-link here"  href="/mainframe.html">WAR ROOM</a>
-    <a class="nav-link"       href="/">DASHBOARD</a>
-    <a class="nav-link"       href="/intel-bot.html">INTEL</a>
-    <a class="nav-link"       href="/predmarket.html">PREDMARKET</a>
-    <a class="nav-link"       href="/sports.html">SPORTS</a>
-    <a class="nav-link"       href="/content.html">CONTENT</a>
-    <a class="nav-link"       href="/newsbrief.html">NEWS</a>
+  <div class="nav">
+    <a class="here" href="/mainframe.html">MAINFRAME</a>
+    <a href="/">DASHBOARD</a>
+    <a href="/intel-bot.html">INTEL</a>
+    <a href="/predmarket.html">PREDMARKET</a>
+    <a href="/sports.html">SPORTS</a>
+    <a href="/content.html">CONTENT</a>
+    <a href="/newsbrief.html">NEWS</a>
   </div>
-  <div class="topbar-right">
-    <span>CLAUDE <span id="sb-claude-st" style="color:var(--dim)">—</span></span>
-    <span>GEMINI <span id="sb-gemini-st" style="color:var(--dim)">—</span></span>
+  <div class="topbar-r">
+    <div class="token-ctr">
+      T<sub>used</sub> <span class="tval" id="tok-used">0</span> /
+      T<sub>cap</sub> <span class="tval" id="tok-cap">200K</span>
+    </div>
     <span>UPTIME <span class="val" id="sb-uptime">—</span></span>
     <span id="clock">--:--:--</span>
   </div>
 </div>
 
-<!-- WORKSPACE -->
-<div class="workspace">
+<!-- ── MAIN GRID ── -->
+<div class="grid">
 
-  <!-- PANE 1: JARVIS — LLM call feed -->
-  <div class="pane">
-    <div class="pane-head">
-      <div class="pane-title">
-        <div class="ind off" id="jarvis-ind"></div>
-        <div>
-          <div class="pane-name">JARVIS</div>
-          <div class="pane-sub">AI Brain · LLM Call Feed</div>
-        </div>
-      </div>
-      <div class="pane-actions">
-        <span class="badge off" id="jarvis-badge">—</span>
-        <a class="open-btn" href="/jarvis/prototype.html" target="_blank">OPEN ↗</a>
+  <!-- ══════════════════════════════════════════
+       LEFT — INGESTION STREAM
+  ══════════════════════════════════════════ -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title live">⬡ INGESTION STREAM</span>
+      <div class="panel-status">
+        <div class="dot-green"></div>
+        <span style="color:var(--green);font-size:9px" id="feed-count">0 ITEMS</span>
       </div>
     </div>
-    <div class="terminal" id="jarvis-log">
-      <div class="line" data-init style="color:var(--mute);font-size:11px;padding:8px 0">Connecting to LLM feed…</div>
+
+    <div class="source-bar">
+      <div class="source-chip">
+        <span class="sc-name">FINNHUB</span>
+        <span class="sc-val ok" id="src-finnhub">LIVE</span>
+      </div>
+      <div class="source-chip">
+        <span class="sc-name">MARKET</span>
+        <span class="sc-val ok" id="src-market">ONLINE</span>
+      </div>
+      <div class="source-chip">
+        <span class="sc-name">SIGNALS</span>
+        <span class="sc-val warn" id="src-signals">SCANNING</span>
+      </div>
     </div>
-    <div class="cmd-bar">
-      <span class="cmd-prompt">jarvis ▶</span>
-      <input class="cmd-in" placeholder="send command…" id="jarvis-cmd" data-pane="jarvis" />
-      <button class="cmd-btn" data-pane="jarvis">SEND</button>
+
+    <div class="tape">
+      <div class="tape-inner" id="tape"></div>
+    </div>
+
+    <div class="tape-filter">
+      <div class="tf-chip active" data-tag="all"  onclick="setFilter('all',this)">ALL</div>
+      <div class="tf-chip"        data-tag="macro" onclick="setFilter('macro',this)">MACRO</div>
+      <div class="tf-chip"        data-tag="earn"  onclick="setFilter('earn',this)">EARN</div>
+      <div class="tf-chip"        data-tag="geo"   onclick="setFilter('geo',this)">GEO</div>
+      <div class="tf-chip"        data-tag="news"  onclick="setFilter('news',this)">NEWS</div>
     </div>
   </div>
 
-  <!-- PANE 2: INTEL-BOT — live market data -->
-  <div class="pane">
-    <div class="pane-head">
-      <div class="pane-title">
-        <div class="ind off" id="intel-ind"></div>
-        <div>
-          <div class="pane-name">INTEL-BOT</div>
-          <div class="pane-sub">Live Market Scanner</div>
+  <!-- ══════════════════════════════════════════
+       CENTER — PROCESSING FACTORY
+  ══════════════════════════════════════════ -->
+  <div class="panel panel-center">
+    <div class="panel-head">
+      <span class="panel-title gold">⬡ PROCESSING FACTORY</span>
+      <div class="panel-status">
+        <div class="dot-gold"></div>
+        <span style="color:var(--gold);font-size:9px" id="factory-status">ACTIVE</span>
+      </div>
+    </div>
+
+    <!-- Node row -->
+    <div class="nodes-row">
+      <!-- Node A: Gemini -->
+      <div class="node">
+        <div class="node-ring gemini" id="node-gemini">
+          <span class="node-icon gemini">G</span>
         </div>
+        <span class="node-label">GEMINI</span>
+        <span class="node-role" style="color:var(--gemini-c)">MACRO FILTER</span>
+        <span class="node-task" id="task-gemini">Quantitative Macro-Overlay</span>
+        <span class="node-stat gemini" id="stat-gemini">— calls</span>
+        <span class="node-badge offline" id="badge-gemini">OFFLINE</span>
       </div>
-      <div class="pane-actions">
-        <span class="badge off" id="intel-badge">—</span>
-        <a class="open-btn" href="/intel-bot.html" target="_blank">OPEN ↗</a>
+
+      <!-- Node B: Claude -->
+      <div class="node" style="border-left:1px solid var(--border2);border-right:1px solid var(--border2)">
+        <div class="node-ring claude" id="node-claude">
+          <span class="node-icon claude">C</span>
+        </div>
+        <span class="node-label">CLAUDE</span>
+        <span class="node-role" style="color:var(--claude-c)">SYSTEMS AUDIT</span>
+        <span class="node-task" id="task-claude">Risk parameter review</span>
+        <span class="node-stat claude" id="stat-claude">— calls</span>
+        <span class="node-badge offline" id="badge-claude">OFFLINE</span>
+      </div>
+
+      <!-- Node C: OpenAI -->
+      <div class="node">
+        <div class="node-ring openai" id="node-openai">
+          <span class="node-icon openai">O</span>
+        </div>
+        <span class="node-label">OPENAI</span>
+        <span class="node-role" style="color:var(--openai-c)">CONTENT FACTORY</span>
+        <span class="node-task" id="task-openai">Script generation</span>
+        <span class="node-stat openai" id="stat-openai">— calls</span>
+        <span class="node-badge offline" id="badge-openai">OFFLINE</span>
       </div>
     </div>
-    <!-- Ticker strip: populated live -->
-    <div class="ticker-strip" id="ticker-strip">
-      <div class="ticker-chip"><span class="tc-sym">ES</span><span class="tc-px" id="tc-ES">—</span><span class="tc-chg flat" id="tcc-ES">—</span></div>
-      <div class="ticker-chip"><span class="tc-sym">BTC</span><span class="tc-px" id="tc-BTC">—</span><span class="tc-chg flat" id="tcc-BTC">—</span></div>
-      <div class="ticker-chip"><span class="tc-sym">VIX</span><span class="tc-px" id="tc-VIX">—</span><span class="tc-chg flat" id="tcc-VIX">—</span></div>
-      <div class="ticker-chip"><span class="tc-sym">NVDA</span><span class="tc-px" id="tc-NVDA">—</span><span class="tc-chg flat" id="tcc-NVDA">—</span></div>
-      <div class="ticker-chip"><span class="tc-sym">DXY</span><span class="tc-px" id="tc-DXY">—</span><span class="tc-chg flat" id="tcc-DXY">—</span></div>
+
+    <!-- Score meters -->
+    <div style="padding:8px 12px 4px;border-bottom:1px solid var(--border2);background:var(--bg3);flex-shrink:0">
+      <div class="score-row" style="padding:3px 0">
+        <span class="score-label" style="min-width:160px">MACRO SIGNAL STRENGTH</span>
+        <div class="score-bar-wrap"><div class="score-bar" id="bar-macro" style="width:0%"></div></div>
+        <span class="score-val" id="val-macro">—</span>
+      </div>
+      <div class="score-row" style="padding:3px 0">
+        <span class="score-label" style="min-width:160px">INFRA SCARCITY SCORE</span>
+        <div class="score-bar-wrap"><div class="score-bar" id="bar-infra" style="width:0%"></div></div>
+        <span class="score-val" id="val-infra">—</span>
+      </div>
+      <div class="score-row" style="padding:3px 0">
+        <span class="score-label" style="min-width:160px">CONVICTION COMPOSITE</span>
+        <div class="score-bar-wrap"><div class="score-bar" id="bar-conv" style="width:0%"></div></div>
+        <span class="score-val" id="val-conv">—</span>
+      </div>
     </div>
-    <div class="terminal" id="intel-log">
-      <div class="line" data-init style="color:var(--mute);font-size:11px;padding:8px 0">Connecting to market feed…</div>
+
+    <!-- Agent internal log -->
+    <div class="panel-head" style="padding:5px 12px">
+      <span class="panel-title" style="color:var(--dim)">INTERNAL LOG · AGENT COMMS</span>
+      <span style="font-size:8px;color:var(--dim)" id="log-count">0 EVENTS</span>
     </div>
-    <div class="cmd-bar">
-      <span class="cmd-prompt">intel ▶</span>
-      <input class="cmd-in" placeholder="query intel-bot…" id="intel-cmd" data-pane="intel" />
-      <button class="cmd-btn" data-pane="intel">SEND</button>
+    <div class="agent-log" id="agent-log"></div>
+
+    <!-- Command bar -->
+    <div class="center-cmd">
+      <span class="cmd-prompt">▶</span>
+      <input class="cmd-in" id="cmd-in" placeholder="broadcast to all agents · @gemini · @claude · @openai…" />
+      <button class="cmd-btn" onclick="sendCmd()">EXECUTE</button>
     </div>
   </div>
 
-  <!-- PANE 3: COMMAND HQ -->
-  <div class="pane">
-    <div class="pane-head">
-      <div class="pane-title">
-        <div class="ind on"></div>
-        <div>
-          <div class="pane-name">COMMAND HQ</div>
-          <div class="pane-sub">Broadcast · @address any operative</div>
-        </div>
-      </div>
-      <div class="pane-actions">
-        <span class="badge hq">HQ</span>
+  <!-- ══════════════════════════════════════════
+       RIGHT — OUTPUT PANEL
+  ══════════════════════════════════════════ -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title gold">⬡ CONVICTION OUTPUT</span>
+      <div class="panel-status">
+        <div class="dot-gold" id="output-dot"></div>
+        <span style="color:var(--gold);font-size:9px" id="output-status">READY</span>
       </div>
     </div>
-    <div class="hq-msgs" id="hq-msgs">
-      <div class="msg-wrap sys">
-        <div class="msg-from"><span class="name">SYSTEM</span></div>
-        <div class="bubble sys">War room online. Use <strong>@jarvis</strong>, <strong>@intel</strong>, <strong>@content</strong>, or <strong>@discord</strong> to address an operative directly.</div>
-      </div>
-    </div>
-    <div class="cmd-bar">
-      <span class="cmd-prompt">hq ▶</span>
-      <input class="cmd-in" placeholder="@jarvis scan / @content write script / broadcast…" id="hq-cmd" />
-      <button class="cmd-btn" id="hq-send">SEND</button>
-    </div>
-  </div>
 
-  <!-- PANE 4: CONTENT ENGINE -->
-  <div class="pane">
-    <div class="pane-head">
-      <div class="pane-title">
-        <div class="ind off" id="content-ind"></div>
-        <div>
-          <div class="pane-name">CONTENT ENGINE</div>
-          <div class="pane-sub">Scripts · Shorts · Cascade</div>
+    <div class="output">
+      <!-- Conviction card -->
+      <div class="conv-card">
+        <div class="conv-header">
+          <div>
+            <div class="conv-ticker" id="conv-ticker">—</div>
+            <div style="font-size:9px;color:var(--dim);letter-spacing:.1em;margin-top:2px" id="conv-name">—</div>
+          </div>
+          <div>
+            <div class="conviction-score" id="conv-score">—</div>
+            <div class="conv-sub">CONVICTION</div>
+          </div>
         </div>
+        <div class="conv-thesis" id="conv-thesis">Awaiting market analysis…</div>
+        <div class="conv-tags" id="conv-tags"></div>
       </div>
-      <div class="pane-actions">
-        <span class="badge off" id="content-badge">—</span>
-        <a class="open-btn" href="/content.html" target="_blank">OPEN ↗</a>
-      </div>
-    </div>
-    <div class="terminal" id="content-log">
-      <div class="line" data-init style="color:var(--mute);font-size:11px;padding:8px 0">Connecting…</div>
-    </div>
-    <div class="cmd-bar">
-      <span class="cmd-prompt">content ▶</span>
-      <input class="cmd-in" placeholder="trigger script, outline, cascade…" id="content-cmd" data-pane="content" />
-      <button class="cmd-btn" data-pane="content">SEND</button>
-    </div>
-  </div>
 
-  <!-- PANE 5: DISCORD BOT -->
-  <div class="pane">
-    <div class="pane-head">
-      <div class="pane-title">
-        <div class="ind off" id="discord-ind"></div>
-        <div>
-          <div class="pane-name">DISCORD BOT</div>
-          <div class="pane-sub">Community · Signals · Briefings</div>
-        </div>
+      <!-- Scripts -->
+      <div class="panel-head" style="padding:5px 12px">
+        <span class="panel-title" style="color:var(--dim)">READY-TO-SHOOT SCRIPTS</span>
+        <span style="font-size:8px;color:var(--dim)" id="scripts-status">—</span>
       </div>
-      <div class="pane-actions">
-        <span class="badge off" id="discord-badge">—</span>
-      </div>
-    </div>
-    <div class="terminal" id="discord-log">
-      <div class="line" data-init style="color:var(--mute);font-size:11px;padding:8px 0">Connecting…</div>
-    </div>
-    <div class="cmd-bar">
-      <span class="cmd-prompt">discord ▶</span>
-      <input class="cmd-in" placeholder="push alert, broadcast message…" id="discord-cmd" data-pane="discord" />
-      <button class="cmd-btn" data-pane="discord">SEND</button>
-    </div>
-  </div>
 
-  <!-- PANE 6: MEMORY & SKILLS -->
-  <div class="pane">
-    <div class="pane-head">
-      <div class="pane-title">
-        <div class="ind on"></div>
-        <div>
-          <div class="pane-name">MEMORY &amp; SKILLS</div>
-          <div class="pane-sub">Knowledge base · Operations</div>
+      <div class="scripts-area" id="scripts-area">
+        <div class="script-empty" id="scripts-empty">
+          Generating scripts from today's market intel…
         </div>
       </div>
-      <div class="pane-actions">
-        <span class="badge on">LOADED</span>
-      </div>
-    </div>
-    <div class="skills-body">
-      <div class="sk">
-        <div class="sk-name">auto-memory</div>
-        <div class="sk-desc">.claude/memory/ — persistent context, preferences, project facts across sessions.</div>
-        <div class="sk-st ready">● ACTIVE</div>
-      </div>
-      <div class="sk">
-        <div class="sk-name">deep-research</div>
-        <div class="sk-desc">Web search + synthesis on any topic via /deep-research.</div>
-        <div class="sk-st ready">● READY</div>
-      </div>
-      <div class="sk">
-        <div class="sk-name">content-cascade</div>
-        <div class="sk-desc">Long-form → short-form → carousel → IG caption chain.</div>
-        <div class="sk-st ready">● READY</div>
-      </div>
-      <div class="sk">
-        <div class="sk-name">yt-pipeline</div>
-        <div class="sk-desc">Script → hooks → shorts → YouTube publish.</div>
-        <div class="sk-st pend" id="sk-yt">● NEEDS YT KEY</div>
-      </div>
-      <div class="sk">
-        <div class="sk-name">recon</div>
-        <div class="sk-desc">Competitor gap analysis — App Store + site mirror → Claude brief.</div>
-        <div class="sk-st todo">● NOT BUILT</div>
-      </div>
-      <div class="sk">
-        <div class="sk-name">layered-intel</div>
-        <div class="sk-desc">5-level explanation engine. Powers Discord + Intel-Bot.</div>
-        <div class="sk-st ready">● ACTIVE</div>
+
+      <!-- Health strip -->
+      <div class="health">
+        <div class="health-chip">
+          <span class="hc-name">GEMINI</span>
+          <span class="hc-st off" id="hc-gemini">OFFLINE</span>
+          <span class="hc-lat" id="lat-gemini">—ms</span>
+        </div>
+        <div class="health-chip">
+          <span class="hc-name">CLAUDE</span>
+          <span class="hc-st off" id="hc-claude">OFFLINE</span>
+          <span class="hc-lat" id="lat-claude">—ms</span>
+        </div>
+        <div class="health-chip">
+          <span class="hc-name">OPENAI</span>
+          <span class="hc-st off" id="hc-openai">OFFLINE</span>
+          <span class="hc-lat" id="lat-openai">—ms</span>
+        </div>
+        <div class="health-chip">
+          <span class="hc-name">FINNHUB</span>
+          <span class="hc-st off" id="hc-finnhub">OFFLINE</span>
+          <span class="hc-lat" id="lat-finnhub">MARKET DATA</span>
+        </div>
       </div>
     </div>
   </div>
 
 </div>
 
-<!-- STATUS BAR -->
+<!-- ── STATUS BAR ── -->
 <div class="statusbar">
-  <span>WAR ROOM v1 · <span style="color:var(--gold)">CONVICTION CAPITAL</span></span>
-  <div class="right">
-    <span>CALLS <span class="val" id="sb-calls">—</span></span>
-    <span>TOKENS <span class="val" id="sb-tokens">—</span></span>
-    <span>ERRORS <span class="val" id="sb-errors">—</span></span>
-    <span>MOOD <span class="val" id="sb-mood">—</span></span>
+  <span style="color:var(--gold);letter-spacing:.2em;font-weight:600">CONVICTION CAPITAL</span>
+  <div class="r">
+    <span>CALLS <span class="v" id="sb-calls">—</span></span>
+    <span>TOKENS <span class="v" id="sb-tokens">—</span></span>
+    <span>MOOD <span class="v" id="sb-mood">—</span></span>
+    <span>ERRORS <span class="v ok" id="sb-errors">0</span></span>
+    <span style="color:var(--dim)">SOVEREIGN MAINFRAME v2</span>
   </div>
 </div>
 
 <script>
 // ── Clock & Uptime ──
+const t0 = Date.now();
 function tick() { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }
 setInterval(tick, 1000); tick();
+setInterval(() => {
+  const s = Math.floor((Date.now()-t0)/1000);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sc = s%60;
+  document.getElementById('sb-uptime').textContent = [h,m,sc].map(v=>String(v).padStart(2,'0')).join(':');
+}, 1000);
 
-const t0 = Date.now();
-function fmtUp(ms) {
-  const s = Math.floor(ms/1000);
-  return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60]
-    .map(v => String(v).padStart(2,'0')).join(':');
-}
-setInterval(() => { document.getElementById('sb-uptime').textContent = fmtUp(Date.now()-t0); }, 1000);
-
-// ── Seen LLM call timestamps (dedup) ──
-const _seenCalls = new Set();
+// ── State ──
+let _tapeItems = [];
+let _tapeFilter = 'all';
+let _logCount = 0;
+let _seenCallTs = new Set();
+let _latencies = { gemini: [], claude: [] };
 
 // ── War Room poll ──
 async function pollWarRoom() {
@@ -533,9 +718,16 @@ async function pollWarRoom() {
     if (!r.ok) return;
     const d = await r.json();
 
-    // Top-bar key indicators
-    setSt('sb-claude-st', d.keys.claude);
-    setSt('sb-gemini-st', d.keys.gemini);
+    // Health
+    const keys = d.keys;
+    setHealth('finnhub', keys.finnhub, 'MARKET DATA');
+    setHealth('claude',  keys.claude,  '');
+    setHealth('gemini',  keys.gemini,  '');
+    setHealth('openai',  false,        '');  // no OpenAI key yet
+
+    // Node rings
+    setNode('gemini', keys.gemini, d.stats.calls_total);
+    setNode('claude', keys.claude, d.stats.calls_total);
 
     // Stats
     const calls  = d.stats.calls_total;
@@ -543,235 +735,258 @@ async function pollWarRoom() {
     const errors = d.stats.errors_total;
     document.getElementById('sb-calls').textContent  = calls.toLocaleString();
     document.getElementById('sb-tokens').textContent = tokens > 999 ? (tokens/1000).toFixed(1)+'K' : tokens;
+    document.getElementById('tok-used').textContent  = tokens > 999 ? (tokens/1000).toFixed(1)+'K' : (tokens||0);
     const errEl = document.getElementById('sb-errors');
-    errEl.textContent = errors;
-    errEl.style.color = errors > 0 ? 'var(--red)' : 'var(--green)';
-    document.getElementById('sb-mood').textContent = d.operatives.intel.mood || '—';
+    errEl.textContent = errors; errEl.className = 'v ' + (errors > 0 ? 'warn' : 'ok');
 
-    // JARVIS pane
-    const jarvis = d.operatives.jarvis;
-    setPane('jarvis', jarvis.online ? 'on' : 'off',
-      jarvis.online ? `ONLINE · ${jarvis.calls_today} CALLS` : 'NO KEY');
-    // Feed recent LLM calls into jarvis terminal
-    if (d.recent_llm && d.recent_llm.length > 0) {
-      const log = document.getElementById('jarvis-log');
-      clearEmpty(log);
-      let added = 0;
+    // Mood → conviction card
+    const intel = d.operatives?.intel || {};
+    if (intel.mood) {
+      document.getElementById('sb-mood').textContent = intel.mood;
+      updateConvictionFromMood(intel.mood, intel.mood_signal);
+    }
+
+    // Scores from market summary
+    const mkt = intel.market_summary || {};
+    const vix = mkt.VIX?.price;
+    if (vix) {
+      const macroScore = Math.max(10, Math.min(95, 100 - (vix - 10) * 2));
+      setBar('macro', macroScore);
+      setBar('infra', Math.min(95, macroScore * 0.9 + 10));
+      setBar('conv', Math.min(95, macroScore * 0.85 + 8));
+    }
+
+    // LLM call log → agent comms
+    if (d.recent_llm?.length > 0) {
       for (const e of [...d.recent_llm].reverse()) {
         const key = String(e.ts) + e.label;
-        if (_seenCalls.has(key)) continue;
-        _seenCalls.add(key);
+        if (_seenCallTs.has(key)) continue;
+        _seenCallTs.add(key);
+        const who = e.provider === 'claude' ? 'claude' : 'gemini';
         const t = new Date(e.ts*1000).toTimeString().slice(0,8);
-        const lvl = e.ok ? 'ok' : 'err';
-        const lbl = e.ok ? 'OK' : 'ERR';
-        const preview = e.preview ? ` <span class="d">— ${esc(e.preview.slice(0,55))}</span>` : '';
-        appendLine(log, t, lvl, lbl,
-          `<span class="hi">${esc(e.provider)}</span> · ${esc(e.label||'')} · <span class="d">${(e.elapsed_ms||0)}ms</span>${preview}`);
-        added++;
-      }
-      if (added > 0) log.scrollTop = log.scrollHeight;
-    }
-
-    // INTEL pane — market data
-    const intel = d.operatives.intel;
-    setPane('intel', intel.online ? 'on' : 'off',
-      intel.online ? 'ONLINE' : 'NO FINNHUB KEY');
-    const mkt = intel.market_summary || {};
-    for (const sym of ['ES','BTC','VIX','NVDA','DXY']) {
-      const px = mkt[sym];
-      const pxEl  = document.getElementById('tc-'+sym);
-      const chgEl = document.getElementById('tcc-'+sym);
-      if (px && px.price != null) {
-        pxEl.textContent  = formatPrice(sym, px.price);
-        const chg = px.chg_pct;
-        chgEl.textContent = chg != null ? (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%' : '—';
-        chgEl.className   = 'tc-chg ' + (chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat');
-      }
-    }
-    // Log market mood into intel terminal
-    if (intel.mood || intel.last_snap_age_s != null) {
-      const log = document.getElementById('intel-log');
-      clearEmpty(log);
-      const t = new Date().toTimeString().slice(0,8);
-      const age = intel.last_snap_age_s;
-      if (intel.mood) {
-        appendLineOnce(log, 'mood-line', t, 'data', 'DATA',
-          `Mood <span class="hi">${esc(intel.mood)}</span>${intel.mood_signal ? ' · ' + esc(intel.mood_signal) : ''}`);
-      }
-      if (age != null) {
-        appendLineOnce(log, 'snap-age', t, age > 60 ? 'warn' : 'ok', age > 60 ? 'WARN' : 'OK',
-          `Snapshot <span class="d">${age}s old</span>`);
-      }
-      if (!intel.online) {
-        appendLineOnce(log, 'intel-key', t, 'warn', 'WARN', 'Finnhub key not set — market data unavailable');
+        const stat = e.ok
+          ? `<span class="g">✓</span> ${esc(e.label||'')} — ${e.elapsed_ms||0}ms${e.preview ? ' · <span style="color:var(--dim)">'+esc(e.preview.slice(0,60))+'</span>' : ''}`
+          : `<span class="r">✗</span> ${esc(e.label||'')} — ${esc(e.error||'error')}`;
+        const latency = e.elapsed_ms || 0;
+        if (_latencies[who]) _latencies[who].push(latency);
+        addLog(t, who, who === 'claude' ? 'CLAUDE' : 'GEMINI', stat);
+        // Update latency display
+        const avgLat = _latencies[who]?.slice(-5).reduce((a,b)=>a+b,0) / Math.min(5, _latencies[who]?.length||1);
+        const latEl = document.getElementById('lat-' + who);
+        if (latEl) latEl.textContent = Math.round(avgLat) + 'ms';
       }
     }
 
-    // CONTENT pane
-    const content = d.operatives.content;
-    const contentStatus = content.scripts_generated ? 'idle' : (content.online ? 'idle' : 'off');
-    setPane('content', contentStatus,
-      content.scripts_generated ? 'SCRIPTS READY' : (content.online ? 'IDLE' : 'NO KEY'));
-    const clog = document.getElementById('content-log');
-    clearEmpty(clog);
-    appendLineOnce(clog, 'content-status',
-      new Date().toTimeString().slice(0,8),
-      content.online ? 'ok' : 'warn',
-      content.online ? 'OK' : 'WARN',
-      content.online
-        ? (content.scripts_generated ? 'Scripts generated · ready to publish' : 'Engine ready · no scripts generated yet')
-        : 'No LLM key — content generation unavailable'
-    );
+  } catch(e) { console.warn('[mainframe]', e); }
+}
 
-    // DISCORD pane
-    const discord = d.operatives.discord;
-    setPane('discord', discord.online ? 'on' : 'off',
-      discord.online ? 'CONFIGURED' : 'NOT CONFIGURED');
-    const dlog = document.getElementById('discord-log');
-    clearEmpty(dlog);
-    appendLineOnce(dlog, 'discord-status',
-      new Date().toTimeString().slice(0,8),
-      discord.online ? 'ok' : 'warn',
-      discord.online ? 'OK' : 'WARN',
-      discord.online
-        ? 'DISCORD_TOKEN set · bot configured · start with python run_bot.py'
-        : 'DISCORD_TOKEN not set · bot not configured'
-    );
+// ── News feed poll ──
+async function pollNews() {
+  try {
+    const r = await fetch('/api/news', { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = await r.json();
+    const items = (d.news || d || []).slice(0, 80);
+    document.getElementById('feed-count').textContent = items.length + ' ITEMS';
+    document.getElementById('src-finnhub').textContent = 'LIVE';
+    document.getElementById('src-finnhub').className = 'sc-val ok';
 
-  } catch(e) {
-    console.warn('[warroom] poll failed', e);
+    // Watchlist tickers for gold flash
+    const WATCH = ['ES','NQ','DJI','VIX','BTC','ETH','SOL','NVDA','AAPL','TSLA','META','AMZN','MSFT','JPM','XOM','CL','GC','DXY'];
+    const seen = new Set(_tapeItems.map(i=>i.id));
+
+    for (const item of items) {
+      const id = String(item.id || item.headline?.slice(0,40));
+      if (seen.has(id)) continue;
+      seen.add(id);
+
+      const tags = (item.tags || item.category || '').toUpperCase();
+      let tag = 'news';
+      if (tags.includes('MACRO') || tags.includes('ECONOMIC') || tags.includes('FED') || tags.includes('FOMC')) tag = 'macro';
+      else if (tags.includes('EARN')) tag = 'earn';
+      else if (tags.includes('GEO') || tags.includes('POLITICAL')) tag = 'geo';
+
+      const headline = (item.headline || item.title || '').slice(0, 90);
+      const isSignal = WATCH.some(t => headline.toUpperCase().includes(t));
+
+      _tapeItems.unshift({ id, ts: item.datetime || Math.floor(Date.now()/1000), tag, headline, isSignal });
+    }
+
+    _tapeItems = _tapeItems.slice(0, 200);
+    renderTape();
+  } catch(e) {}
+}
+
+// ── Scripts poll ──
+async function pollScripts() {
+  try {
+    const r = await fetch('/api/scripts/today', { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = await r.json();
+    const scripts = d.scripts || [];
+    document.getElementById('scripts-status').textContent = scripts.length + ' READY';
+
+    if (scripts.length > 0) {
+      const empty = document.getElementById('scripts-empty');
+      if (empty) empty.remove();
+      const area = document.getElementById('scripts-area');
+      area.innerHTML = '';
+      scripts.forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = 'script-card';
+        card.innerHTML = `
+          <div class="script-num">
+            <span>SCRIPT ${i+1} · ${esc(s.topic||'')}</span>
+            <button class="copy-btn" onclick="copyScript(${i})">COPY</button>
+          </div>
+          <div class="script-hook">${esc(s.hook||'')}</div>
+          <div class="script-body">${esc((s.fact||'') + ' ' + (s.cta||''))}</div>
+        `;
+        area.appendChild(card);
+      });
+    }
+
+    // Update conviction card from first script's tickers
+    if (scripts[0]?.tickers?.length > 0) {
+      document.getElementById('conv-ticker').textContent = '$' + scripts[0].tickers[0];
+    }
+  } catch(e) {}
+}
+
+// ── Analysis poll ──
+async function pollAnalysis() {
+  try {
+    const r = await fetch('/api/analysis', { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.mood) updateConvictionFromMood(d.mood, d.signal);
+    if (d.summary_en || d.summary) {
+      document.getElementById('conv-thesis').textContent = (d.summary_en || d.summary || '').slice(0, 160);
+    }
+    const tags = document.getElementById('conv-tags');
+    tags.innerHTML = '';
+    if (d.mood)   tags.innerHTML += `<span class="conv-tag gold">${esc(d.mood)}</span>`;
+    if (d.signal) tags.innerHTML += `<span class="conv-tag signal">${esc(d.signal)}</span>`;
+    (d.signals||[]).slice(0,4).forEach(s => {
+      if (s?.label) tags.innerHTML += `<span class="conv-tag">${esc(s.label)}</span>`;
+    });
+  } catch(e) {}
+}
+
+function updateConvictionFromMood(mood, signal) {
+  const m = (mood||'').toUpperCase();
+  let score = 50;
+  if (m.includes('RISK ON') || m.includes('BULLISH')) score = 82;
+  else if (m.includes('FEAR') || m.includes('BEARISH')) score = 28;
+  else if (m.includes('NEUTRAL')) score = 55;
+  document.getElementById('conv-score').textContent = score + '%';
+  document.getElementById('conv-score').style.color = score > 70 ? 'var(--green)' : score < 35 ? 'var(--red)' : 'var(--gold)';
+  document.getElementById('conv-score').style.textShadow = '0 0 10px ' + (score > 70 ? 'var(--green)' : score < 35 ? 'var(--red)' : 'var(--gold)');
+}
+
+// ── Tape render ──
+function renderTape() {
+  const tape = document.getElementById('tape');
+  const items = _tapeFilter === 'all' ? _tapeItems : _tapeItems.filter(i => i.tag === _tapeFilter);
+  tape.innerHTML = '';
+  for (const item of items.slice(0, 100)) {
+    const line = document.createElement('div');
+    line.className = 'tape-line' + (item.isSignal ? ' signal' : '');
+    const t = new Date(item.ts * 1000).toTimeString().slice(0,8);
+    line.innerHTML = `<span class="tape-ts">${t}</span><span class="tape-src ${item.tag}">${item.tag.toUpperCase()}</span><span class="tape-msg">${esc(item.headline)}</span>`;
+    tape.appendChild(line);
   }
 }
 
-function setSt(id, ok) {
-  const el = document.getElementById(id);
+function setFilter(tag, el) {
+  _tapeFilter = tag;
+  document.querySelectorAll('.tf-chip').forEach(c => c.classList.toggle('active', c.dataset.tag === tag));
+  renderTape();
+}
+
+// ── Node helpers ──
+function setNode(id, online, calls) {
+  const ring  = document.getElementById('node-' + id);
+  const badge = document.getElementById('badge-' + id);
+  const stat  = document.getElementById('stat-' + id);
+  if (!ring) return;
+  ring.classList.toggle('active', online);
+  ring.classList.toggle('offline', !online);
+  badge.textContent = online ? 'ONLINE' : 'OFFLINE';
+  badge.className   = 'node-badge ' + (online ? 'online' : 'offline');
+  if (stat && calls != null) stat.textContent = calls + ' calls';
+}
+
+function setHealth(id, online, sub) {
+  const el = document.getElementById('hc-' + id);
   if (!el) return;
-  el.textContent = '●';
-  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  el.textContent = online ? 'ONLINE' : 'OFFLINE';
+  el.className   = 'hc-st ' + (online ? 'on' : 'off');
+  if (sub && document.getElementById('lat-' + id)) document.getElementById('lat-' + id).textContent = sub;
 }
 
-function setPane(id, status, label) {
-  const ind   = document.getElementById(id+'-ind');
-  const badge = document.getElementById(id+'-badge');
-  if (ind)   ind.className = 'ind ' + status;
-  if (badge) {
-    badge.textContent = label;
-    const cls = status === 'on' ? 'on' : status === 'run' ? 'run' : status === 'idle' ? 'idle' : 'off';
-    badge.className = 'badge ' + cls;
-  }
+function setBar(id, pct) {
+  const bar = document.getElementById('bar-' + id);
+  const val = document.getElementById('val-' + id);
+  if (bar) bar.style.width = Math.round(pct) + '%';
+  if (val) val.textContent = Math.round(pct) + '%';
 }
 
-function clearEmpty(el) {
-  const e = el.querySelector('[data-empty]');
-  if (e) e.remove();
-  // Also clear the initial "Connecting…" spans that aren't structured lines
-  el.querySelectorAll('.line[data-init]').forEach(l => l.remove());
-  // Remove plain text init nodes
-  if (el.children.length === 1 && !el.children[0].classList.contains('line')) {
-    el.innerHTML = '';
-  }
-}
-
-function appendLine(log, ts, lvlCls, lvlTxt, msgHtml) {
-  const line = document.createElement('div');
-  line.className = 'line';
-  line.innerHTML = `<span class="ts">${ts}</span><span class="lvl ${lvlCls}">${lvlTxt}</span><span class="msg">${msgHtml}</span>`;
-  log.appendChild(line);
-}
-
-// appendLineOnce — only add if data-id not already present; update if it is
-function appendLineOnce(log, dataId, ts, lvlCls, lvlTxt, msgHtml) {
-  let line = log.querySelector(`[data-id="${dataId}"]`);
-  if (!line) {
-    line = document.createElement('div');
-    line.className = 'line';
-    line.dataset.id = dataId;
-    log.appendChild(line);
-  }
-  line.innerHTML = `<span class="ts">${ts}</span><span class="lvl ${lvlCls}">${lvlTxt}</span><span class="msg">${msgHtml}</span>`;
-}
-
-function formatPrice(sym, px) {
-  if (sym === 'BTC') return '$' + Math.round(px).toLocaleString();
-  if (['ES','NQ'].includes(sym)) return px.toLocaleString(undefined, {minimumFractionDigits:1, maximumFractionDigits:1});
-  return px.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-
-// ── Command send ──
-function sendCmd(paneId) {
-  const input = document.getElementById(paneId + '-cmd');
-  const val = input.value.trim();
-  if (!val) return;
-  const log = document.getElementById(paneId + '-log');
-  clearEmpty(log);
-  const t = new Date().toTimeString().slice(0,8);
-  appendLine(log, t, 'cmd', 'CMD', `<span class="hi">${esc(val)}</span>`);
+// ── Agent log ──
+function addLog(ts, whoCls, whoLabel, msgHtml) {
+  const log = document.getElementById('agent-log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="log-ts">${ts}</span><span class="log-who ${whoCls}">${whoLabel}</span><span class="log-txt">${msgHtml}</span>`;
+  log.appendChild(entry);
   log.scrollTop = log.scrollHeight;
-  input.value = '';
-  setTimeout(() => {
-    appendLine(log, new Date().toTimeString().slice(0,8), 'warn', 'WAIT',
-      `<span class="d">Backend command routing not yet wired</span>`);
-    log.scrollTop = log.scrollHeight;
-  }, 500);
+  _logCount++;
+  document.getElementById('log-count').textContent = _logCount + ' EVENTS';
 }
 
-document.querySelectorAll('.cmd-btn[data-pane]').forEach(btn => {
-  btn.addEventListener('click', () => sendCmd(btn.dataset.pane));
-});
-document.querySelectorAll('.cmd-in[data-pane]').forEach(inp => {
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') sendCmd(inp.dataset.pane); });
-});
-
-// ── HQ broadcast ──
-function sendHQ() {
-  const input = document.getElementById('hq-cmd');
-  const val = input.value.trim();
+// ── Command ──
+function sendCmd() {
+  const inp = document.getElementById('cmd-in');
+  const val = inp.value.trim();
   if (!val) return;
-  const chat = document.getElementById('hq-msgs');
   const t = new Date().toTimeString().slice(0,8);
-
-  const you = document.createElement('div');
-  you.className = 'msg-wrap you';
-  you.innerHTML = `<div class="msg-from you-label"><span class="name">YOU</span> · ${t}</div><div class="bubble you">${esc(val)}</div>`;
-  chat.appendChild(you);
-  input.value = '';
-
   const lo = val.toLowerCase();
-  let agent = 'SYSTEM';
-  let reply = 'Broadcast logged. Backend routing not yet wired — command is queued locally.';
-  if (lo.includes('@jarvis'))  { agent = 'JARVIS';  reply = 'Received. Command queued — backend routing not yet wired.'; sendCmdSilent('jarvis', val); }
-  if (lo.includes('@intel'))   { agent = 'INTEL';   reply = 'Received. Command queued.'; sendCmdSilent('intel', val); }
-  if (lo.includes('@content')) { agent = 'CONTENT'; reply = 'Received. Command queued.'; sendCmdSilent('content', val); }
-  if (lo.includes('@discord')) { agent = 'DISCORD'; reply = 'Received. Command queued.'; sendCmdSilent('discord', val); }
-
-  setTimeout(() => {
-    const resp = document.createElement('div');
-    resp.className = 'msg-wrap sys';
-    resp.innerHTML = `<div class="msg-from"><span class="name">${agent}</span> · ${new Date().toTimeString().slice(0,8)}</div><div class="bubble sys">${reply}</div>`;
-    chat.appendChild(resp);
-    chat.scrollTop = chat.scrollHeight;
-  }, 600);
-  chat.scrollTop = chat.scrollHeight;
+  let who = 'sys', label = 'SYSTEM';
+  if (lo.includes('@gemini')) { who = 'gemini'; label = 'GEMINI'; }
+  if (lo.includes('@claude')) { who = 'claude'; label = 'CLAUDE'; }
+  if (lo.includes('@openai')) { who = 'openai'; label = 'OPENAI'; }
+  addLog(t, who, '▶ ' + label, `<span class="hi">${esc(val)}</span>`);
+  setTimeout(() => addLog(new Date().toTimeString().slice(0,8), who, label,
+    'Command received · backend routing not yet wired'), 600);
+  inp.value = '';
 }
+document.getElementById('cmd-in').addEventListener('keydown', e => { if (e.key === 'Enter') sendCmd(); });
 
-function sendCmdSilent(paneId, val) {
-  const log = document.getElementById(paneId + '-log');
-  if (!log) return;
-  clearEmpty(log);
-  appendLine(log, new Date().toTimeString().slice(0,8), 'cmd', 'HQ', `<span class="hi">${esc(val)}</span>`);
-  log.scrollTop = log.scrollHeight;
-}
-
-document.getElementById('hq-send').addEventListener('click', sendHQ);
-document.getElementById('hq-cmd').addEventListener('keydown', e => { if (e.key === 'Enter') sendHQ(); });
+// ── Copy script ──
+window.copyScript = (i) => {
+  const cards = document.querySelectorAll('.script-card');
+  if (cards[i]) {
+    const text = cards[i].querySelector('.script-hook').textContent + '\n' + cards[i].querySelector('.script-body').textContent;
+    navigator.clipboard?.writeText(text).catch(()=>{});
+  }
+};
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// Start polling
+// ── Boot ──
+addLog(new Date().toTimeString().slice(0,8), 'sys', 'SYSTEM', '<span class="g">Sovereign Mainframe online · connecting to data feeds…</span>');
+
 pollWarRoom();
-setInterval(pollWarRoom, 5000);
+pollNews();
+pollAnalysis();
+pollScripts();
+
+setInterval(pollWarRoom,  5000);
+setInterval(pollNews,     60000);
+setInterval(pollAnalysis, 30000);
+setInterval(pollScripts,  300000);
 </script>
 </body>
 </html>
