@@ -1277,7 +1277,7 @@ _JARVIS_RUNNING: dict = {}  # task_type → {"started_at": ts, "status": "runnin
 
 def _run_jarvis_task(task_type: str, snap: dict, analysis: dict, news: list) -> dict | None:
     """Run one Claude-powered Jarvis task and return a brief dict."""
-    from web.llm_router import claude_call, _record
+    from web.llm_router import claude_call, gemini_call as _gemini_call, _record
     import time
 
     ts = time.time()
@@ -1332,7 +1332,8 @@ def _run_jarvis_task(task_type: str, snap: dict, analysis: dict, news: list) -> 
         _JARVIS_RUNNING.pop(task_type, None)
         return None
 
-    result = claude_call(prompt, max_tokens=400)
+    # Use Claude if available, fall back to Gemini
+    result = claude_call(prompt, max_tokens=400) or _gemini_call(prompt, max_tokens=400, label=label)
     elapsed = int((time.time() - ts) * 1000)
     _JARVIS_RUNNING.pop(task_type, None)
 
