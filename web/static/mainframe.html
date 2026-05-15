@@ -3,221 +3,775 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mainframe · Conviction Capital</title>
+<title>WAR ROOM · Conviction Capital</title>
 <style>
-  :root {
-    --bg:        #0a0a0a;
-    --panel:     #111;
-    --panel-2:   #181818;
-    --border:    #2a2a2a;
-    --text:      #e8e8e8;
-    --muted:     #888;
-    --gold:      #c9a44c;
-    --gold-2:    #f0c75e;
-    --green:     #4ade80;
-    --red:       #ef4444;
-    --gemini:    #4a86e8;
-    --claude:    #d97757;
-    --openai:    #10a37f;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 16px;
-  }
-  header {
-    display: flex; align-items: baseline; justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 12px; margin-bottom: 18px;
-  }
-  h1 { font-size: 20px; color: var(--gold); letter-spacing: 1px; }
-  .uptime { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px; margin-bottom: 16px;
-  }
-  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .card h3 {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
-    color: var(--muted); margin-bottom: 10px; font-weight: 600;
-  }
-  .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
-  .row .label { color: var(--muted); }
-  .row .val { font-variant-numeric: tabular-nums; }
-  .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    display: inline-block; margin-right: 6px;
-  }
-  .dot.gemini { background: var(--gemini); }
-  .dot.claude { background: var(--claude); }
-  .dot.openai { background: var(--openai); }
-  .status-ok { color: var(--green); }
-  .status-no { color: var(--red); }
+:root {
+  --bg:      #070a0f;
+  --panel:   #0c1018;
+  --panel2:  #101520;
+  --border:  #1a2235;
+  --border2: #253048;
+  --text:    #d0ddf0;
+  --dim:     #5a6e8a;
+  --mute:    #2e3d54;
+  --gold:    #c9a44c;
+  --gold2:   #f0c75e;
+  --green:   #34d399;
+  --red:     #fb7185;
+  --warn:    #fbbf24;
+  --teal:    #22d3ee;
+  --blue:    #60a5fa;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
 
-  .feed {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .feed h3 {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
-    color: var(--muted); margin-bottom: 12px;
-  }
-  .event {
-    display: grid;
-    grid-template-columns: 80px 90px 1fr 90px 60px;
-    gap: 10px; padding: 7px 0;
-    border-top: 1px solid var(--panel-2);
-    font-size: 12px;
-    align-items: baseline;
-  }
-  .event:first-of-type { border-top: 0; }
-  .event .time { color: var(--muted); font-variant-numeric: tabular-nums; }
-  .event .provider { font-weight: 600; }
-  .event .provider.gemini { color: var(--gemini); }
-  .event .provider.claude { color: var(--claude); }
-  .event .label { color: var(--text); }
-  .event .preview { color: var(--muted); font-size: 11px; margin-top: 2px;
-                    grid-column: 3 / 4; }
-  .event .tokens { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
-  .event .elapsed { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
-  .event.error { background: rgba(239, 68, 68, 0.07); }
-  .event.error .label { color: var(--red); }
+/* TOP BAR */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 46px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(7,10,15,.97);
+  flex-shrink: 0;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  color: var(--gold);
+}
+.pulse-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite ease-in-out;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
 
-  .empty { color: var(--muted); font-style: italic; padding: 20px; text-align: center; }
-  .pulse {
-    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-    background: var(--green); margin-right: 8px;
-    animation: pulse 1.5s infinite ease-in-out;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
-  footer { color: var(--muted); font-size: 11px; margin-top: 18px; text-align: center; }
-  a { color: var(--gold); text-decoration: none; }
+.nav-links { display: flex; gap: 3px; }
+.nav-link {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--dim);
+  text-decoration: none;
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  transition: all .15s;
+}
+.nav-link:hover { color: var(--text); border-color: var(--border2); }
+.nav-link.here  { color: var(--gold); border-color: rgba(201,164,76,.4); background: rgba(201,164,76,.06); }
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: .1em;
+}
+#clock { color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* LAYOUT */
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1px;
+  flex: 1;
+  overflow: hidden;
+  background: var(--border);
+  min-height: 0;
+}
+
+/* PANE */
+.pane {
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--panel2);
+}
+.pane-title { display: flex; align-items: center; gap: 9px; }
+.ind { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ind.on   { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.ind.off  { background: var(--mute); }
+.ind.idle { background: var(--warn);  box-shadow: 0 0 5px var(--warn); }
+.ind.run  { background: var(--teal);  box-shadow: 0 0 5px var(--teal); animation: pulse .8s infinite; }
+.pane-name { font-size: 10px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+.pane-sub  { font-size: 9px; color: var(--dim); margin-top: 1px; }
+.pane-actions { display: flex; align-items: center; gap: 6px; }
+.badge {
+  font-size: 9px; padding: 2px 7px; border-radius: 4px;
+  border: 1px solid var(--border2); color: var(--dim);
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.badge.on   { color: var(--green); border-color: #0b3025; background: #03100a; }
+.badge.off  { color: var(--dim);   border-color: var(--border); }
+.badge.idle { color: var(--warn);  border-color: #3a2a0c; background: #0f0a02; }
+.badge.hq   { color: var(--gold);  border-color: #3a2c10; background: #0c0800; }
+.badge.run  { color: var(--teal);  border-color: #0a3040; background: #030c10; }
+.open-btn {
+  font-size: 9px; padding: 2px 7px;
+  border: 1px solid var(--border); border-radius: 4px;
+  color: var(--dim); text-decoration: none;
+  letter-spacing: .1em; text-transform: uppercase;
+  transition: all .15s;
+}
+.open-btn:hover { color: var(--gold); border-color: rgba(201,164,76,.4); }
+
+/* TERMINAL */
+.terminal {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 0;
+}
+.terminal::-webkit-scrollbar { width: 3px; }
+.terminal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 1px 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.ts  { color: var(--mute); font-size: 10px; flex-shrink: 0; font-variant-numeric: tabular-nums; min-width: 58px; }
+.lvl { font-size: 9px; flex-shrink: 0; min-width: 28px; letter-spacing: .06em; text-transform: uppercase; }
+.lvl.info { color: var(--blue); }
+.lvl.ok   { color: var(--green); }
+.lvl.warn { color: var(--warn); }
+.lvl.err  { color: var(--red); }
+.lvl.cmd  { color: var(--gold); }
+.lvl.data { color: var(--teal); }
+.msg { color: var(--text); flex: 1; word-break: break-word; }
+.msg .hi { color: var(--gold); }
+.msg .g  { color: var(--green); }
+.msg .d  { color: var(--dim); }
+.msg .r  { color: var(--red); }
+.msg .w  { color: var(--warn); }
+
+/* MARKET TICKER STRIP */
+.ticker-strip {
+  display: flex;
+  gap: 1px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel2);
+  overflow: hidden;
+}
+.ticker-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 5px 8px;
+  min-width: 0;
+}
+.tc-sym  { font-size: 9px; color: var(--dim); letter-spacing: .14em; text-transform: uppercase; }
+.tc-px   { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tc-chg  { font-size: 9px; font-variant-numeric: tabular-nums; }
+.tc-chg.up   { color: var(--green); }
+.tc-chg.down { color: var(--red); }
+.tc-chg.flat { color: var(--dim); }
+
+/* CMD BAR */
+.cmd-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--panel2);
+  flex-shrink: 0;
+}
+.cmd-prompt { color: var(--gold); font-size: 11px; flex-shrink: 0; }
+.cmd-in {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: inherit; font-size: 11px;
+  caret-color: var(--gold);
+}
+.cmd-in::placeholder { color: var(--mute); }
+.cmd-btn {
+  font-size: 9px; padding: 3px 9px;
+  border: 1px solid var(--border2); border-radius: 4px;
+  background: rgba(201,164,76,.07); color: var(--gold);
+  cursor: pointer; letter-spacing: .1em; text-transform: uppercase;
+  transition: background .15s;
+}
+.cmd-btn:hover { background: rgba(201,164,76,.16); }
+
+/* HQ CHAT */
+.hq-msgs {
+  flex: 1; overflow-y: auto;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 0;
+}
+.hq-msgs::-webkit-scrollbar { width: 3px; }
+.hq-msgs::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.msg-wrap { display: flex; flex-direction: column; gap: 3px; max-width: 88%; }
+.msg-wrap.you { align-self: flex-end; align-items: flex-end; }
+.msg-wrap.sys { align-self: flex-start; }
+.msg-from { font-size: 9px; color: var(--dim); letter-spacing: .1em; }
+.msg-from .name { color: var(--teal); font-weight: 700; }
+.msg-from.you-label .name { color: var(--gold); }
+.bubble {
+  padding: 8px 11px; border-radius: 8px;
+  font-size: 11px; line-height: 1.5;
+}
+.bubble.you { background: rgba(201,164,76,.09); border: 1px solid rgba(201,164,76,.18); border-radius: 8px 2px 8px 8px; }
+.bubble.sys { background: var(--panel2); border: 1px solid var(--border); border-radius: 2px 8px 8px 8px; }
+
+/* SKILLS */
+.skills-body {
+  flex: 1; overflow-y: auto;
+  padding: 10px 14px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; align-content: start;
+  min-height: 0;
+}
+.skills-body::-webkit-scrollbar { width: 3px; }
+.sk {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 11px;
+}
+.sk-name { font-size: 10px; font-weight: 700; color: var(--text); letter-spacing: .12em; text-transform: uppercase; }
+.sk-desc { font-size: 10px; color: var(--dim); margin-top: 3px; line-height: 1.4; }
+.sk-st   { font-size: 9px; margin-top: 6px; letter-spacing: .1em; }
+.sk-st.ready { color: var(--green); }
+.sk-st.pend  { color: var(--warn); }
+.sk-st.todo  { color: var(--mute); }
+
+/* STATUS BAR */
+.statusbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(7,10,15,.97);
+  flex-shrink: 0;
+  font-size: 10px; color: var(--dim); letter-spacing: .1em;
+}
+.statusbar .right { display: flex; gap: 18px; }
+.statusbar .val { color: var(--text); }
+
+@media (max-width: 860px) {
+  .workspace { grid-template-columns: 1fr; grid-template-rows: none; }
+  .nav-links { display: none; }
+}
 </style>
 </head>
 <body>
 
-<header>
-  <h1><span class="pulse"></span>MAINFRAME · CONVICTION CAPITAL</h1>
-  <div class="uptime" id="uptime">uptime —</div>
-</header>
-
-<div class="grid">
-  <div class="card">
-    <h3>AI Brain Status</h3>
-    <div class="row"><span class="label"><span class="dot gemini"></span>Gemini</span> <span class="val" id="gemini-status">—</span></div>
-    <div class="row"><span class="label"><span class="dot claude"></span>Claude</span> <span class="val" id="claude-status">—</span></div>
-    <div class="row"><span class="label"><span class="dot openai"></span>OpenAI</span> <span class="val" id="openai-status">—</span></div>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="brand">
+    <span class="pulse-dot"></span>
+    WAR ROOM · CONVICTION CAPITAL
   </div>
-
-  <div class="card">
-    <h3>Gemini Activity</h3>
-    <div class="row"><span class="label">Calls</span> <span class="val" id="gemini-calls">—</span></div>
-    <div class="row"><span class="label">Tokens</span> <span class="val" id="gemini-tokens">—</span></div>
-    <div class="row"><span class="label">Errors</span> <span class="val" id="gemini-errors">—</span></div>
+  <div class="nav-links">
+    <a class="nav-link here"  href="/mainframe.html">WAR ROOM</a>
+    <a class="nav-link"       href="/">DASHBOARD</a>
+    <a class="nav-link"       href="/intel-bot.html">INTEL</a>
+    <a class="nav-link"       href="/predmarket.html">PREDMARKET</a>
+    <a class="nav-link"       href="/sports.html">SPORTS</a>
+    <a class="nav-link"       href="/content.html">CONTENT</a>
+    <a class="nav-link"       href="/newsbrief.html">NEWS</a>
   </div>
-
-  <div class="card">
-    <h3>Claude Activity</h3>
-    <div class="row"><span class="label">Calls</span> <span class="val" id="claude-calls">—</span></div>
-    <div class="row"><span class="label">Tokens</span> <span class="val" id="claude-tokens">—</span></div>
-    <div class="row"><span class="label">Errors</span> <span class="val" id="claude-errors">—</span></div>
+  <div class="topbar-right">
+    <span>CLAUDE <span id="sb-claude-st" style="color:var(--dim)">—</span></span>
+    <span>GEMINI <span id="sb-gemini-st" style="color:var(--dim)">—</span></span>
+    <span>UPTIME <span class="val" id="sb-uptime">—</span></span>
+    <span id="clock">--:--:--</span>
   </div>
 </div>
 
-<div class="feed">
-  <h3>Live Call Feed · most recent first</h3>
-  <div id="feed"><div class="empty">Waiting for AI activity…</div></div>
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- PANE 1: JARVIS — LLM call feed -->
+  <div class="pane">
+    <div class="pane-head">
+      <div class="pane-title">
+        <div class="ind off" id="jarvis-ind"></div>
+        <div>
+          <div class="pane-name">JARVIS</div>
+          <div class="pane-sub">AI Brain · LLM Call Feed</div>
+        </div>
+      </div>
+      <div class="pane-actions">
+        <span class="badge off" id="jarvis-badge">—</span>
+        <a class="open-btn" href="/jarvis/prototype.html" target="_blank">OPEN ↗</a>
+      </div>
+    </div>
+    <div class="terminal" id="jarvis-log">
+      <div class="line" data-init style="color:var(--mute);font-size:11px;padding:8px 0">Connecting to LLM feed…</div>
+    </div>
+    <div class="cmd-bar">
+      <span class="cmd-prompt">jarvis ▶</span>
+      <input class="cmd-in" placeholder="send command…" id="jarvis-cmd" data-pane="jarvis" />
+      <button class="cmd-btn" data-pane="jarvis">SEND</button>
+    </div>
+  </div>
+
+  <!-- PANE 2: INTEL-BOT — live market data -->
+  <div class="pane">
+    <div class="pane-head">
+      <div class="pane-title">
+        <div class="ind off" id="intel-ind"></div>
+        <div>
+          <div class="pane-name">INTEL-BOT</div>
+          <div class="pane-sub">Live Market Scanner</div>
+        </div>
+      </div>
+      <div class="pane-actions">
+        <span class="badge off" id="intel-badge">—</span>
+        <a class="open-btn" href="/intel-bot.html" target="_blank">OPEN ↗</a>
+      </div>
+    </div>
+    <!-- Ticker strip: populated live -->
+    <div class="ticker-strip" id="ticker-strip">
+      <div class="ticker-chip"><span class="tc-sym">ES</span><span class="tc-px" id="tc-ES">—</span><span class="tc-chg flat" id="tcc-ES">—</span></div>
+      <div class="ticker-chip"><span class="tc-sym">BTC</span><span class="tc-px" id="tc-BTC">—</span><span class="tc-chg flat" id="tcc-BTC">—</span></div>
+      <div class="ticker-chip"><span class="tc-sym">VIX</span><span class="tc-px" id="tc-VIX">—</span><span class="tc-chg flat" id="tcc-VIX">—</span></div>
+      <div class="ticker-chip"><span class="tc-sym">NVDA</span><span class="tc-px" id="tc-NVDA">—</span><span class="tc-chg flat" id="tcc-NVDA">—</span></div>
+      <div class="ticker-chip"><span class="tc-sym">DXY</span><span class="tc-px" id="tc-DXY">—</span><span class="tc-chg flat" id="tcc-DXY">—</span></div>
+    </div>
+    <div class="terminal" id="intel-log">
+      <div class="line" data-init style="color:var(--mute);font-size:11px;padding:8px 0">Connecting to market feed…</div>
+    </div>
+    <div class="cmd-bar">
+      <span class="cmd-prompt">intel ▶</span>
+      <input class="cmd-in" placeholder="query intel-bot…" id="intel-cmd" data-pane="intel" />
+      <button class="cmd-btn" data-pane="intel">SEND</button>
+    </div>
+  </div>
+
+  <!-- PANE 3: COMMAND HQ -->
+  <div class="pane">
+    <div class="pane-head">
+      <div class="pane-title">
+        <div class="ind on"></div>
+        <div>
+          <div class="pane-name">COMMAND HQ</div>
+          <div class="pane-sub">Broadcast · @address any operative</div>
+        </div>
+      </div>
+      <div class="pane-actions">
+        <span class="badge hq">HQ</span>
+      </div>
+    </div>
+    <div class="hq-msgs" id="hq-msgs">
+      <div class="msg-wrap sys">
+        <div class="msg-from"><span class="name">SYSTEM</span></div>
+        <div class="bubble sys">War room online. Use <strong>@jarvis</strong>, <strong>@intel</strong>, <strong>@content</strong>, or <strong>@discord</strong> to address an operative directly.</div>
+      </div>
+    </div>
+    <div class="cmd-bar">
+      <span class="cmd-prompt">hq ▶</span>
+      <input class="cmd-in" placeholder="@jarvis scan / @content write script / broadcast…" id="hq-cmd" />
+      <button class="cmd-btn" id="hq-send">SEND</button>
+    </div>
+  </div>
+
+  <!-- PANE 4: CONTENT ENGINE -->
+  <div class="pane">
+    <div class="pane-head">
+      <div class="pane-title">
+        <div class="ind off" id="content-ind"></div>
+        <div>
+          <div class="pane-name">CONTENT ENGINE</div>
+          <div class="pane-sub">Scripts · Shorts · Cascade</div>
+        </div>
+      </div>
+      <div class="pane-actions">
+        <span class="badge off" id="content-badge">—</span>
+        <a class="open-btn" href="/content.html" target="_blank">OPEN ↗</a>
+      </div>
+    </div>
+    <div class="terminal" id="content-log">
+      <div class="line" data-init style="color:var(--mute);font-size:11px;padding:8px 0">Connecting…</div>
+    </div>
+    <div class="cmd-bar">
+      <span class="cmd-prompt">content ▶</span>
+      <input class="cmd-in" placeholder="trigger script, outline, cascade…" id="content-cmd" data-pane="content" />
+      <button class="cmd-btn" data-pane="content">SEND</button>
+    </div>
+  </div>
+
+  <!-- PANE 5: DISCORD BOT -->
+  <div class="pane">
+    <div class="pane-head">
+      <div class="pane-title">
+        <div class="ind off" id="discord-ind"></div>
+        <div>
+          <div class="pane-name">DISCORD BOT</div>
+          <div class="pane-sub">Community · Signals · Briefings</div>
+        </div>
+      </div>
+      <div class="pane-actions">
+        <span class="badge off" id="discord-badge">—</span>
+      </div>
+    </div>
+    <div class="terminal" id="discord-log">
+      <div class="line" data-init style="color:var(--mute);font-size:11px;padding:8px 0">Connecting…</div>
+    </div>
+    <div class="cmd-bar">
+      <span class="cmd-prompt">discord ▶</span>
+      <input class="cmd-in" placeholder="push alert, broadcast message…" id="discord-cmd" data-pane="discord" />
+      <button class="cmd-btn" data-pane="discord">SEND</button>
+    </div>
+  </div>
+
+  <!-- PANE 6: MEMORY & SKILLS -->
+  <div class="pane">
+    <div class="pane-head">
+      <div class="pane-title">
+        <div class="ind on"></div>
+        <div>
+          <div class="pane-name">MEMORY &amp; SKILLS</div>
+          <div class="pane-sub">Knowledge base · Operations</div>
+        </div>
+      </div>
+      <div class="pane-actions">
+        <span class="badge on">LOADED</span>
+      </div>
+    </div>
+    <div class="skills-body">
+      <div class="sk">
+        <div class="sk-name">auto-memory</div>
+        <div class="sk-desc">.claude/memory/ — persistent context, preferences, project facts across sessions.</div>
+        <div class="sk-st ready">● ACTIVE</div>
+      </div>
+      <div class="sk">
+        <div class="sk-name">deep-research</div>
+        <div class="sk-desc">Web search + synthesis on any topic via /deep-research.</div>
+        <div class="sk-st ready">● READY</div>
+      </div>
+      <div class="sk">
+        <div class="sk-name">content-cascade</div>
+        <div class="sk-desc">Long-form → short-form → carousel → IG caption chain.</div>
+        <div class="sk-st ready">● READY</div>
+      </div>
+      <div class="sk">
+        <div class="sk-name">yt-pipeline</div>
+        <div class="sk-desc">Script → hooks → shorts → YouTube publish.</div>
+        <div class="sk-st pend" id="sk-yt">● NEEDS YT KEY</div>
+      </div>
+      <div class="sk">
+        <div class="sk-name">recon</div>
+        <div class="sk-desc">Competitor gap analysis — App Store + site mirror → Claude brief.</div>
+        <div class="sk-st todo">● NOT BUILT</div>
+      </div>
+      <div class="sk">
+        <div class="sk-name">layered-intel</div>
+        <div class="sk-desc">5-level explanation engine. Powers Discord + Intel-Bot.</div>
+        <div class="sk-st ready">● ACTIVE</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<footer>
-  Mainframe refreshes every 2s · <a href="/">Dashboard</a> ·
-  <a href="/movers.html">Movers</a> ·
-  <a href="/intel-bot.html">Intel-Bot</a> ·
-  <a href="/content.html">Content</a>
-</footer>
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <span>WAR ROOM v1 · <span style="color:var(--gold)">CONVICTION CAPITAL</span></span>
+  <div class="right">
+    <span>CALLS <span class="val" id="sb-calls">—</span></span>
+    <span>TOKENS <span class="val" id="sb-tokens">—</span></span>
+    <span>ERRORS <span class="val" id="sb-errors">—</span></span>
+    <span>MOOD <span class="val" id="sb-mood">—</span></span>
+  </div>
+</div>
 
 <script>
-const fmtTime = t => {
-  const d = new Date(t * 1000);
-  return d.toTimeString().slice(0, 8);
-};
-const fmtUptime = s => {
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-};
+// ── Clock & Uptime ──
+function tick() { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }
+setInterval(tick, 1000); tick();
 
-async function refresh() {
+const t0 = Date.now();
+function fmtUp(ms) {
+  const s = Math.floor(ms/1000);
+  return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60]
+    .map(v => String(v).padStart(2,'0')).join(':');
+}
+setInterval(() => { document.getElementById('sb-uptime').textContent = fmtUp(Date.now()-t0); }, 1000);
+
+// ── Seen LLM call timestamps (dedup) ──
+const _seenCalls = new Set();
+
+// ── War Room poll ──
+async function pollWarRoom() {
   try {
-    const r = await fetch('/api/mainframe', { cache: 'no-store' });
+    const r = await fetch('/api/warroom', { cache: 'no-store' });
+    if (!r.ok) return;
     const d = await r.json();
 
-    document.getElementById('uptime').textContent = 'uptime ' + fmtUptime(d.uptime_s);
+    // Top-bar key indicators
+    setSt('sb-claude-st', d.keys.claude);
+    setSt('sb-gemini-st', d.keys.gemini);
 
-    // Key status
-    const setStatus = (id, ok) => {
-      const el = document.getElementById(id);
-      el.textContent = ok ? 'ONLINE' : 'OFFLINE';
-      el.className = 'val ' + (ok ? 'status-ok' : 'status-no');
-    };
-    setStatus('gemini-status', d.keys.gemini);
-    setStatus('claude-status', d.keys.claude);
-    setStatus('openai-status', d.openai_key_set);
+    // Stats
+    const calls  = d.stats.calls_total;
+    const tokens = d.stats.tokens_total;
+    const errors = d.stats.errors_total;
+    document.getElementById('sb-calls').textContent  = calls.toLocaleString();
+    document.getElementById('sb-tokens').textContent = tokens > 999 ? (tokens/1000).toFixed(1)+'K' : tokens;
+    const errEl = document.getElementById('sb-errors');
+    errEl.textContent = errors;
+    errEl.style.color = errors > 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('sb-mood').textContent = d.operatives.intel.mood || '—';
 
-    // Counters
-    document.getElementById('gemini-calls').textContent  = d.stats.gemini_calls || 0;
-    document.getElementById('gemini-tokens').textContent = (d.stats.gemini_tokens || 0).toLocaleString();
-    document.getElementById('gemini-errors').textContent = d.stats.gemini_errors || 0;
-    document.getElementById('claude-calls').textContent  = d.stats.claude_calls || 0;
-    document.getElementById('claude-tokens').textContent = (d.stats.claude_tokens || 0).toLocaleString();
-    document.getElementById('claude-errors').textContent = d.stats.claude_errors || 0;
-
-    // Feed
-    const feed = document.getElementById('feed');
-    if (!d.recent || d.recent.length === 0) {
-      feed.innerHTML = '<div class="empty">Waiting for AI activity…</div>';
-    } else {
-      feed.innerHTML = d.recent.map(e => `
-        <div class="event ${e.ok ? '' : 'error'}">
-          <div class="time">${fmtTime(e.ts)}</div>
-          <div class="provider ${e.provider}">${e.provider}</div>
-          <div>
-            <div class="label">${e.label || '—'}</div>
-            ${e.preview ? `<div class="preview">${escapeHtml(e.preview)}</div>` : ''}
-            ${e.error ? `<div class="preview" style="color:var(--red)">⚠ ${escapeHtml(e.error)}</div>` : ''}
-          </div>
-          <div class="tokens">${(e.tokens_in||0)+(e.tokens_out||0)} tok</div>
-          <div class="elapsed">${e.elapsed_ms || 0}ms</div>
-        </div>
-      `).join('');
+    // JARVIS pane
+    const jarvis = d.operatives.jarvis;
+    setPane('jarvis', jarvis.online ? 'on' : 'off',
+      jarvis.online ? `ONLINE · ${jarvis.calls_today} CALLS` : 'NO KEY');
+    // Feed recent LLM calls into jarvis terminal
+    if (d.recent_llm && d.recent_llm.length > 0) {
+      const log = document.getElementById('jarvis-log');
+      clearEmpty(log);
+      let added = 0;
+      for (const e of [...d.recent_llm].reverse()) {
+        const key = String(e.ts) + e.label;
+        if (_seenCalls.has(key)) continue;
+        _seenCalls.add(key);
+        const t = new Date(e.ts*1000).toTimeString().slice(0,8);
+        const lvl = e.ok ? 'ok' : 'err';
+        const lbl = e.ok ? 'OK' : 'ERR';
+        const preview = e.preview ? ` <span class="d">— ${esc(e.preview.slice(0,55))}</span>` : '';
+        appendLine(log, t, lvl, lbl,
+          `<span class="hi">${esc(e.provider)}</span> · ${esc(e.label||'')} · <span class="d">${(e.elapsed_ms||0)}ms</span>${preview}`);
+        added++;
+      }
+      if (added > 0) log.scrollTop = log.scrollHeight;
     }
-  } catch (e) {
-    console.warn('mainframe fetch fail', e);
+
+    // INTEL pane — market data
+    const intel = d.operatives.intel;
+    setPane('intel', intel.online ? 'on' : 'off',
+      intel.online ? 'ONLINE' : 'NO FINNHUB KEY');
+    const mkt = intel.market_summary || {};
+    for (const sym of ['ES','BTC','VIX','NVDA','DXY']) {
+      const px = mkt[sym];
+      const pxEl  = document.getElementById('tc-'+sym);
+      const chgEl = document.getElementById('tcc-'+sym);
+      if (px && px.price != null) {
+        pxEl.textContent  = formatPrice(sym, px.price);
+        const chg = px.chg_pct;
+        chgEl.textContent = chg != null ? (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%' : '—';
+        chgEl.className   = 'tc-chg ' + (chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat');
+      }
+    }
+    // Log market mood into intel terminal
+    if (intel.mood || intel.last_snap_age_s != null) {
+      const log = document.getElementById('intel-log');
+      clearEmpty(log);
+      const t = new Date().toTimeString().slice(0,8);
+      const age = intel.last_snap_age_s;
+      if (intel.mood) {
+        appendLineOnce(log, 'mood-line', t, 'data', 'DATA',
+          `Mood <span class="hi">${esc(intel.mood)}</span>${intel.mood_signal ? ' · ' + esc(intel.mood_signal) : ''}`);
+      }
+      if (age != null) {
+        appendLineOnce(log, 'snap-age', t, age > 60 ? 'warn' : 'ok', age > 60 ? 'WARN' : 'OK',
+          `Snapshot <span class="d">${age}s old</span>`);
+      }
+      if (!intel.online) {
+        appendLineOnce(log, 'intel-key', t, 'warn', 'WARN', 'Finnhub key not set — market data unavailable');
+      }
+    }
+
+    // CONTENT pane
+    const content = d.operatives.content;
+    const contentStatus = content.scripts_generated ? 'idle' : (content.online ? 'idle' : 'off');
+    setPane('content', contentStatus,
+      content.scripts_generated ? 'SCRIPTS READY' : (content.online ? 'IDLE' : 'NO KEY'));
+    const clog = document.getElementById('content-log');
+    clearEmpty(clog);
+    appendLineOnce(clog, 'content-status',
+      new Date().toTimeString().slice(0,8),
+      content.online ? 'ok' : 'warn',
+      content.online ? 'OK' : 'WARN',
+      content.online
+        ? (content.scripts_generated ? 'Scripts generated · ready to publish' : 'Engine ready · no scripts generated yet')
+        : 'No LLM key — content generation unavailable'
+    );
+
+    // DISCORD pane
+    const discord = d.operatives.discord;
+    setPane('discord', discord.online ? 'on' : 'off',
+      discord.online ? 'CONFIGURED' : 'NOT CONFIGURED');
+    const dlog = document.getElementById('discord-log');
+    clearEmpty(dlog);
+    appendLineOnce(dlog, 'discord-status',
+      new Date().toTimeString().slice(0,8),
+      discord.online ? 'ok' : 'warn',
+      discord.online ? 'OK' : 'WARN',
+      discord.online
+        ? 'DISCORD_TOKEN set · bot configured · start with python run_bot.py'
+        : 'DISCORD_TOKEN not set · bot not configured'
+    );
+
+  } catch(e) {
+    console.warn('[warroom] poll failed', e);
   }
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => (
-    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
-  ));
+function setSt(id, ok) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = '●';
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
 }
 
-refresh();
-setInterval(refresh, 2000);
+function setPane(id, status, label) {
+  const ind   = document.getElementById(id+'-ind');
+  const badge = document.getElementById(id+'-badge');
+  if (ind)   ind.className = 'ind ' + status;
+  if (badge) {
+    badge.textContent = label;
+    const cls = status === 'on' ? 'on' : status === 'run' ? 'run' : status === 'idle' ? 'idle' : 'off';
+    badge.className = 'badge ' + cls;
+  }
+}
+
+function clearEmpty(el) {
+  const e = el.querySelector('[data-empty]');
+  if (e) e.remove();
+  // Also clear the initial "Connecting…" spans that aren't structured lines
+  el.querySelectorAll('.line[data-init]').forEach(l => l.remove());
+  // Remove plain text init nodes
+  if (el.children.length === 1 && !el.children[0].classList.contains('line')) {
+    el.innerHTML = '';
+  }
+}
+
+function appendLine(log, ts, lvlCls, lvlTxt, msgHtml) {
+  const line = document.createElement('div');
+  line.className = 'line';
+  line.innerHTML = `<span class="ts">${ts}</span><span class="lvl ${lvlCls}">${lvlTxt}</span><span class="msg">${msgHtml}</span>`;
+  log.appendChild(line);
+}
+
+// appendLineOnce — only add if data-id not already present; update if it is
+function appendLineOnce(log, dataId, ts, lvlCls, lvlTxt, msgHtml) {
+  let line = log.querySelector(`[data-id="${dataId}"]`);
+  if (!line) {
+    line = document.createElement('div');
+    line.className = 'line';
+    line.dataset.id = dataId;
+    log.appendChild(line);
+  }
+  line.innerHTML = `<span class="ts">${ts}</span><span class="lvl ${lvlCls}">${lvlTxt}</span><span class="msg">${msgHtml}</span>`;
+}
+
+function formatPrice(sym, px) {
+  if (sym === 'BTC') return '$' + Math.round(px).toLocaleString();
+  if (['ES','NQ'].includes(sym)) return px.toLocaleString(undefined, {minimumFractionDigits:1, maximumFractionDigits:1});
+  return px.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ── Command send ──
+function sendCmd(paneId) {
+  const input = document.getElementById(paneId + '-cmd');
+  const val = input.value.trim();
+  if (!val) return;
+  const log = document.getElementById(paneId + '-log');
+  clearEmpty(log);
+  const t = new Date().toTimeString().slice(0,8);
+  appendLine(log, t, 'cmd', 'CMD', `<span class="hi">${esc(val)}</span>`);
+  log.scrollTop = log.scrollHeight;
+  input.value = '';
+  setTimeout(() => {
+    appendLine(log, new Date().toTimeString().slice(0,8), 'warn', 'WAIT',
+      `<span class="d">Backend command routing not yet wired</span>`);
+    log.scrollTop = log.scrollHeight;
+  }, 500);
+}
+
+document.querySelectorAll('.cmd-btn[data-pane]').forEach(btn => {
+  btn.addEventListener('click', () => sendCmd(btn.dataset.pane));
+});
+document.querySelectorAll('.cmd-in[data-pane]').forEach(inp => {
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') sendCmd(inp.dataset.pane); });
+});
+
+// ── HQ broadcast ──
+function sendHQ() {
+  const input = document.getElementById('hq-cmd');
+  const val = input.value.trim();
+  if (!val) return;
+  const chat = document.getElementById('hq-msgs');
+  const t = new Date().toTimeString().slice(0,8);
+
+  const you = document.createElement('div');
+  you.className = 'msg-wrap you';
+  you.innerHTML = `<div class="msg-from you-label"><span class="name">YOU</span> · ${t}</div><div class="bubble you">${esc(val)}</div>`;
+  chat.appendChild(you);
+  input.value = '';
+
+  const lo = val.toLowerCase();
+  let agent = 'SYSTEM';
+  let reply = 'Broadcast logged. Backend routing not yet wired — command is queued locally.';
+  if (lo.includes('@jarvis'))  { agent = 'JARVIS';  reply = 'Received. Command queued — backend routing not yet wired.'; sendCmdSilent('jarvis', val); }
+  if (lo.includes('@intel'))   { agent = 'INTEL';   reply = 'Received. Command queued.'; sendCmdSilent('intel', val); }
+  if (lo.includes('@content')) { agent = 'CONTENT'; reply = 'Received. Command queued.'; sendCmdSilent('content', val); }
+  if (lo.includes('@discord')) { agent = 'DISCORD'; reply = 'Received. Command queued.'; sendCmdSilent('discord', val); }
+
+  setTimeout(() => {
+    const resp = document.createElement('div');
+    resp.className = 'msg-wrap sys';
+    resp.innerHTML = `<div class="msg-from"><span class="name">${agent}</span> · ${new Date().toTimeString().slice(0,8)}</div><div class="bubble sys">${reply}</div>`;
+    chat.appendChild(resp);
+    chat.scrollTop = chat.scrollHeight;
+  }, 600);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function sendCmdSilent(paneId, val) {
+  const log = document.getElementById(paneId + '-log');
+  if (!log) return;
+  clearEmpty(log);
+  appendLine(log, new Date().toTimeString().slice(0,8), 'cmd', 'HQ', `<span class="hi">${esc(val)}</span>`);
+  log.scrollTop = log.scrollHeight;
+}
+
+document.getElementById('hq-send').addEventListener('click', sendHQ);
+document.getElementById('hq-cmd').addEventListener('keydown', e => { if (e.key === 'Enter') sendHQ(); });
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Start polling
+pollWarRoom();
+setInterval(pollWarRoom, 5000);
 </script>
 </body>
 </html>

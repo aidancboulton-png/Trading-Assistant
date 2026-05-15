@@ -1226,6 +1226,100 @@ async def api_mainframe():
     }
 
 
+# ── War Room — aggregate status for all operatives ─────────────────────────
+@app.get("/api/warroom")
+async def api_warroom():
+    """
+    Single endpoint for the War Room dashboard.
+    Aggregates real status from every operative without blocking.
+    Returns only what is genuinely known — no fake data.
+    """
+    from web.llm_router import telemetry, health
+
+    tel = telemetry()
+    h   = health()
+
+    # Key presence (booleans only)
+    keys = {
+        "claude":  h.get("claude",  {}).get("key_set", False),
+        "gemini":  h.get("gemini",  {}).get("key_set", False),
+        "finnhub": bool(FKEY),
+        "discord": bool(os.environ.get("DISCORD_TOKEN", "").strip()),
+    }
+
+    # LLM stats
+    stats = tel["stats"]
+    calls_total  = stats.get("gemini_calls",  0) + stats.get("claude_calls",  0)
+    tokens_total = stats.get("gemini_tokens", 0) + stats.get("claude_tokens", 0)
+    errors_total = stats.get("gemini_errors", 0) + stats.get("claude_errors", 0)
+
+    # Recent LLM calls → jarvis/intel feed
+    recent = tel["recent"][:40]
+
+    # Quick market snapshot (from shared cache — no extra API calls)
+    snap_cached = _cache.get("snapshot", {})
+    market_summary: dict = {}
+    if snap_cached:
+        prices = snap_cached.get("prices", {})
+        for sym in ["ES", "BTC", "VIX", "NVDA", "DXY"]:
+            if sym in prices:
+                p = prices[sym]
+                market_summary[sym] = {
+                    "price": p.get("price"),
+                    "chg_pct": p.get("chg_pct"),
+                }
+
+    # Analysis mood (from shared cache)
+    analysis_cached = _cache.get("analysis", {})
+    mood = analysis_cached.get("mood", "") if analysis_cached else ""
+    mood_signal = analysis_cached.get("signal", "") if analysis_cached else ""
+
+    # Scripts status
+    scripts_cached = bool(_SCRIPTS_CACHE.get("payload"))
+
+    # Per-operative status
+    operatives = {
+        "intel": {
+            "online": bool(FKEY),
+            "status": "ONLINE" if FKEY else "NO KEY",
+            "market_summary": market_summary,
+            "mood": mood,
+            "mood_signal": mood_signal,
+            "last_snap_age_s": int(time.time() - _cache_ts.get("snapshot", 0)) if _cache_ts.get("snapshot") else None,
+        },
+        "jarvis": {
+            "online": keys["claude"] or keys["gemini"],
+            "status": "ONLINE" if (keys["claude"] or keys["gemini"]) else "NO KEY",
+            "recent_calls": recent,
+            "calls_today": calls_total,
+            "tokens_today": tokens_total,
+            "errors_today": errors_total,
+        },
+        "content": {
+            "online": keys["claude"] or keys["gemini"],
+            "status": "SCRIPTS READY" if scripts_cached else ("IDLE" if (keys["claude"] or keys["gemini"]) else "NO KEY"),
+            "scripts_generated": scripts_cached,
+        },
+        "discord": {
+            "online": keys["discord"],
+            "status": "CONFIGURED" if keys["discord"] else "NOT CONFIGURED",
+        },
+    }
+
+    return {
+        "ts": time.time(),
+        "uptime_s": tel["uptime_s"],
+        "keys": keys,
+        "stats": {
+            "calls_total": calls_total,
+            "tokens_total": tokens_total,
+            "errors_total": errors_total,
+        },
+        "operatives": operatives,
+        "recent_llm": recent,
+    }
+
+
 # ── Daily scripts (for IG/Twitter/TikTok content) ──────────────────────────
 _SCRIPTS_CACHE: dict = {}
 _SCRIPTS_TTL = 6 * 3600   # 6 hours
