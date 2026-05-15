@@ -786,71 +786,73 @@ async function pollNews() {
     const r = await fetch('/api/news', { cache: 'no-store' });
     if (!r.ok) return;
     const d = await r.json();
-    const items = (d.news || d || []).slice(0, 80);
+    // API returns {data: [...], ts: ...}
+    const raw = Array.isArray(d) ? d : (d.data || d.news || []);
+    const items = raw.slice(0, 80);
+    if (!items.length) return;
     document.getElementById('feed-count').textContent = items.length + ' ITEMS';
     document.getElementById('src-finnhub').textContent = 'LIVE';
     document.getElementById('src-finnhub').className = 'sc-val ok';
 
-    // Watchlist tickers for gold flash
-    const WATCH = ['ES','NQ','DJI','VIX','BTC','ETH','SOL','NVDA','AAPL','TSLA','META','AMZN','MSFT','JPM','XOM','CL','GC','DXY'];
-    const seen = new Set(_tapeItems.map(i=>i.id));
+    const WATCH = ['NVDA','BTC','ETH','SPY','QQQ','VIX','TSLA','META','AAPL','AMZN','MSFT','JPM','XOM','NVDA','SOL','FOMC','FED','RATE','CPI','GDP'];
+    const seen = new Set(_tapeItems.map(i => i.id));
 
     for (const item of items) {
-      const id = String(item.id || item.headline?.slice(0,40));
+      const id = String(item.id || (item.headline||'').slice(0, 40));
       if (seen.has(id)) continue;
       seen.add(id);
 
-      const tags = (item.tags || item.category || '').toUpperCase();
+      const cat = (item.category || '').toUpperCase();
       let tag = 'news';
-      if (tags.includes('MACRO') || tags.includes('ECONOMIC') || tags.includes('FED') || tags.includes('FOMC')) tag = 'macro';
-      else if (tags.includes('EARN')) tag = 'earn';
-      else if (tags.includes('GEO') || tags.includes('POLITICAL')) tag = 'geo';
+      if (cat.includes('GENERAL') && /(FED|FOMC|MACRO|CPI|GDP|RATE|INFLATION|TREASURY)/i.test(item.headline||'')) tag = 'macro';
+      else if (cat.includes('EARNING') || cat.includes('COMPANY')) tag = 'earn';
+      else if (cat.includes('MERGER') || cat.includes('CRYPTO') || cat.includes('FOREX')) tag = 'news';
 
-      const headline = (item.headline || item.title || '').slice(0, 90);
-      const isSignal = WATCH.some(t => headline.toUpperCase().includes(t));
-
+      const headline = (item.headline || '').slice(0, 92);
+      const isSignal = WATCH.some(w => headline.toUpperCase().includes(w));
       _tapeItems.unshift({ id, ts: item.datetime || Math.floor(Date.now()/1000), tag, headline, isSignal });
     }
 
     _tapeItems = _tapeItems.slice(0, 200);
     renderTape();
-  } catch(e) {}
+  } catch(e) { console.warn('[news]', e); }
 }
 
 // ── Scripts poll ──
 async function pollScripts() {
+  const area  = document.getElementById('scripts-area');
+  const stEl  = document.getElementById('scripts-status');
   try {
     const r = await fetch('/api/scripts/today', { cache: 'no-store' });
-    if (!r.ok) return;
     const d = await r.json();
-    const scripts = d.scripts || [];
-    document.getElementById('scripts-status').textContent = scripts.length + ' READY';
-
-    if (scripts.length > 0) {
-      const empty = document.getElementById('scripts-empty');
-      if (empty) empty.remove();
-      const area = document.getElementById('scripts-area');
-      area.innerHTML = '';
-      scripts.forEach((s, i) => {
-        const card = document.createElement('div');
-        card.className = 'script-card';
-        card.innerHTML = `
-          <div class="script-num">
-            <span>SCRIPT ${i+1} · ${esc(s.topic||'')}</span>
-            <button class="copy-btn" onclick="copyScript(${i})">COPY</button>
-          </div>
-          <div class="script-hook">${esc(s.hook||'')}</div>
-          <div class="script-body">${esc((s.fact||'') + ' ' + (s.cta||''))}</div>
-        `;
-        area.appendChild(card);
-      });
+    if (!r.ok || d.error || !d.scripts?.length) {
+      stEl.textContent = 'NEEDS GEMINI KEY';
+      area.innerHTML = '<div class="script-empty">Script generation requires a Gemini API key.<br>Add GEMINI_API_KEY to env or config.json.</div>';
+      return;
     }
-
-    // Update conviction card from first script's tickers
-    if (scripts[0]?.tickers?.length > 0) {
+    const scripts = d.scripts;
+    stEl.textContent = scripts.length + ' READY';
+    area.innerHTML = '';
+    scripts.forEach((s, i) => {
+      const card = document.createElement('div');
+      card.className = 'script-card';
+      card.innerHTML = `
+        <div class="script-num">
+          <span>SCRIPT ${i+1} · ${esc(s.topic||'')}</span>
+          <button class="copy-btn" onclick="copyScript(${i})">COPY</button>
+        </div>
+        <div class="script-hook">${esc(s.hook||'')}</div>
+        <div class="script-body">${esc(((s.fact||'') + ' ' + (s.cta||'')).trim())}</div>
+      `;
+      area.appendChild(card);
+    });
+    if (scripts[0]?.tickers?.length) {
       document.getElementById('conv-ticker').textContent = '$' + scripts[0].tickers[0];
     }
-  } catch(e) {}
+  } catch(e) {
+    stEl.textContent = 'ERROR';
+    area.innerHTML = '<div class="script-empty">Script endpoint unreachable.</div>';
+  }
 }
 
 // ── Analysis poll ──
@@ -858,19 +860,44 @@ async function pollAnalysis() {
   try {
     const r = await fetch('/api/analysis', { cache: 'no-store' });
     if (!r.ok) return;
-    const d = await r.json();
-    if (d.mood) updateConvictionFromMood(d.mood, d.signal);
-    if (d.summary_en || d.summary) {
-      document.getElementById('conv-thesis').textContent = (d.summary_en || d.summary || '').slice(0, 160);
+    const raw = await r.json();
+    // API returns {data: {mood, simple_summary, signals, ...}, ts: ...}
+    const d = raw.data || raw;
+
+    if (d.mood) {
+      updateConvictionFromMood(d.mood);
+      document.getElementById('sb-mood').textContent = d.mood;
     }
+    if (d.simple_summary || d.mood_desc) {
+      document.getElementById('conv-thesis').textContent = (d.simple_summary || d.mood_desc || '').slice(0, 180);
+    }
+    if (d.mood_desc) {
+      document.getElementById('conv-name').textContent = d.mood_desc;
+    }
+
     const tags = document.getElementById('conv-tags');
     tags.innerHTML = '';
-    if (d.mood)   tags.innerHTML += `<span class="conv-tag gold">${esc(d.mood)}</span>`;
-    if (d.signal) tags.innerHTML += `<span class="conv-tag signal">${esc(d.signal)}</span>`;
-    (d.signals||[]).slice(0,4).forEach(s => {
-      if (s?.label) tags.innerHTML += `<span class="conv-tag">${esc(s.label)}</span>`;
+    if (d.mood) tags.innerHTML += `<span class="conv-tag gold">${esc(d.mood)}</span>`;
+    (d.signals || []).slice(0, 4).forEach(s => {
+      if (s?.title) tags.innerHTML += `<span class="conv-tag ${s.type === 'opportunity' ? 'signal' : ''}">${esc(s.title)}</span>`;
     });
-  } catch(e) {}
+
+    // Score meters from VIX signal
+    const volSig = (d.signals||[]).find(s => s.kind === 'vol');
+    if (volSig?.expert) {
+      const vixMatch = volSig.expert.match(/VIX\s+([\d.]+)/);
+      if (vixMatch) {
+        const vix = parseFloat(vixMatch[1]);
+        const macroScore = Math.max(8, Math.min(94, 100 - (vix - 10) * 2.2));
+        setBar('macro', macroScore);
+        setBar('infra', Math.min(94, macroScore * 0.88 + 8));
+        setBar('conv',  Math.min(94, macroScore * 0.82 + 6));
+        // Also add to agent log
+        addLog(new Date().toTimeString().slice(0,8), 'sys', 'MACRO',
+          `VIX <span class="hi">${vix}</span> · Macro score <span class="g">${Math.round(macroScore)}%</span>`);
+      }
+    }
+  } catch(e) { console.warn('[analysis]', e); }
 }
 
 function updateConvictionFromMood(mood, signal) {
