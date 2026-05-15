@@ -1287,7 +1287,7 @@ async def api_warroom():
         "claude":  h.get("claude",  {}).get("key_set", False),
         "gemini":  h.get("gemini",  {}).get("key_set", False),
         "finnhub": bool(FKEY),
-        "discord": bool(os.environ.get("DISCORD_TOKEN", "").strip()),
+        "discord": bool(os.environ.get("DISCORD_TOKEN", "").strip() or _cfg.get("discord_token", "")),
     }
 
     # LLM stats
@@ -1299,22 +1299,27 @@ async def api_warroom():
     # Recent LLM calls → jarvis/intel feed
     recent = tel["recent"][:40]
 
-    # Quick market snapshot (from shared cache — no extra API calls)
+    # Quick market snapshot — _cache["snapshot"] is the flat {SYM: {...}} dict
     snap_cached = _cache.get("snapshot", {})
     market_summary: dict = {}
-    if snap_cached:
-        prices = snap_cached.get("data", {})
-        for sym in ["ES", "BTC", "VIX", "NVDA", "DXY"]:
-            if sym in prices:
-                p = prices[sym]
-                market_summary[sym] = {
-                    "price":   p.get("current"),
-                    "chg_pct": p.get("change_pct"),
-                }
+    for sym in ["ES", "BTC", "VIX", "NVDA", "DXY"]:
+        if sym in snap_cached:
+            p = snap_cached[sym]
+            market_summary[sym] = {
+                "price":   p.get("current"),
+                "chg_pct": p.get("change_pct"),
+            }
 
-    # Analysis mood (from shared cache) — response shape: {data: {mood, ...}}
-    analysis_raw    = _cache.get("analysis", {})
-    analysis_cached = analysis_raw.get("data", analysis_raw) if analysis_raw else {}
+    # Analysis mood — stored under time-bucketed key "analysis_<bucket>"
+    bucket = f"analysis_{int(time.time())//300}"
+    # Try current bucket, then search all cache keys for most recent analysis
+    analysis_cached = _cache.get(bucket)
+    if not analysis_cached:
+        for k in sorted(_cache.keys(), reverse=True):
+            if k.startswith("analysis_"):
+                analysis_cached = _cache[k]
+                break
+    analysis_cached = analysis_cached or {}
     mood        = analysis_cached.get("mood", "")
     mood_signal = analysis_cached.get("mood_desc", "")
 
@@ -1333,7 +1338,8 @@ async def api_warroom():
         },
         "jarvis": {
             "online": keys["claude"] or keys["gemini"],
-            "status": "ONLINE" if (keys["claude"] or keys["gemini"]) else "NO KEY",
+            "status": ("DEGRADED — GEMINI KEY MISSING" if keys["claude"] and not keys["gemini"]
+                       else "ONLINE" if (keys["claude"] or keys["gemini"]) else "NO KEY"),
             "recent_calls": recent,
             "calls_today": calls_total,
             "tokens_today": tokens_total,

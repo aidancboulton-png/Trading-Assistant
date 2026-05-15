@@ -1,13 +1,24 @@
 """Environment configuration for the Discord agent."""
 import os
+import json
+from pathlib import Path
 
+def _cfg() -> dict:
+    try:
+        return json.load(open(Path(__file__).parent.parent / "config.json"))
+    except Exception:
+        return {}
 
-def _get(name: str, default: str = "") -> str:
-    return os.environ.get(name, default).strip()
+_C = _cfg()
+
+def _get(name: str, cfg_key: str = "", default: str = "") -> str:
+    return (os.environ.get(name, "").strip()
+            or _C.get(cfg_key or name.lower(), "")
+            or default)
 
 
 # Discord
-DISCORD_TOKEN = _get("DISCORD_TOKEN")
+DISCORD_TOKEN = _get("DISCORD_TOKEN", "discord_token")
 DISCORD_GUILD_ID = _get("DISCORD_GUILD_ID")  # optional — speeds up slash registration
 DISCORD_BRIEFING_CHANNEL_ID = _get("DISCORD_BRIEFING_CHANNEL_ID")
 DISCORD_ALERT_CHANNEL_ID = _get("DISCORD_ALERT_CHANNEL_ID")
