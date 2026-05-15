@@ -1384,12 +1384,80 @@ async def jarvis_loop():
                 _JARVIS_BRIEFS.insert(0, brief)
                 if len(_JARVIS_BRIEFS) > 20:
                     _JARVIS_BRIEFS.pop()
+                # Auto-post to X if configured
+                try:
+                    from web.social import post_brief_to_x
+                    result = await asyncio.to_thread(post_brief_to_x, brief)
+                    if result.get("ok"):
+                        print(f"[social] Posted to X: {result.get('url')}")
+                    elif "not configured" not in result.get("error", ""):
+                        print(f"[social] X post failed: {result.get('error')}")
+                except Exception as se:
+                    print(f"[social] auto-post error: {se}")
 
         except Exception as e:
             print(f"[jarvis_loop] error: {e}")
 
         loop_count += 1
         await asyncio.sleep(900)   # 15 minutes between tasks
+
+
+_SOCIAL_LOG: list = []  # last 50 posts across all platforms
+
+@app.post("/api/social/post")
+async def api_social_post(body: dict):
+    """
+    Manually trigger a social post.
+    body: {platform: 'twitter'|'youtube'|'tiktok', type: 'brief'|'script', index: int}
+    For youtube/tiktok: body must also include {video_path, title, description}
+    """
+    from web.social import post_brief_to_x, post_script_to_x, upload_to_youtube, upload_to_tiktok
+
+    platform = body.get("platform", "twitter")
+    post_type = body.get("type", "brief")
+    idx = int(body.get("index", 0))
+
+    result = {"ok": False, "error": "nothing to post"}
+
+    if platform == "twitter":
+        if post_type == "brief" and _JARVIS_BRIEFS:
+            brief = _JARVIS_BRIEFS[min(idx, len(_JARVIS_BRIEFS)-1)]
+            result = await asyncio.to_thread(post_brief_to_x, brief)
+        elif post_type == "script":
+            scripts = _SCRIPTS_CACHE.get("payload", {}).get("scripts", [])
+            if scripts:
+                result = await asyncio.to_thread(post_script_to_x, scripts[min(idx, len(scripts)-1)])
+
+    elif platform in ("youtube", "tiktok"):
+        video_path  = body.get("video_path", "")
+        title       = body.get("title", "Conviction Capital Market Brief")
+        description = body.get("description", "")
+        caption     = body.get("caption", title)
+        if platform == "youtube":
+            result = await asyncio.to_thread(upload_to_youtube, video_path, title, description)
+        else:
+            result = await asyncio.to_thread(upload_to_tiktok, video_path, caption)
+
+    result["ts"] = time.time()
+    _SOCIAL_LOG.insert(0, result)
+    if len(_SOCIAL_LOG) > 50:
+        _SOCIAL_LOG.pop()
+    return result
+
+
+@app.get("/api/social/status")
+async def api_social_status():
+    """Returns which social platforms are configured and recent post log."""
+    from web.social import _key
+    return {
+        "configured": {
+            "twitter":  bool(_key("TWITTER_API_KEY",     "twitter_api_key")),
+            "youtube":  bool(_key("YOUTUBE_CLIENT_ID",   "youtube_client_id")),
+            "tiktok":   bool(_key("TIKTOK_ACCESS_TOKEN", "tiktok_access_token")),
+        },
+        "recent": _SOCIAL_LOG[:20],
+        "ts": time.time(),
+    }
 
 
 @app.get("/api/jarvis/briefs")
