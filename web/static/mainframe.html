@@ -6,284 +6,148 @@
 <title>War Room · Conviction Capital</title>
 <style>
 :root {
-  --bg:       #0c0c0c;
-  --s1:       #111111;
-  --s2:       #171717;
-  --border:   #1e1e1e;
-  --text:     #e0e0e0;
-  --muted:    #555;
-  --gold:     #c9a44c;
-  --gold-bg:  rgba(201,164,76,0.07);
-  --gold-dim: rgba(201,164,76,0.25);
-  --up:       #4ade80;
-  --dn:       #f87171;
-  --blue:     #60a5fa;
-  --blue-bg:  rgba(96,165,250,0.07);
+  --bg:      #0c0c0c;
+  --s1:      #111;
+  --s2:      #161616;
+  --border:  #1e1e1e;
+  --text:    #e0e0e0;
+  --muted:   #555;
+  --gold:    #c9a44c;
+  --gold-bg: rgba(201,164,76,0.07);
+  --up:      #4ade80;
+  --dn:      #f87171;
+  --blue:    #60a5fa;
+  --blue-bg: rgba(96,165,250,0.07);
+  --amber:   #fbbf24;
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 13px;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;display:flex;flex-direction:column;height:100vh}
 
-/* ── TOPBAR ── */
-.topbar {
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--s1);
-  flex-shrink: 0;
-}
-.brand { font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: var(--gold); }
-.nav { display: flex; gap: 2px; }
-.nav a {
-  font-size: 11px; color: var(--muted); text-decoration: none;
-  padding: 4px 10px; border-radius: 4px; letter-spacing: 0.04em; transition: color .15s;
-}
-.nav a:hover { color: var(--text); }
-.nav a.here { color: var(--gold); background: var(--gold-bg); }
-.topbar-r { display: flex; align-items: center; gap: 20px; font-size: 11px; color: var(--muted); }
-#clock { color: var(--text); font-variant-numeric: tabular-nums; }
+.topbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border);background:var(--s1);flex-shrink:0}
+.brand{font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--gold)}
+.nav{display:flex;gap:2px}
+.nav a{font-size:11px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:4px;transition:color .15s}
+.nav a:hover{color:var(--text)}
+.nav a.here{color:var(--gold);background:var(--gold-bg)}
+.topbar-r{display:flex;align-items:center;gap:16px;font-size:11px;color:var(--muted)}
+#clock{color:var(--text);font-variant-numeric:tabular-nums}
 
-/* ── SITUATION REPORT (top summary bar) ── */
-.sitrep {
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-.sitrep-badge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  padding: 4px 10px;
-  border-radius: 3px;
-  border: 1px solid;
-  white-space: nowrap;
-  margin-top: 1px;
-  flex-shrink: 0;
-}
-.sitrep-badge.bull { color: var(--up);  border-color: rgba(74,222,128,.3);  background: rgba(74,222,128,.06); }
-.sitrep-badge.bear { color: var(--dn);  border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.06); }
-.sitrep-badge.neut { color: #fbbf24;    border-color: rgba(251,191,36,.3);  background: rgba(251,191,36,.06); }
-.sitrep-badge.load { color: var(--muted); border-color: var(--border); }
-.sitrep-text {
-  font-size: 13px;
-  color: var(--text);
-  line-height: 1.55;
-  flex: 1;
-}
-.sitrep-text em { color: var(--muted); font-style: normal; font-size: 12px; }
+/* Regime bar */
+.regime-bar{display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0}
+.regime-badge{font-size:10px;font-weight:700;letter-spacing:.14em;padding:4px 12px;border-radius:3px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.rb-RISK_ON{color:var(--up);border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.06)}
+.rb-RISK_OFF{color:var(--dn);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.06)}
+.rb-PANIC{color:var(--dn);border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.12)}
+.rb-EUPHORIA{color:var(--amber);border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.06)}
+.rb-STAGFLATION{color:var(--amber);border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.06)}
+.rb-FED_PIVOT{color:var(--blue);border-color:rgba(96,165,250,.3);background:rgba(96,165,250,.06)}
+.rb-GEOPOLITICAL{color:var(--dn);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.06)}
+.rb-CONSOLIDATION,.rb-default{color:var(--muted);border-color:var(--border)}
+.regime-desc{font-size:12px;color:var(--muted);flex:1;line-height:1.4}
+.regime-conf{font-size:10px;color:var(--muted);white-space:nowrap}
+.agi-phase{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);white-space:nowrap}
+.phase-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.phase-dot.active{background:var(--up);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ── MAIN GRID ── */
-.main {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-}
+/* Main grid */
+.main{display:grid;grid-template-columns:1fr 400px;flex:1;overflow:hidden;min-height:0}
+.col{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.col+.col{border-left:1px solid var(--border)}
+.col-head{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid var(--border);background:var(--s1);flex-shrink:0}
+.col-title{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.col-meta{font-size:11px;color:var(--muted)}
 
-.col {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-}
-.col + .col { border-left: 1px solid var(--border); }
+/* Feed */
+.feed{flex:1;overflow-y:auto;min-height:0}
+.feed::-webkit-scrollbar{width:3px}
+.feed::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-.col-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--s1);
-  flex-shrink: 0;
-}
-.col-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.col-meta { font-size: 11px; color: var(--muted); }
+/* Brief card (AGI output) */
+.brief-card{padding:14px 18px;border-bottom:1px solid var(--border);border-left:3px solid var(--gold);background:var(--gold-bg);transition:background .1s;cursor:default}
+.brief-card:hover{background:rgba(201,164,76,.11)}
+.brief-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.brief-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0}
+.brief-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.brief-time{font-size:10px;color:var(--muted);margin-left:auto}
+.brief-headline{font-size:13px;color:var(--text);line-height:1.5;margin-bottom:5px;font-weight:500}
+.brief-body{font-size:12px;color:var(--muted);line-height:1.6}
+.brief-regime{font-size:10px;color:var(--muted);margin-top:5px;display:flex;gap:10px}
+.brief-regime span{padding:1px 6px;border-radius:2px;background:var(--s2)}
 
-/* ── MAIN FEED ── */
-.feed {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-.feed::-webkit-scrollbar { width: 3px; }
-.feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* Signal card (HIGH priority news) */
+.signal-card{padding:12px 18px;border-bottom:1px solid var(--border);border-left:3px solid var(--dn);background:rgba(248,113,113,.04);transition:background .1s}
+.signal-card:hover{background:rgba(248,113,113,.07)}
+.sig-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.sig-badge{font-size:9px;font-weight:700;letter-spacing:.1em;padding:1px 6px;border-radius:2px;background:rgba(248,113,113,.12);color:var(--dn)}
+.sig-score{font-size:10px;color:var(--muted);margin-left:auto}
+.sig-headline{font-size:12px;color:var(--text);line-height:1.45;margin-bottom:3px}
+.sig-assets{font-size:10px;color:var(--muted)}
 
-/* Jarvis brief card */
-.brief-card {
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid var(--gold);
-  background: var(--gold-bg);
-  transition: background .1s;
-  cursor: default;
-}
-.brief-card:hover { background: rgba(201,164,76,0.1); }
-.brief-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 7px;
-}
-.brief-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--gold);
-}
-.brief-time { font-size: 10px; color: var(--muted); margin-left: auto; }
-.brief-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
-.brief-headline { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 6px; font-weight: 500; }
-.brief-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+/* Medium signal */
+.medium-card{padding:9px 18px;border-bottom:1px solid var(--border);border-left:3px solid transparent;transition:background .1s}
+.medium-card:hover{background:var(--s2)}
+.med-top{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.med-badge{font-size:9px;font-weight:700;letter-spacing:.08em;padding:1px 6px;border-radius:2px;background:rgba(96,165,250,.1);color:var(--blue)}
+.med-headline{font-size:12px;color:var(--muted);line-height:1.4}
 
-/* Jarvis running */
-.brief-running {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid #fbbf24;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.running-dot { width: 6px; height: 6px; border-radius: 50%; background: #fbbf24; animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+.running-card{padding:10px 18px;border-bottom:1px solid var(--border);border-left:3px solid var(--amber);display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}
+.running-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);animation:pulse 1s infinite}
 
-/* Analysis signal card */
-.signal-card {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid var(--blue);
-  background: var(--blue-bg);
-  transition: background .1s;
-  cursor: default;
-}
-.signal-card:hover { background: rgba(96,165,250,0.1); }
-.signal-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-.signal-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--blue);
-}
-.signal-title { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 5px; font-weight: 500; }
-.signal-body  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.empty-msg{padding:24px 18px;color:var(--muted);font-size:12px;line-height:1.7}
 
-/* Feed empty state */
-.feed-empty {
-  padding: 32px 20px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
-}
+/* Right column */
+.right-top{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;border-bottom:1px solid var(--border)}
+.right-bot{flex:0 0 auto;max-height:50%;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.panel-scroll{flex:1;overflow-y:auto;min-height:0}
+.panel-scroll::-webkit-scrollbar{width:3px}
+.panel-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-/* ── RIGHT COLUMN ── */
-.right-top { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; border-bottom: 1px solid var(--border); }
-.right-bot { flex: 0 0 auto; max-height: 45%; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+/* Operative row */
+.op-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border)}
+.op-left{display:flex;align-items:center;gap:9px}
+.op-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.op-dot.on{background:var(--up)}
+.op-dot.off{background:var(--dn)}
+.op-dot.warn{background:var(--amber)}
+.op-name{font-size:12px;font-weight:600;color:var(--text)}
+.op-status{font-size:11px;color:var(--muted)}
+.op-right{text-align:right}
+.op-stat{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.op-config{font-size:10px;color:var(--dn);margin-top:1px}
 
-.panel-scroll {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-.panel-scroll::-webkit-scrollbar { width: 3px; }
-.panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* Script cards */
+.script-card{padding:12px 16px;border-bottom:1px solid var(--border);transition:background .1s}
+.script-card:hover{background:var(--s2)}
+.sc-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sc-num{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.1em}
+.sc-tickers{display:flex;gap:4px;margin-left:auto}
+.sc-ticker{font-size:9px;padding:1px 5px;border-radius:2px;background:var(--gold-bg);color:var(--gold);font-weight:700}
+.sc-hook{font-size:12px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:3px}
+.sc-body{font-size:11px;color:var(--muted);line-height:1.5}
+.sc-actions{display:flex;gap:6px;margin-top:6px}
+.sc-btn{font-size:10px;padding:3px 8px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit}
+.sc-btn:hover{color:var(--gold);border-color:rgba(201,164,76,.4)}
+.sc-btn.speak:hover{color:var(--up);border-color:rgba(74,222,128,.4)}
+.audio-player{margin-top:6px;display:none}
+.audio-player.show{display:block}
+audio{width:100%;height:28px}
 
-/* Operative status */
-.op-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 11px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.op-left { display: flex; align-items: center; gap: 9px; }
-.op-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.op-dot.on  { background: var(--up); }
-.op-dot.off { background: var(--dn); }
-.op-dot.warn{ background: #fbbf24; }
-.op-name { font-size: 12px; font-weight: 600; color: var(--text); }
-.op-status { font-size: 11px; color: var(--muted); }
-.op-time { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
-
-/* What to watch next */
-.watch-item {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  transition: background .1s;
-}
-.watch-item:hover { background: var(--s2); }
-.watch-item-title { font-size: 12px; color: var(--text); line-height: 1.45; margin-bottom: 3px; }
-.watch-item-why   { font-size: 11px; color: var(--muted); line-height: 1.5; }
-.watch-tag {
-  display: inline-block;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 1px 6px;
-  border-radius: 2px;
-  margin-bottom: 4px;
-}
-.watch-tag.earn   { background: rgba(251,191,36,.1);  color: #fbbf24; }
-.watch-tag.macro  { background: rgba(96,165,250,.1);  color: var(--blue); }
-.watch-tag.signal { background: var(--gold-bg);       color: var(--gold); }
-
-/* ── STATUS BAR ── */
-.statusbar {
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  border-top: 1px solid var(--border);
-  background: var(--s1);
-  flex-shrink: 0;
-  font-size: 10px;
-  color: var(--muted);
-}
-.sb-keys { display: flex; gap: 14px; align-items: center; }
-.sb-key  { display: flex; align-items: center; gap: 5px; }
-.sb-dot  { width: 5px; height: 5px; border-radius: 50%; }
-.sb-dot.on  { background: var(--up); }
-.sb-dot.off { background: var(--dn); }
-.sb-dot.warn{ background: #fbbf24; }
+/* Status bar */
+.statusbar{height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-top:1px solid var(--border);background:var(--s1);flex-shrink:0;font-size:10px;color:var(--muted)}
+.sb-keys{display:flex;gap:12px;align-items:center}
+.sb-key{display:flex;align-items:center;gap:4px}
+.sb-dot{width:5px;height:5px;border-radius:50%}
+.sb-dot.on{background:var(--up)}
+.sb-dot.off{background:var(--dn)}
+.sb-dot.warn{background:var(--amber)}
 </style>
 </head>
 <body>
 
-<!-- TOPBAR -->
 <div class="topbar">
-  <div class="brand">CONVICTION CAPITAL</div>
+  <div class="brand">CONVICTION CAPITAL — WAR ROOM</div>
   <nav class="nav">
     <a class="here" href="/mainframe.html">War Room</a>
     <a href="/dashboard.html">Dashboard</a>
@@ -291,39 +155,41 @@ body {
     <a href="/predmarket.html">Pred Markets</a>
     <a href="/newsbrief.html">News</a>
     <a href="/content.html">Content</a>
+    <a href="/sports.html">Sports</a>
   </nav>
   <div class="topbar-r">
-    <span>Uptime <span id="sb-uptime">—</span></span>
+    <span>Cycle <span id="sb-cycle">—</span></span>
+    <span>Briefs <span id="sb-briefs">—</span></span>
     <span id="clock">--:--:--</span>
   </div>
 </div>
 
-<!-- SITUATION REPORT -->
-<div class="sitrep">
-  <div class="sitrep-badge load" id="sitrep-badge">LOADING</div>
-  <div class="sitrep-text" id="sitrep-text">
-    <em>Gathering market intelligence…</em>
+<!-- Regime bar -->
+<div class="regime-bar">
+  <div class="regime-badge rb-default" id="regime-badge">DETECTING…</div>
+  <div class="regime-desc" id="regime-desc">Analyzing market structure…</div>
+  <div class="regime-conf" id="regime-conf"></div>
+  <div class="agi-phase">
+    <div class="phase-dot" id="phase-dot"></div>
+    <span id="phase-label">idle</span>
   </div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
-  <!-- ═══ LEFT: WHY FEED ═══ -->
+  <!-- LEFT: WHY FEED -->
   <div class="col">
     <div class="col-head">
-      <span class="col-title">Why It's Moving</span>
+      <span class="col-title">Intelligence Feed</span>
       <span class="col-meta" id="feed-meta">—</span>
     </div>
     <div class="feed" id="feed">
-      <div class="feed-empty">Loading intelligence… Jarvis runs every 15 minutes using Claude to explain what is driving markets and why.</div>
+      <div class="empty-msg">AGI is warming up. First cycle runs ~60s after startup — produces market regime, top signals, and a Claude-written WHY brief every 15 minutes automatically.</div>
     </div>
   </div>
 
-  <!-- ═══ RIGHT ═══ -->
+  <!-- RIGHT -->
   <div class="col">
-
-    <!-- Operative Status -->
     <div class="right-top">
       <div class="col-head">
         <span class="col-title">Operatives</span>
@@ -331,328 +197,273 @@ body {
       </div>
       <div class="panel-scroll" id="ops-list"></div>
     </div>
-
-    <!-- What to Watch -->
     <div class="right-bot">
       <div class="col-head">
-        <span class="col-title">What to Watch Next</span>
-        <span class="col-meta" id="watch-meta">—</span>
+        <span class="col-title">Ready-to-Shoot Scripts</span>
+        <span class="col-meta" id="scripts-meta">—</span>
       </div>
-      <div class="panel-scroll" id="watch-list">
-        <div style="padding:14px 16px;color:var(--muted);font-size:12px">Loading catalysts…</div>
+      <div class="panel-scroll" id="scripts-list">
+        <div style="padding:14px 16px;color:var(--muted);font-size:12px">Generating scripts from live intel…</div>
       </div>
     </div>
-
   </div>
+
 </div>
 
-<!-- STATUS BAR -->
 <div class="statusbar">
-  <span id="sb-calls" style="color:var(--muted)">—</span>
+  <span id="sb-stats" style="color:var(--muted)">—</span>
   <div class="sb-keys">
     <div class="sb-key"><div class="sb-dot off" id="dot-claude"></div><span>Claude</span></div>
     <div class="sb-key"><div class="sb-dot off" id="dot-gemini"></div><span>Gemini</span></div>
-    <div class="sb-key"><div class="sb-dot off" id="dot-finnhub"></div><span>Finnhub</span></div>
+    <div class="sb-key"><div class="sb-dot off" id="dot-elevenlabs"></div><span>Voice</span></div>
+    <div class="sb-key"><div class="sb-dot off" id="dot-twitter"></div><span>X</span></div>
+    <div class="sb-key"><div class="sb-dot off" id="dot-youtube"></div><span>YouTube</span></div>
     <div class="sb-key"><div class="sb-dot off" id="dot-discord"></div><span>Discord</span></div>
   </div>
 </div>
 
 <script>
-// ── Clock ──
 const t0 = Date.now();
 function tick() { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }
-setInterval(tick, 1000); tick();
-setInterval(() => {
-  const s = Math.floor((Date.now()-t0)/1000);
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sc = s%60;
-  document.getElementById('sb-uptime').textContent = [h,m,sc].map(v=>String(v).padStart(2,'0')).join(':');
-}, 1000);
+setInterval(tick,1000); tick();
 
-function esc(s) {
-  return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-function timeAgo(ts) {
-  const s = Math.floor(Date.now()/1000 - ts);
-  if (s < 60)   return s + 's ago';
-  if (s < 3600) return Math.floor(s/60) + 'm ago';
-  return Math.floor(s/3600) + 'h ago';
-}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function timeAgo(ts){const s=Math.floor(Date.now()/1000-ts);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';return Math.floor(s/3600)+'h ago'}
+function setDot(id,state){const el=document.getElementById('dot-'+id);if(el)el.className='sb-dot '+(state==='on'?'on':state==='warn'?'warn':'off')}
 
-// ── Feed state ──
-// Each item: {type: 'brief'|'signal', ts, ...}
-let _items = [];
-let _seenIds = new Set();
+let _feedItems = [];
+let _seenIds   = new Set();
 
 function renderFeed() {
   const feed = document.getElementById('feed');
-  if (!_items.length) return;
-
-  // Sort by recency
-  const sorted = [..._items].sort((a,b) => b.ts - a.ts);
-  feed.innerHTML = '';
-
-  for (const item of sorted) {
-    if (item.type === 'brief') {
-      const div = document.createElement('div');
-      div.className = 'brief-card';
-      div.innerHTML =
-        `<div class="brief-meta">
-          <div class="brief-dot"></div>
-          <span class="brief-label">Jarvis · ${esc(item.label)}</span>
-          <span class="brief-time">${timeAgo(item.ts)}</span>
-        </div>
-        <div class="brief-headline">${esc(item.headline)}</div>
-        ${item.body ? `<div class="brief-body">${esc(item.body)}</div>` : ''}`;
-      feed.appendChild(div);
-    } else if (item.type === 'signal') {
-      const div = document.createElement('div');
-      div.className = 'signal-card';
-      div.innerHTML =
-        `<div class="signal-meta">
-          <span class="signal-label">Market Signal</span>
-          <span style="font-size:10px;color:var(--muted);margin-left:auto">${timeAgo(item.ts)}</span>
-        </div>
-        <div class="signal-title">${esc(item.title)}</div>
-        <div class="signal-body">${esc(item.body)}</div>`;
-      feed.appendChild(div);
+  if (!_feedItems.length) return;
+  const sorted = [..._feedItems].sort((a,b)=>b.ts-a.ts);
+  feed.innerHTML='';
+  for (const item of sorted.slice(0,60)) {
+    const div=document.createElement('div');
+    if (item.type==='brief') {
+      div.className='brief-card';
+      div.innerHTML=
+        `<div class="brief-top"><div class="brief-dot"></div><span class="brief-label">${esc(item.label)}</span><span class="brief-time">${timeAgo(item.ts)}</span></div>`+
+        `<div class="brief-headline">${esc(item.headline)}</div>`+
+        (item.body?`<div class="brief-body">${esc(item.body)}</div>`:'')+
+        `<div class="brief-regime"><span>Regime: ${esc(item.regime||'—')}</span><span>High signals: ${item.high_signals||0}</span></div>`;
+    } else if (item.type==='high') {
+      div.className='signal-card';
+      div.innerHTML=
+        `<div class="sig-top"><span class="sig-badge">HIGH PRIORITY</span><span class="sig-score">Score ${item.score}</span></div>`+
+        `<div class="sig-headline">${esc(item.headline)}</div>`+
+        (item.assets&&item.assets.length?`<div class="sig-assets">Affects: ${item.assets.join(' · ')}</div>`:'');
+    } else {
+      div.className='medium-card';
+      div.innerHTML=
+        `<div class="med-top"><span class="med-badge">SIGNAL</span></div>`+
+        `<div class="med-headline">${esc(item.headline)}</div>`;
     }
+    feed.appendChild(div);
   }
-
-  document.getElementById('feed-meta').textContent = sorted.length + ' signals';
+  document.getElementById('feed-meta').textContent=_feedItems.length+' items';
 }
 
-// ── Analysis → Situation Report + Signals ──
-async function pollAnalysis() {
+// AGI Status
+async function pollAGI() {
   try {
-    const r = await fetch('/api/analysis', {cache:'no-store'});
-    if (!r.ok) return;
-    const raw = await r.json();
-    const d = raw.data || raw;
+    const r=await fetch('/api/agi/status',{cache:'no-store'});
+    if(!r.ok)return;
+    const d=await r.json();
 
-    // Situation report
-    const mood = d.mood || '';
-    const summary = d.simple_summary || d.mood_desc || '';
-    const badge = document.getElementById('sitrep-badge');
-    const text  = document.getElementById('sitrep-text');
+    // Phase
+    const phase=d.current_phase||'idle';
+    const dot=document.getElementById('phase-dot');
+    const lbl=document.getElementById('phase-label');
+    dot.className='phase-dot'+(phase!=='idle'?' active':'');
+    lbl.textContent=phase;
 
-    const m = mood.toUpperCase();
-    badge.textContent = mood || 'UNKNOWN';
-    badge.className = 'sitrep-badge ' + (
-      m.includes('BULL') || m.includes('RISK ON') ? 'bull' :
-      m.includes('BEAR') || m.includes('FEAR') || m.includes('RISK OFF') ? 'bear' :
-      m.includes('NEUTRAL') ? 'neut' : 'load'
-    );
-    if (summary) text.textContent = summary;
+    // Stats
+    document.getElementById('sb-cycle').textContent=d.cycle_count||0;
+    document.getElementById('sb-briefs').textContent=d.briefs_generated||0;
+    document.getElementById('sb-stats').textContent=
+      `Cycle ${d.cycle_count||0} · Briefs ${d.briefs_generated||0} · Scripts ${d.scripts_generated||0} · Posts ${d.posts_sent||0}`;
 
-    // Signals → WHY feed items
-    const signals = d.signals || [];
-    const sigTs = Math.floor(Date.now()/1000);
-    signals.forEach((sig, i) => {
-      if (!sig?.title) return;
-      const id = 'sig_' + sig.title.slice(0,20);
-      if (_seenIds.has(id)) return;
-      _seenIds.add(id);
-      // Use expert explanation (longer, more WHY-driven) when available
-      const body = sig.expert || sig.simple || '';
-      _items.push({type:'signal', id, ts: sigTs - i, title: sig.title, body});
-    });
+    // Keys
+    const cfg=d.configured||{};
+    setDot('claude',   cfg.claude   ?'on':'off');
+    setDot('gemini',   cfg.gemini   ?'on':'off');
+    setDot('elevenlabs',cfg.elevenlabs?'on':'off');
+    setDot('twitter',  cfg.twitter  ?'on':'off');
+    setDot('youtube',  cfg.youtube  ?'on':'off');
+    setDot('discord',  cfg.discord  ?'on':'off');
 
-    renderFeed();
-  } catch(e) { console.warn('[analysis]', e); }
-}
-
-// ── Jarvis briefs ──
-async function pollJarvis() {
-  try {
-    const r = await fetch('/api/jarvis/briefs', {cache:'no-store'});
-    if (!r.ok) return;
-    const d = await r.json();
-    const briefs  = d.briefs  || [];
-    const running = d.running || {};
-
-    // Running tasks shown at top of feed
-    const feed = document.getElementById('feed');
-    const existingRunning = document.querySelectorAll('.brief-running');
-    existingRunning.forEach(el => el.remove());
-
-    for (const [taskType, info] of Object.entries(running)) {
-      const div = document.createElement('div');
-      div.className = 'brief-running';
-      div.innerHTML = `<div class="running-dot"></div><span style="color:#fbbf24;font-weight:600">Jarvis running: ${esc(taskType.replace(/_/g,' '))}</span><span style="margin-left:auto;color:var(--muted);font-size:10px">${timeAgo(info.started_at)}</span>`;
-      feed.insertBefore(div, feed.firstChild);
-    }
-
-    // Add new briefs to feed
-    let added = 0;
-    for (const b of briefs) {
-      const id = 'brief_' + b.id;
-      if (_seenIds.has(id)) continue;
-      _seenIds.add(id);
-      _items.push({type:'brief', id, ts: b.ts, label: b.label, headline: b.headline, body: b.body});
-      added++;
-    }
-    if (added > 0) renderFeed();
-
-    document.getElementById('feed-meta').textContent =
-      _items.length + ' signals' + (Object.keys(running).length ? ' · 1 running' : '');
-
-  } catch(e) { console.warn('[jarvis]', e); }
-}
-
-// ── Operatives ──
-async function pollOperatives() {
-  try {
-    const r = await fetch('/api/warroom', {cache:'no-store'});
-    if (!r.ok) return;
-    const d = await r.json();
-
-    // Keys → status dots in footer
-    const k = d.keys || {};
-    setDot('claude',  k.claude);
-    setDot('gemini',  k.gemini);
-    setDot('finnhub', k.finnhub);
-    setDot('discord', k.discord);
-
-    const st = d.stats || {};
-    const errs = st.errors_total || 0;
-    document.getElementById('sb-calls').textContent =
-      `${(st.calls_total||0)} calls · ${fmtTokens(st.tokens_total||0)} tokens` +
-      (errs > 0 ? ` · ${errs} errors` : '');
-
-    // Operative rows
-    const ops = d.operatives || {};
-    const list = document.getElementById('ops-list');
-    list.innerHTML = '';
-
-    const opDefs = [
-      {
-        key: 'intel',
-        name: 'Intel Engine',
-        getStatus: (o) => o.mood ? `Reading: ${o.mood}` : o.status,
-        getDot: (o) => o.online ? 'on' : 'off',
-        getTime: (o) => o.last_snap_age_s != null ? `${o.last_snap_age_s}s ago` : '',
-      },
-      {
-        key: 'jarvis',
-        name: 'Jarvis',
-        getStatus: (o) => o.status,
-        getDot: (o) => !o.online ? 'off' : o.errors_today > 0 ? 'warn' : 'on',
-        getTime: (o) => o.calls_today ? `${o.calls_today} calls today` : '',
-      },
-      {
-        key: 'content',
-        name: 'Content Engine',
-        getStatus: (o) => o.status,
-        getDot: (o) => o.scripts_generated ? 'on' : o.online ? 'warn' : 'off',
-        getTime: (o) => o.scripts_generated ? 'Scripts ready' : '',
-      },
-      {
-        key: 'discord',
-        name: 'Discord Bot',
-        getStatus: (o) => o.status,
-        getDot: (o) => o.online ? 'on' : 'off',
-        getTime: () => '',
-      },
-    ];
-
-    for (const def of opDefs) {
-      const op = ops[def.key] || {};
-      const div = document.createElement('div');
-      div.className = 'op-row';
-      div.innerHTML =
-        `<div class="op-left">
-          <div class="op-dot ${def.getDot(op)}"></div>
-          <div>
-            <div class="op-name">${esc(def.name)}</div>
-            <div class="op-status">${esc(def.getStatus(op))}</div>
-          </div>
-        </div>
-        <div class="op-time">${esc(def.getTime(op))}</div>`;
-      list.appendChild(div);
-    }
-
-    document.getElementById('ops-meta').textContent =
-      Object.values(ops).filter(o=>o.online).length + '/' + Object.keys(ops).length + ' online';
-
-    // Situation report mood update from warroom too
-    const intel = ops.intel || {};
-    if (intel.mood) {
-      const badge = document.getElementById('sitrep-badge');
-      const m = intel.mood.toUpperCase();
-      badge.textContent = intel.mood;
-      badge.className = 'sitrep-badge ' + (
-        m.includes('BULL') || m.includes('RISK ON') ? 'bull' :
-        m.includes('BEAR') || m.includes('FEAR') || m.includes('RISK OFF') ? 'bear' :
-        m.includes('NEUTRAL') ? 'neut' : 'load'
-      );
-      if (intel.mood_signal) {
-        const t = document.getElementById('sitrep-text');
-        if (t.querySelector('em')) t.textContent = intel.mood_signal;
+    // Regime
+    if(d.regime&&d.regime!=='UNKNOWN'){
+      const rb=document.getElementById('regime-badge');
+      rb.textContent=d.regime.replace(/_/g,' ');
+      rb.className='regime-badge rb-'+d.regime;
+      document.getElementById('regime-conf').textContent=d.regime_confidence+'% confidence';
+      if(d.regime_key_signals&&d.regime_key_signals.length){
+        document.getElementById('regime-desc').textContent=d.regime_key_signals.join(' · ');
       }
     }
 
-  } catch(e) { console.warn('[operatives]', e); }
+    // Operatives panel
+    renderOperatives(d, cfg);
+
+  } catch(e){console.warn('[agi]',e)}
 }
 
-// ── What to Watch (signals from analysis + earnings news) ──
-let _watchLoaded = false;
-async function pollWatchNext() {
-  if (_watchLoaded) return;
+function renderOperatives(d, cfg) {
+  const list=document.getElementById('ops-list');
+  list.innerHTML='';
+  const ops=[
+    {name:'AGI Orchestrator',  on:d.running,          status:d.current_phase==='idle'?`Cycle ${d.cycle_count||0} complete`:`Running: ${d.current_phase}`, stat:`Next in ${Math.max(0,Math.round((d.next_cycle_ts-Date.now()/1000)/60))}m`, config:''},
+    {name:'Claude (Reasoning)',on:cfg.claude,          status:cfg.claude?'Reasoning engine online':'API key missing', stat:'', config:cfg.claude?'':'console.anthropic.com'},
+    {name:'Gemini (Create)',   on:cfg.gemini,          status:cfg.gemini?'Script + signal enrichment':'API key missing', stat:'', config:cfg.gemini?'':'aistudio.google.com'},
+    {name:'Voice (ElevenLabs)',on:cfg.elevenlabs,      status:cfg.elevenlabs?'TTS ready':'Key missing — scripts are silent', stat:'', config:cfg.elevenlabs?'':'elevenlabs.io'},
+    {name:'X / Twitter',      on:cfg.twitter,         status:cfg.twitter?'Auto-posting enabled':'Keys missing — not posting', stat:d.posts_sent?d.posts_sent+' posted':'', config:cfg.twitter?'':'developer.twitter.com'},
+    {name:'YouTube',           on:cfg.youtube,         status:cfg.youtube?'Upload ready':'OAuth missing — not uploading', stat:'', config:cfg.youtube?'':'console.cloud.google.com'},
+    {name:'Discord Bot',       on:cfg.discord,         status:cfg.discord?'Bot online':'Token missing', stat:'', config:cfg.discord?'':'discord.com/developers'},
+  ];
+  let online=0;
+  for(const op of ops){
+    if(op.on)online++;
+    const div=document.createElement('div');
+    div.className='op-row';
+    div.innerHTML=
+      `<div class="op-left"><div class="op-dot ${op.on?'on':'off'}"></div><div><div class="op-name">${esc(op.name)}</div><div class="op-status">${esc(op.status)}</div></div></div>`+
+      `<div class="op-right">${op.stat?`<div class="op-stat">${esc(op.stat)}</div>`:''}${op.config?`<div class="op-config">${esc(op.config)}</div>`:''}</div>`;
+    list.appendChild(div);
+  }
+  document.getElementById('ops-meta').textContent=online+'/'+ops.length+' online';
+}
+
+// Briefs
+async function pollBriefs() {
   try {
-    // Pull from analysis signals — forward-looking WHY items
-    const r = await fetch('/api/analysis', {cache:'no-store'});
-    if (!r.ok) return;
-    const raw = await r.json();
-    const d = raw.data || raw;
+    const r=await fetch('/api/jarvis/briefs',{cache:'no-store'});
+    if(!r.ok)return;
+    const d=await r.json();
 
-    const list = document.getElementById('watch-list');
-    list.innerHTML = '';
-
-    const signals = (d.signals || []).filter(s => s?.title);
-    if (!signals.length) {
-      list.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:12px">No signals loaded yet.</div>';
-      return;
+    // Running
+    const feed=document.getElementById('feed');
+    document.querySelectorAll('.running-card').forEach(el=>el.remove());
+    for(const [t,info] of Object.entries(d.running||{})){
+      const div=document.createElement('div');
+      div.className='running-card';
+      div.innerHTML=`<div class="running-dot"></div><span style="color:var(--amber);font-weight:600">Running: ${esc(t.replace(/_/g,' '))}</span><span style="margin-left:auto;font-size:10px">${timeAgo(info.started_at)}</span>`;
+      feed.insertBefore(div,feed.firstChild);
     }
 
-    for (const sig of signals) {
-      const div = document.createElement('div');
-      div.className = 'watch-item';
-      // Determine tag
-      const kind = sig.kind || '';
-      const tagClass = kind === 'vol' ? 'signal' : kind === 'macro' || kind === 'rates' ? 'macro' : 'earn';
-      const tagLabel = kind === 'vol' ? 'VOLATILITY' : kind === 'macro' ? 'MACRO' : kind === 'rates' ? 'RATES' : 'WATCH';
-      div.innerHTML =
-        `<div class="watch-tag ${tagClass}">${tagLabel}</div>
-         <div class="watch-item-title">${esc(sig.title)}</div>
-         <div class="watch-item-why">${esc(sig.simple || sig.expert?.slice(0,120) || '')}</div>`;
+    // Briefs → feed
+    let added=0;
+    for(const b of (d.briefs||[])){
+      const id='brief_'+b.id;
+      if(_seenIds.has(id))continue;
+      _seenIds.add(id);
+      _feedItems.push({type:'brief',id,ts:b.ts,label:b.label,headline:b.headline,body:b.body,regime:b.regime,high_signals:b.high_signals||0});
+      added++;
+    }
+    if(added)renderFeed();
+  } catch(e){console.warn('[briefs]',e)}
+}
+
+// High signals
+async function pollSignals() {
+  try {
+    const r=await fetch('/api/agi/signals',{cache:'no-store'});
+    if(!r.ok)return;
+    const d=await r.json();
+    let added=0;
+    for(const s of (d.high||[])){
+      const id='sig_'+s.id;
+      if(_seenIds.has(id))continue;
+      _seenIds.add(id);
+      _feedItems.push({type:'high',id,ts:s.ts,headline:s.headline,score:s.score,assets:s.affected_assets||[]});
+      added++;
+    }
+    if(added)renderFeed();
+  } catch(e){console.warn('[signals]',e)}
+}
+
+// Regime
+async function pollRegime() {
+  try {
+    const r=await fetch('/api/agi/regime',{cache:'no-store'});
+    if(!r.ok)return;
+    const d=await r.json();
+    const rb=document.getElementById('regime-badge');
+    rb.textContent=(d.regime||'UNKNOWN').replace(/_/g,' ');
+    rb.className='regime-badge rb-'+(d.regime||'default');
+    document.getElementById('regime-conf').textContent=(d.confidence||0)+'% confidence';
+    document.getElementById('regime-desc').textContent=(d.key_signals||[]).join(' · ')||d.description||'';
+  } catch(e){}
+}
+
+// Scripts
+async function pollScripts() {
+  try {
+    const r=await fetch('/api/scripts/today',{cache:'no-store'});
+    if(!r.ok)return;
+    const d=await r.json();
+    const scripts=d.scripts||[];
+    if(!scripts.length)return;
+    const list=document.getElementById('scripts-list');
+    list.innerHTML='';
+    document.getElementById('scripts-meta').textContent=scripts.length+' ready';
+    scripts.forEach((s,i)=>{
+      const div=document.createElement('div');
+      div.className='script-card';
+      div.innerHTML=
+        `<div class="sc-top"><span class="sc-num">SCRIPT ${i+1}</span><div class="sc-tickers">${(s.tickers||[]).map(t=>`<span class="sc-ticker">${esc(t)}</span>`).join('')}</div></div>`+
+        `<div class="sc-hook">${esc(s.hook||'')}</div>`+
+        `<div class="sc-body">${esc((s.body||'').slice(0,120))}…</div>`+
+        `<div class="sc-actions">`+
+          `<button class="sc-btn" onclick="copyScript(${i})">Copy</button>`+
+          `<button class="sc-btn speak" onclick="speakScript(${i},this)">▶ Speak</button>`+
+          `<button class="sc-btn" onclick="postScript(${i})">Post to X</button>`+
+        `</div>`+
+        `<div class="audio-player" id="audio-${i}"></div>`;
       list.appendChild(div);
+    });
+    window._scripts=scripts;
+  } catch(e){}
+}
+
+window.copyScript=function(i){
+  const s=window._scripts&&window._scripts[i];
+  if(!s)return;
+  navigator.clipboard?.writeText(`${s.hook}\n\n${s.body}\n\n${s.cta}\n\nconvictioncapital.com`);
+};
+
+window.speakScript=async function(i,btn){
+  btn.textContent='Generating…';btn.disabled=true;
+  try{
+    const r=await fetch('/api/agi/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({script_index:i})});
+    const d=await r.json();
+    if(d.ok&&d.url){
+      const panel=document.getElementById('audio-'+i);
+      panel.innerHTML=`<audio controls src="${esc(d.url)}"></audio>`;
+      panel.classList.add('show');
+      btn.textContent='▶ Play';
+    } else {
+      btn.textContent=d.error||'Failed';
     }
+  }catch(e){btn.textContent='Error';}
+  btn.disabled=false;
+};
 
-    document.getElementById('watch-meta').textContent = signals.length + ' active';
-    _watchLoaded = true;
-  } catch(e) { console.warn('[watch]', e); }
-}
+window.postScript=async function(i){
+  const r=await fetch('/api/social/post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({platform:'twitter',type:'script',index:i})});
+  const d=await r.json();
+  alert(d.ok?'Posted: '+d.url:d.error||'Failed');
+};
 
-function setDot(id, on) {
-  const el = document.getElementById('dot-' + id);
-  if (el) el.className = 'sb-dot ' + (on ? 'on' : 'off');
-}
-function fmtTokens(n) {
-  if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
-  if (n >= 1000) return (n/1000).toFixed(1)+'K';
-  return String(n);
-}
-
-// ── Boot ──
-pollAnalysis();
-pollJarvis();
-pollOperatives();
-pollWatchNext();
-
-setInterval(pollAnalysis,    60000);
-setInterval(pollJarvis,      15000);
-setInterval(pollOperatives,   5000);
-setInterval(pollWatchNext,   60000);
+// Boot
+pollAGI(); pollBriefs(); pollSignals(); pollRegime(); pollScripts();
+setInterval(pollAGI,    8000);
+setInterval(pollBriefs, 15000);
+setInterval(pollSignals,30000);
+setInterval(pollRegime, 60000);
+setInterval(pollScripts,120000);
 </script>
 </body>
 </html>

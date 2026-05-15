@@ -46,6 +46,13 @@
     background: linear-gradient(135deg, var(--gold) 0%, var(--gold-2) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
+  .nav { display: flex; align-items: center; gap: 2px; }
+  .nav a {
+    color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.04em; padding: 5px 10px; border-radius: 5px; transition: color .15s;
+  }
+  .nav a:hover { color: var(--text); }
+  .nav a.here { color: var(--gold); background: rgba(201,164,76,0.1); }
   .back {
     color: var(--muted); text-decoration: none; font-size: 13px;
     padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
@@ -257,9 +264,16 @@
 
 <div class="topbar">
   <div class="brand">
-    <a class="back" href="/mainframe.html">⬡ WAR ROOM</a>
-    <a class="back" href="/" style="margin-left:6px">← Dashboard</a>
     <div class="logo">CONVICTION CAPITAL</div>
+    <nav class="nav">
+      <a href="/mainframe.html">War Room</a>
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/intel-bot.html">Intel Bot</a>
+      <a href="/predmarket.html">Pred Markets</a>
+      <a href="/newsbrief.html">News</a>
+      <a href="/content.html">Content</a>
+      <a class="here" href="/sports.html">Sports</a>
+    </nav>
   </div>
   <div class="status">
     <span class="pulse"></span>

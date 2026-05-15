@@ -1013,6 +1013,7 @@ async def startup():
     asyncio.create_task(market_loop())
     asyncio.create_task(warm_caches())
     asyncio.create_task(jarvis_loop())
+    asyncio.create_task(_start_agi())
 
 async def warm_caches():
     """Pre-populate slow caches so the first visitor doesn't wait."""
@@ -1467,6 +1468,98 @@ async def api_jarvis_briefs():
         "running": dict(_JARVIS_RUNNING),
         "ts": time.time(),
     }
+
+
+# ── AGI Orchestrator ──────────────────────────────────────────────────────────
+
+async def _start_agi():
+    """Start the AGI orchestrator after caches warm."""
+    from web.orchestrator import run_agi_loop
+    await asyncio.sleep(60)  # let warm_caches finish first
+    await run_agi_loop(
+        get_snap_fn=lambda: _cache.get("snapshot", {}),
+        get_news_fn=lambda: _cache.get("news", []),
+        get_fg_fn=lambda: _cache.get("fear_greed", {}),
+        get_analysis_fn=lambda: next(
+            (_cache[k] for k in sorted(_cache) if k.startswith("analysis_")), {}
+        ),
+        scripts_cache=_SCRIPTS_CACHE,
+        jarvis_briefs=_JARVIS_BRIEFS,
+        interval_s=900,
+    )
+
+
+@app.get("/api/agi/status")
+async def api_agi_status():
+    """Full AGI system state — what every layer is doing."""
+    from web.orchestrator import get_state
+    from web.signal_priority import detect_regime
+    from web.voice import elevenlabs_configured
+    from web.social import _key as social_key
+
+    state = get_state()
+
+    # Add what's configured
+    state["configured"] = {
+        "claude":      bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()),
+        "gemini":      bool(os.environ.get("GEMINI_API_KEY", "").strip()),
+        "finnhub":     bool(FKEY),
+        "elevenlabs":  elevenlabs_configured(),
+        "twitter":     bool(social_key("TWITTER_API_KEY", "twitter_api_key")),
+        "youtube":     bool(social_key("YOUTUBE_CLIENT_ID", "youtube_client_id")),
+        "tiktok":      bool(social_key("TIKTOK_ACCESS_TOKEN", "tiktok_access_token")),
+        "discord":     bool(os.environ.get("DISCORD_TOKEN", "").strip()),
+    }
+    state["ts"] = time.time()
+    return state
+
+
+@app.get("/api/agi/signals")
+async def api_agi_signals():
+    """Current signal prioritization from latest news batch."""
+    from web.signal_priority import classify_batch, PRIORITY_HIGH, PRIORITY_MEDIUM
+    from dataclasses import asdict
+    news = _cache.get("news", [])
+    if not news:
+        return {"high": [], "medium": [], "ts": time.time()}
+    all_sigs = classify_batch(news)
+    return {
+        "high":   [asdict(s) for s in all_sigs if s.priority == PRIORITY_HIGH][:10],
+        "medium": [asdict(s) for s in all_sigs if s.priority == PRIORITY_MEDIUM][:15],
+        "total":  len(all_sigs),
+        "ts":     time.time(),
+    }
+
+
+@app.get("/api/agi/regime")
+async def api_agi_regime():
+    """Current market regime detection."""
+    from web.signal_priority import detect_regime
+    snap = _cache.get("snapshot", {})
+    analysis = next((_cache[k] for k in sorted(_cache) if k.startswith("analysis_")), {})
+    fg = _cache.get("fear_greed", {})
+    fear_greed = int(fg.get("value", 50) if isinstance(fg, dict) else 50)
+    return {**detect_regime(snap, analysis, fear_greed), "ts": time.time()}
+
+
+@app.post("/api/agi/speak")
+async def api_agi_speak(body: dict):
+    """Generate ElevenLabs audio for a script. body: {script_index: int}"""
+    from web.voice import generate_script_audio
+    scripts = _SCRIPTS_CACHE.get("payload", {}).get("scripts", [])
+    idx = int(body.get("script_index", 0))
+    if not scripts:
+        return JSONResponse({"error": "No scripts generated yet"}, status_code=404)
+    script = scripts[min(idx, len(scripts) - 1)]
+    result = await asyncio.to_thread(generate_script_audio, script)
+    return result
+
+
+# Serve audio files
+from fastapi.staticfiles import StaticFiles as _SF
+_audio_dir = Path(__file__).parent / "static" / "audio"
+_audio_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/audio", _SF(directory=str(_audio_dir)), name="audio")
 
 
 # ── War Room — aggregate status for all operatives ─────────────────────────
