@@ -8,19 +8,17 @@
 :root {
   --bg:       #0c0c0c;
   --s1:       #111111;
-  --s2:       #161616;
+  --s2:       #171717;
   --border:   #1e1e1e;
-  --border2:  #252525;
   --text:     #e0e0e0;
   --muted:    #555;
-  --dim:      #2a2a2a;
   --gold:     #c9a44c;
   --gold-bg:  rgba(201,164,76,0.07);
+  --gold-dim: rgba(201,164,76,0.25);
   --up:       #4ade80;
   --dn:       #f87171;
   --blue:     #60a5fa;
-  --purple:   #a78bfa;
-  --amber:    #fbbf24;
+  --blue-bg:  rgba(96,165,250,0.07);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
@@ -45,89 +43,59 @@ body {
   background: var(--s1);
   flex-shrink: 0;
 }
-.brand {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: var(--gold);
-}
-.nav {
-  display: flex;
-  gap: 4px;
-}
+.brand { font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: var(--gold); }
+.nav { display: flex; gap: 2px; }
 .nav a {
-  font-size: 11px;
-  color: var(--muted);
-  text-decoration: none;
-  padding: 4px 10px;
-  border-radius: 4px;
-  letter-spacing: 0.05em;
-  transition: color .15s;
+  font-size: 11px; color: var(--muted); text-decoration: none;
+  padding: 4px 10px; border-radius: 4px; letter-spacing: 0.04em; transition: color .15s;
 }
 .nav a:hover { color: var(--text); }
-.nav a.here  { color: var(--gold); background: var(--gold-bg); }
-.topbar-r {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  font-size: 11px;
-  color: var(--muted);
-}
+.nav a.here { color: var(--gold); background: var(--gold-bg); }
+.topbar-r { display: flex; align-items: center; gap: 20px; font-size: 11px; color: var(--muted); }
 #clock { color: var(--text); font-variant-numeric: tabular-nums; }
 
-/* ── MARKET STRIP ── */
-.mstrip {
-  height: 38px;
-  display: flex;
-  align-items: center;
-  gap: 0;
+/* ── SITUATION REPORT (top summary bar) ── */
+.sitrep {
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   flex-shrink: 0;
-  padding: 0 20px;
-  overflow: hidden;
-}
-.mstrip-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 20px 0 0;
-  margin-right: 20px;
-  border-right: 1px solid var(--border);
-  white-space: nowrap;
+  align-items: flex-start;
+  gap: 14px;
 }
-.mstrip-item:last-child { border-right: none; }
-.ms-sym { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; }
-.ms-price { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.ms-chg { font-size: 11px; font-variant-numeric: tabular-nums; }
-.ms-chg.up { color: var(--up); }
-.ms-chg.dn { color: var(--dn); }
-.ms-price.up { color: var(--text); }
-.ms-price.dn { color: var(--text); }
-.mood-badge {
-  margin-left: auto;
+.sitrep-badge {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  padding: 3px 10px;
+  letter-spacing: 0.14em;
+  padding: 4px 10px;
   border-radius: 3px;
   border: 1px solid;
+  white-space: nowrap;
+  margin-top: 1px;
+  flex-shrink: 0;
 }
-.mood-badge.bull { color: var(--up);    border-color: rgba(74,222,128,.3);  background: rgba(74,222,128,.06); }
-.mood-badge.bear { color: var(--dn);    border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.06); }
-.mood-badge.neut { color: var(--amber); border-color: rgba(251,191,36,.3);  background: rgba(251,191,36,.06); }
-.mood-badge.off  { color: var(--muted); border-color: var(--border); }
+.sitrep-badge.bull { color: var(--up);  border-color: rgba(74,222,128,.3);  background: rgba(74,222,128,.06); }
+.sitrep-badge.bear { color: var(--dn);  border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.06); }
+.sitrep-badge.neut { color: #fbbf24;    border-color: rgba(251,191,36,.3);  background: rgba(251,191,36,.06); }
+.sitrep-badge.load { color: var(--muted); border-color: var(--border); }
+.sitrep-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.55;
+  flex: 1;
+}
+.sitrep-text em { color: var(--muted); font-style: normal; font-size: 12px; }
 
 /* ── MAIN GRID ── */
 .main {
   display: grid;
-  grid-template-columns: 1fr 420px;
+  grid-template-columns: 1fr 380px;
   flex: 1;
   overflow: hidden;
   min-height: 0;
 }
 
-/* ── PANEL ── */
 .col {
   display: flex;
   flex-direction: column;
@@ -154,160 +122,141 @@ body {
 }
 .col-meta { font-size: 11px; color: var(--muted); }
 
-/* Filter tabs */
-.ftabs {
-  display: flex;
-  gap: 2px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
-  flex-shrink: 0;
-}
-.ftab {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  padding: 3px 10px;
-  border-radius: 3px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  color: var(--muted);
-  background: none;
-  transition: all .15s;
-}
-.ftab.active       { color: var(--text); border-color: var(--border2); background: var(--s2); }
-.ftab:hover:not(.active) { color: var(--text); }
-
-/* ── NEWS FEED ── */
+/* ── MAIN FEED ── */
 .feed {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
 }
 .feed::-webkit-scrollbar { width: 3px; }
-.feed::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-.feed-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 9px 16px;
+/* Jarvis brief card */
+.brief-card {
+  padding: 16px 18px;
   border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  background: var(--gold-bg);
+  transition: background .1s;
   cursor: default;
-  transition: background .1s;
-  line-height: 1.45;
 }
-.feed-item:hover { background: var(--s2); }
-.feed-item.signal { background: var(--gold-bg); }
-.feed-item.signal .fi-headline { color: var(--gold); }
-
-.fi-time { font-size: 10px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; min-width: 44px; margin-top: 1px; }
-.fi-cat {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 1px 6px;
-  border-radius: 2px;
-  flex-shrink: 0;
-  margin-top: 1px;
-  min-width: 42px;
-  text-align: center;
-}
-.fi-cat.macro  { background: rgba(96,165,250,.12);  color: var(--blue);   }
-.fi-cat.earn   { background: rgba(251,191,36,.12);  color: var(--amber);  }
-.fi-cat.geo    { background: rgba(248,113,113,.12); color: var(--dn);     }
-.fi-cat.crypto { background: rgba(167,139,250,.12); color: var(--purple); }
-.fi-cat.news   { background: var(--s2); color: var(--muted); }
-.fi-headline   { font-size: 12px; color: var(--text); flex: 1; }
-
-/* ── RIGHT COLUMN SPLIT ── */
-.right-top, .right-bot {
+.brief-card:hover { background: rgba(201,164,76,0.1); }
+.brief-meta {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
 }
-.right-top { flex: 1; border-bottom: 1px solid var(--border); }
-.right-bot { flex: 0 0 260px; }
-
-/* ── JARVIS TASK LIST ── */
-.task-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 0;
-  min-height: 0;
+.brief-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
 }
-.task-list::-webkit-scrollbar { width: 3px; }
-.task-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.brief-time { font-size: 10px; color: var(--muted); margin-left: auto; }
+.brief-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+.brief-headline { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 6px; font-weight: 500; }
+.brief-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
 
-.task-card {
-  padding: 12px 16px;
+/* Jarvis running */
+.brief-running {
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border);
-  transition: background .1s;
+  border-left: 3px solid #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
 }
-.task-card:hover { background: var(--s2); }
-.task-header {
+.running-dot { width: 6px; height: 6px; border-radius: 50%; background: #fbbf24; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* Analysis signal card */
+.signal-card {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--blue);
+  background: var(--blue-bg);
+  transition: background .1s;
+  cursor: default;
+}
+.signal-card:hover { background: rgba(96,165,250,0.1); }
+.signal-meta {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
 }
-.task-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.signal-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
 }
-.task-dot.done    { background: var(--up); }
-.task-dot.running { background: var(--amber); animation: pulse 1s infinite; }
-.task-dot.error   { background: var(--dn); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.signal-title { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 5px; font-weight: 500; }
+.signal-body  { font-size: 12px; color: var(--muted); line-height: 1.6; }
 
-.task-label { font-size: 11px; font-weight: 600; color: var(--gold); flex: 1; }
-.task-time  { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.task-headline { font-size: 12px; color: var(--text); line-height: 1.45; margin-bottom: 4px; }
-.task-body  { font-size: 11px; color: var(--muted); line-height: 1.5; }
-.task-elapsed { font-size: 10px; color: var(--dim); margin-top: 4px; }
-
-.task-running {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+/* Feed empty state */
+.feed-empty {
+  padding: 32px 20px;
   color: var(--muted);
-  font-size: 12px;
-}
-.task-empty {
-  padding: 24px 16px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
-/* ── CATALYSTS ── */
-.catalyst-list {
+/* ── RIGHT COLUMN ── */
+.right-top { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; border-bottom: 1px solid var(--border); }
+.right-bot { flex: 0 0 auto; max-height: 45%; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+.panel-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 0;
   min-height: 0;
 }
-.catalyst-list::-webkit-scrollbar { width: 3px; }
-.catalyst-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.panel-scroll::-webkit-scrollbar { width: 3px; }
+.panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-.catalyst-item {
+/* Operative status */
+.op-row {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.op-left { display: flex; align-items: center; gap: 9px; }
+.op-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.op-dot.on  { background: var(--up); }
+.op-dot.off { background: var(--dn); }
+.op-dot.warn{ background: #fbbf24; }
+.op-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.op-status { font-size: 11px; color: var(--muted); }
+.op-time { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* What to watch next */
+.watch-item {
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   transition: background .1s;
 }
-.catalyst-item:hover { background: var(--s2); }
-.ci-date  { font-size: 10px; color: var(--muted); flex-shrink: 0; min-width: 56px; font-variant-numeric: tabular-nums; }
-.ci-sym   { font-size: 11px; font-weight: 700; color: var(--gold); flex-shrink: 0; min-width: 44px; }
-.ci-info  { flex: 1; }
-.ci-name  { font-size: 12px; color: var(--text); }
-.ci-note  { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.watch-item:hover { background: var(--s2); }
+.watch-item-title { font-size: 12px; color: var(--text); line-height: 1.45; margin-bottom: 3px; }
+.watch-item-why   { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.watch-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 1px 6px;
+  border-radius: 2px;
+  margin-bottom: 4px;
+}
+.watch-tag.earn   { background: rgba(251,191,36,.1);  color: #fbbf24; }
+.watch-tag.macro  { background: rgba(96,165,250,.1);  color: var(--blue); }
+.watch-tag.signal { background: var(--gold-bg);       color: var(--gold); }
 
 /* ── STATUS BAR ── */
 .statusbar {
@@ -322,13 +271,12 @@ body {
   font-size: 10px;
   color: var(--muted);
 }
-.sb-left { display: flex; gap: 20px; }
-.sb-right { display: flex; gap: 16px; align-items: center; }
-.sb-key { display: flex; align-items: center; gap: 5px; }
-.sb-dot { width: 5px; height: 5px; border-radius: 50%; }
+.sb-keys { display: flex; gap: 14px; align-items: center; }
+.sb-key  { display: flex; align-items: center; gap: 5px; }
+.sb-dot  { width: 5px; height: 5px; border-radius: 50%; }
 .sb-dot.on  { background: var(--up); }
 .sb-dot.off { background: var(--dn); }
-.sb-val { color: var(--text); }
+.sb-dot.warn{ background: #fbbf24; }
 </style>
 </head>
 <body>
@@ -337,7 +285,7 @@ body {
 <div class="topbar">
   <div class="brand">CONVICTION CAPITAL</div>
   <nav class="nav">
-    <a class="here" href="/mainframe.html">WAR ROOM</a>
+    <a class="here" href="/mainframe.html">War Room</a>
     <a href="/dashboard.html">Dashboard</a>
     <a href="/intel-bot.html">Intel Bot</a>
     <a href="/predmarket.html">Pred Markets</a>
@@ -345,83 +293,53 @@ body {
     <a href="/content.html">Content</a>
   </nav>
   <div class="topbar-r">
-    <span>UPTIME <span id="sb-uptime" class="sb-val">—</span></span>
+    <span>Uptime <span id="sb-uptime">—</span></span>
     <span id="clock">--:--:--</span>
   </div>
 </div>
 
-<!-- MARKET STRIP -->
-<div class="mstrip" id="mstrip">
-  <div class="mstrip-item">
-    <span class="ms-sym">SPX</span>
-    <span class="ms-price" id="ms-ES">—</span>
-    <span class="ms-chg" id="msc-ES">—</span>
+<!-- SITUATION REPORT -->
+<div class="sitrep">
+  <div class="sitrep-badge load" id="sitrep-badge">LOADING</div>
+  <div class="sitrep-text" id="sitrep-text">
+    <em>Gathering market intelligence…</em>
   </div>
-  <div class="mstrip-item">
-    <span class="ms-sym">BTC</span>
-    <span class="ms-price" id="ms-BTC">—</span>
-    <span class="ms-chg" id="msc-BTC">—</span>
-  </div>
-  <div class="mstrip-item">
-    <span class="ms-sym">VIX</span>
-    <span class="ms-price" id="ms-VIX">—</span>
-    <span class="ms-chg" id="msc-VIX">—</span>
-  </div>
-  <div class="mstrip-item">
-    <span class="ms-sym">NVDA</span>
-    <span class="ms-price" id="ms-NVDA">—</span>
-    <span class="ms-chg" id="msc-NVDA">—</span>
-  </div>
-  <div class="mstrip-item">
-    <span class="ms-sym">GOLD</span>
-    <span class="ms-price" id="ms-GC">—</span>
-    <span class="ms-chg" id="msc-GC">—</span>
-  </div>
-  <div class="mood-badge off" id="mood-badge">LOADING</div>
 </div>
 
 <!-- MAIN -->
 <div class="main">
 
-  <!-- ═══ LEFT: INTEL FEED ═══ -->
+  <!-- ═══ LEFT: WHY FEED ═══ -->
   <div class="col">
     <div class="col-head">
-      <span class="col-title">Intel Feed</span>
-      <span class="col-meta" id="feed-count">—</span>
+      <span class="col-title">Why It's Moving</span>
+      <span class="col-meta" id="feed-meta">—</span>
     </div>
-    <div class="ftabs">
-      <button class="ftab active" data-cat="all"        onclick="setFilter('all',this)">All</button>
-      <button class="ftab"        data-cat="macro"      onclick="setFilter('macro',this)">Macro</button>
-      <button class="ftab"        data-cat="earn"       onclick="setFilter('earn',this)">Earnings</button>
-      <button class="ftab"        data-cat="geo"        onclick="setFilter('geo',this)">Geopolitical</button>
-      <button class="ftab"        data-cat="crypto"     onclick="setFilter('crypto',this)">Crypto</button>
-      <button class="ftab"        data-cat="news"       onclick="setFilter('news',this)">General</button>
+    <div class="feed" id="feed">
+      <div class="feed-empty">Loading intelligence… Jarvis runs every 15 minutes using Claude to explain what is driving markets and why.</div>
     </div>
-    <div class="feed" id="feed"></div>
   </div>
 
-  <!-- ═══ RIGHT: JARVIS + CATALYSTS ═══ -->
+  <!-- ═══ RIGHT ═══ -->
   <div class="col">
 
-    <!-- Jarvis Tasks -->
+    <!-- Operative Status -->
     <div class="right-top">
       <div class="col-head">
-        <span class="col-title">Jarvis — Active Intelligence</span>
-        <span class="col-meta" id="jarvis-meta">—</span>
+        <span class="col-title">Operatives</span>
+        <span class="col-meta" id="ops-meta">—</span>
       </div>
-      <div class="task-list" id="task-list">
-        <div class="task-empty">Jarvis is warming up — first brief in ~30 seconds.</div>
-      </div>
+      <div class="panel-scroll" id="ops-list"></div>
     </div>
 
-    <!-- Catalysts -->
+    <!-- What to Watch -->
     <div class="right-bot">
       <div class="col-head">
-        <span class="col-title">Upcoming Catalysts</span>
-        <span class="col-meta" id="cat-meta">Earnings · FOMC · Key Dates</span>
+        <span class="col-title">What to Watch Next</span>
+        <span class="col-meta" id="watch-meta">—</span>
       </div>
-      <div class="catalyst-list" id="catalyst-list">
-        <div style="padding:16px;color:var(--muted);font-size:12px">Loading earnings calendar…</div>
+      <div class="panel-scroll" id="watch-list">
+        <div style="padding:14px 16px;color:var(--muted);font-size:12px">Loading catalysts…</div>
       </div>
     </div>
 
@@ -430,13 +348,8 @@ body {
 
 <!-- STATUS BAR -->
 <div class="statusbar">
-  <div class="sb-left">
-    <span>Calls <span class="sb-val" id="sb-calls">—</span></span>
-    <span>Tokens <span class="sb-val" id="sb-tokens">—</span></span>
-    <span>Errors <span class="sb-val" id="sb-errors">0</span></span>
-    <span>Mood <span class="sb-val" id="sb-mood">—</span></span>
-  </div>
-  <div class="sb-right">
+  <span id="sb-calls" style="color:var(--muted)">—</span>
+  <div class="sb-keys">
     <div class="sb-key"><div class="sb-dot off" id="dot-claude"></div><span>Claude</span></div>
     <div class="sb-key"><div class="sb-dot off" id="dot-gemini"></div><span>Gemini</span></div>
     <div class="sb-key"><div class="sb-dot off" id="dot-finnhub"></div><span>Finnhub</span></div>
@@ -456,158 +369,96 @@ setInterval(() => {
 }, 1000);
 
 function esc(s) {
-  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-
-function fmt(ts) {
-  const d = new Date(ts * 1000);
-  return d.toTimeString().slice(0,5);
-}
-
 function timeAgo(ts) {
   const s = Math.floor(Date.now()/1000 - ts);
-  if (s < 60) return s + 's ago';
+  if (s < 60)   return s + 's ago';
   if (s < 3600) return Math.floor(s/60) + 'm ago';
   return Math.floor(s/3600) + 'h ago';
 }
 
-// ── State ──
-let _feedItems = [];
-let _feedFilter = 'all';
-const WATCH = ['NVDA','BTC','ETH','SPY','QQQ','VIX','TSLA','META','AAPL','AMZN','MSFT','JPM','XOM','SOL','FOMC','FED','RATE','CPI','GDP','POWELL','EARNINGS'];
-
-// ── War Room poll ──
-async function pollWarRoom() {
-  try {
-    const r = await fetch('/api/warroom', {cache:'no-store'});
-    if (!r.ok) return;
-    const d = await r.json();
-
-    // Keys → status dots
-    const k = d.keys || {};
-    setDot('claude',  k.claude);
-    setDot('gemini',  k.gemini);
-    setDot('finnhub', k.finnhub);
-    setDot('discord', k.discord);
-
-    // Stats
-    const st = d.stats || {};
-    document.getElementById('sb-calls').textContent  = (st.calls_total||0).toLocaleString();
-    document.getElementById('sb-tokens').textContent = fmtTokens(st.tokens_total||0);
-    const errEl = document.getElementById('sb-errors');
-    const errs = st.errors_total || 0;
-    errEl.textContent = errs;
-    errEl.style.color = errs > 0 ? 'var(--dn)' : 'var(--text)';
-
-    // Market prices
-    const intel = d.operatives?.intel || {};
-    const mkt = intel.market_summary || {};
-    updateStrip(mkt);
-
-    // Mood
-    if (intel.mood) {
-      document.getElementById('sb-mood').textContent = intel.mood;
-      updateMoodBadge(intel.mood, intel.mood_signal);
-    }
-
-  } catch(e) { console.warn('[warroom]', e); }
-}
-
-function updateStrip(mkt) {
-  const SYMS = {ES:'SPX', BTC:'BTC', VIX:'VIX', NVDA:'NVDA', GC:'GOLD'};
-  for (const [sym, label] of Object.entries(SYMS)) {
-    const p = mkt[sym];
-    if (!p || !p.price) continue;
-    const priceEl = document.getElementById('ms-' + sym);
-    const chgEl   = document.getElementById('msc-' + sym);
-    if (!priceEl) continue;
-    const price = p.price;
-    const chg   = p.chg_pct;
-    priceEl.textContent = price > 1000 ? price.toLocaleString('en', {maximumFractionDigits:0}) : price.toFixed(2);
-    priceEl.className   = 'ms-price';
-    chgEl.textContent   = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-    chgEl.className     = 'ms-chg ' + (chg >= 0 ? 'up' : 'dn');
-  }
-}
-
-function updateMoodBadge(mood, signal) {
-  const el = document.getElementById('mood-badge');
-  const m = mood.toUpperCase();
-  el.textContent = mood;
-  el.className = 'mood-badge ' + (
-    m.includes('BULL') || m.includes('RISK ON') ? 'bull' :
-    m.includes('BEAR') || m.includes('FEAR') || m.includes('RISK OFF') ? 'bear' :
-    m.includes('NEUTRAL') ? 'neut' : 'off'
-  );
-}
-
-function setDot(id, on) {
-  const el = document.getElementById('dot-' + id);
-  if (el) el.className = 'sb-dot ' + (on ? 'on' : 'off');
-}
-
-function fmtTokens(n) {
-  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
-  if (n >= 1000) return (n/1000).toFixed(1) + 'K';
-  return n;
-}
-
-// ── News feed ──
-async function pollNews() {
-  try {
-    const r = await fetch('/api/news', {cache:'no-store'});
-    if (!r.ok) return;
-    const raw = await r.json();
-    const items = Array.isArray(raw) ? raw : (raw.data || raw.news || []);
-    if (!items.length) return;
-
-    document.getElementById('feed-count').textContent = items.length + ' items';
-    const seen = new Set(_feedItems.map(i => i.id));
-
-    for (const item of items) {
-      const id = String(item.id || (item.headline||'').slice(0,40));
-      if (seen.has(id)) continue;
-      seen.add(id);
-
-      const cat = (item.category||'').toLowerCase();
-      const hl  = (item.headline||'');
-      let tag = 'news';
-      if (/fed|fomc|macro|cpi|gdp|rate|inflation|treasury|pce|payroll|powell/i.test(hl) || cat.includes('macro')) tag = 'macro';
-      else if (/earn|revenue|profit|beat|miss|guidance|eps|quarter|report/i.test(hl) || cat.includes('earn') || cat.includes('company')) tag = 'earn';
-      else if (/war|geopolit|china|russia|iran|ukraine|sanction|military|nato/i.test(hl) || cat.includes('geo')) tag = 'geo';
-      else if (/bitcoin|crypto|eth|btc|sol|blockchain|defi|token|nft/i.test(hl) || cat.includes('crypto')) tag = 'crypto';
-
-      const isSignal = WATCH.some(w => hl.toUpperCase().includes(w));
-      _feedItems.unshift({id, ts: item.datetime || Math.floor(Date.now()/1000), tag, hl, isSignal});
-    }
-
-    _feedItems = _feedItems.slice(0, 300);
-    renderFeed();
-  } catch(e) { console.warn('[news]', e); }
-}
+// ── Feed state ──
+// Each item: {type: 'brief'|'signal', ts, ...}
+let _items = [];
+let _seenIds = new Set();
 
 function renderFeed() {
   const feed = document.getElementById('feed');
-  const items = _feedFilter === 'all'
-    ? _feedItems
-    : _feedItems.filter(i => i.tag === _feedFilter);
-  const CAT_LABEL = {macro:'MACRO', earn:'EARN', geo:'GEO', crypto:'CRYPTO', news:'NEWS'};
+  if (!_items.length) return;
+
+  // Sort by recency
+  const sorted = [..._items].sort((a,b) => b.ts - a.ts);
   feed.innerHTML = '';
-  for (const item of items.slice(0, 150)) {
-    const div = document.createElement('div');
-    div.className = 'feed-item' + (item.isSignal ? ' signal' : '');
-    div.innerHTML =
-      `<span class="fi-time">${fmt(item.ts)}</span>` +
-      `<span class="fi-cat ${item.tag}">${CAT_LABEL[item.tag]||'NEWS'}</span>` +
-      `<span class="fi-headline">${esc(item.hl)}</span>`;
-    feed.appendChild(div);
+
+  for (const item of sorted) {
+    if (item.type === 'brief') {
+      const div = document.createElement('div');
+      div.className = 'brief-card';
+      div.innerHTML =
+        `<div class="brief-meta">
+          <div class="brief-dot"></div>
+          <span class="brief-label">Jarvis · ${esc(item.label)}</span>
+          <span class="brief-time">${timeAgo(item.ts)}</span>
+        </div>
+        <div class="brief-headline">${esc(item.headline)}</div>
+        ${item.body ? `<div class="brief-body">${esc(item.body)}</div>` : ''}`;
+      feed.appendChild(div);
+    } else if (item.type === 'signal') {
+      const div = document.createElement('div');
+      div.className = 'signal-card';
+      div.innerHTML =
+        `<div class="signal-meta">
+          <span class="signal-label">Market Signal</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto">${timeAgo(item.ts)}</span>
+        </div>
+        <div class="signal-title">${esc(item.title)}</div>
+        <div class="signal-body">${esc(item.body)}</div>`;
+      feed.appendChild(div);
+    }
   }
+
+  document.getElementById('feed-meta').textContent = sorted.length + ' signals';
 }
 
-function setFilter(cat, el) {
-  _feedFilter = cat;
-  document.querySelectorAll('.ftab').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-  renderFeed();
+// ── Analysis → Situation Report + Signals ──
+async function pollAnalysis() {
+  try {
+    const r = await fetch('/api/analysis', {cache:'no-store'});
+    if (!r.ok) return;
+    const raw = await r.json();
+    const d = raw.data || raw;
+
+    // Situation report
+    const mood = d.mood || '';
+    const summary = d.simple_summary || d.mood_desc || '';
+    const badge = document.getElementById('sitrep-badge');
+    const text  = document.getElementById('sitrep-text');
+
+    const m = mood.toUpperCase();
+    badge.textContent = mood || 'UNKNOWN';
+    badge.className = 'sitrep-badge ' + (
+      m.includes('BULL') || m.includes('RISK ON') ? 'bull' :
+      m.includes('BEAR') || m.includes('FEAR') || m.includes('RISK OFF') ? 'bear' :
+      m.includes('NEUTRAL') ? 'neut' : 'load'
+    );
+    if (summary) text.textContent = summary;
+
+    // Signals → WHY feed items
+    const signals = d.signals || [];
+    const sigTs = Math.floor(Date.now()/1000);
+    signals.forEach((sig, i) => {
+      if (!sig?.title) return;
+      const id = 'sig_' + sig.title.slice(0,20);
+      if (_seenIds.has(id)) return;
+      _seenIds.add(id);
+      // Use expert explanation (longer, more WHY-driven) when available
+      const body = sig.expert || sig.simple || '';
+      _items.push({type:'signal', id, ts: sigTs - i, title: sig.title, body});
+    });
+
+    renderFeed();
+  } catch(e) { console.warn('[analysis]', e); }
 }
 
 // ── Jarvis briefs ──
@@ -616,132 +467,192 @@ async function pollJarvis() {
     const r = await fetch('/api/jarvis/briefs', {cache:'no-store'});
     if (!r.ok) return;
     const d = await r.json();
-    const list = document.getElementById('task-list');
-    const briefs = d.briefs || [];
+    const briefs  = d.briefs  || [];
     const running = d.running || {};
 
-    if (!briefs.length && !Object.keys(running).length) {
-      list.innerHTML = '<div class="task-empty">No tasks completed yet. Jarvis runs every 15 minutes using Claude to synthesize news, scan earnings, and map cross-asset correlations.</div>';
-      document.getElementById('jarvis-meta').textContent = 'Waiting for first task…';
-      return;
-    }
+    // Running tasks shown at top of feed
+    const feed = document.getElementById('feed');
+    const existingRunning = document.querySelectorAll('.brief-running');
+    existingRunning.forEach(el => el.remove());
 
-    list.innerHTML = '';
-    document.getElementById('jarvis-meta').textContent = briefs.length + ' tasks completed';
-
-    // Show running tasks first
     for (const [taskType, info] of Object.entries(running)) {
       const div = document.createElement('div');
-      div.className = 'task-running';
-      div.innerHTML = `<div class="task-dot running"></div><span style="color:var(--amber)">Running: ${esc(taskType.replace(/_/g,' '))}</span><span style="margin-left:auto;color:var(--muted);font-size:10px">${timeAgo(info.started_at)}</span>`;
-      list.appendChild(div);
+      div.className = 'brief-running';
+      div.innerHTML = `<div class="running-dot"></div><span style="color:#fbbf24;font-weight:600">Jarvis running: ${esc(taskType.replace(/_/g,' '))}</span><span style="margin-left:auto;color:var(--muted);font-size:10px">${timeAgo(info.started_at)}</span>`;
+      feed.insertBefore(div, feed.firstChild);
     }
 
-    // Completed briefs
+    // Add new briefs to feed
+    let added = 0;
     for (const b of briefs) {
-      const div = document.createElement('div');
-      div.className = 'task-card';
-      div.innerHTML =
-        `<div class="task-header">
-          <div class="task-dot done"></div>
-          <span class="task-label">${esc(b.label)}</span>
-          <span class="task-time">${timeAgo(b.ts)}</span>
-        </div>
-        <div class="task-headline">${esc(b.headline)}</div>
-        ${b.body ? `<div class="task-body">${esc(b.body)}</div>` : ''}
-        <div class="task-elapsed">${b.elapsed_ms ? b.elapsed_ms.toLocaleString() + 'ms' : ''} · ${b.mood||''}</div>`;
-      list.appendChild(div);
+      const id = 'brief_' + b.id;
+      if (_seenIds.has(id)) continue;
+      _seenIds.add(id);
+      _items.push({type:'brief', id, ts: b.ts, label: b.label, headline: b.headline, body: b.body});
+      added++;
     }
+    if (added > 0) renderFeed();
+
+    document.getElementById('feed-meta').textContent =
+      _items.length + ' signals' + (Object.keys(running).length ? ' · 1 running' : '');
+
   } catch(e) { console.warn('[jarvis]', e); }
 }
 
-// ── Earnings / Catalysts ──
-async function pollCatalysts() {
+// ── Operatives ──
+async function pollOperatives() {
   try {
-    const r = await fetch('/api/sentiment', {cache:'no-store'});
-    // Try earnings from the sentiment endpoint if available
-  } catch(e) {}
-
-  try {
-    const r = await fetch('/api/earnings', {cache:'no-store'});
-    if (!r.ok) throw new Error('no earnings endpoint');
+    const r = await fetch('/api/warroom', {cache:'no-store'});
+    if (!r.ok) return;
     const d = await r.json();
-    renderCatalysts(d.data || d || []);
-  } catch(e) {
-    // Fall back to hardcoded upcoming if endpoint missing
-    renderCatalystsFromNews();
-  }
+
+    // Keys → status dots in footer
+    const k = d.keys || {};
+    setDot('claude',  k.claude);
+    setDot('gemini',  k.gemini);
+    setDot('finnhub', k.finnhub);
+    setDot('discord', k.discord);
+
+    const st = d.stats || {};
+    const errs = st.errors_total || 0;
+    document.getElementById('sb-calls').textContent =
+      `${(st.calls_total||0)} calls · ${fmtTokens(st.tokens_total||0)} tokens` +
+      (errs > 0 ? ` · ${errs} errors` : '');
+
+    // Operative rows
+    const ops = d.operatives || {};
+    const list = document.getElementById('ops-list');
+    list.innerHTML = '';
+
+    const opDefs = [
+      {
+        key: 'intel',
+        name: 'Intel Engine',
+        getStatus: (o) => o.mood ? `Reading: ${o.mood}` : o.status,
+        getDot: (o) => o.online ? 'on' : 'off',
+        getTime: (o) => o.last_snap_age_s != null ? `${o.last_snap_age_s}s ago` : '',
+      },
+      {
+        key: 'jarvis',
+        name: 'Jarvis',
+        getStatus: (o) => o.status,
+        getDot: (o) => !o.online ? 'off' : o.errors_today > 0 ? 'warn' : 'on',
+        getTime: (o) => o.calls_today ? `${o.calls_today} calls today` : '',
+      },
+      {
+        key: 'content',
+        name: 'Content Engine',
+        getStatus: (o) => o.status,
+        getDot: (o) => o.scripts_generated ? 'on' : o.online ? 'warn' : 'off',
+        getTime: (o) => o.scripts_generated ? 'Scripts ready' : '',
+      },
+      {
+        key: 'discord',
+        name: 'Discord Bot',
+        getStatus: (o) => o.status,
+        getDot: (o) => o.online ? 'on' : 'off',
+        getTime: () => '',
+      },
+    ];
+
+    for (const def of opDefs) {
+      const op = ops[def.key] || {};
+      const div = document.createElement('div');
+      div.className = 'op-row';
+      div.innerHTML =
+        `<div class="op-left">
+          <div class="op-dot ${def.getDot(op)}"></div>
+          <div>
+            <div class="op-name">${esc(def.name)}</div>
+            <div class="op-status">${esc(def.getStatus(op))}</div>
+          </div>
+        </div>
+        <div class="op-time">${esc(def.getTime(op))}</div>`;
+      list.appendChild(div);
+    }
+
+    document.getElementById('ops-meta').textContent =
+      Object.values(ops).filter(o=>o.online).length + '/' + Object.keys(ops).length + ' online';
+
+    // Situation report mood update from warroom too
+    const intel = ops.intel || {};
+    if (intel.mood) {
+      const badge = document.getElementById('sitrep-badge');
+      const m = intel.mood.toUpperCase();
+      badge.textContent = intel.mood;
+      badge.className = 'sitrep-badge ' + (
+        m.includes('BULL') || m.includes('RISK ON') ? 'bull' :
+        m.includes('BEAR') || m.includes('FEAR') || m.includes('RISK OFF') ? 'bear' :
+        m.includes('NEUTRAL') ? 'neut' : 'load'
+      );
+      if (intel.mood_signal) {
+        const t = document.getElementById('sitrep-text');
+        if (t.querySelector('em')) t.textContent = intel.mood_signal;
+      }
+    }
+
+  } catch(e) { console.warn('[operatives]', e); }
 }
 
-function renderCatalysts(items) {
-  const list = document.getElementById('catalyst-list');
-  if (!items || !items.length) { renderCatalystsFromNews(); return; }
-  list.innerHTML = '';
-  for (const item of items.slice(0, 20)) {
-    const div = document.createElement('div');
-    div.className = 'catalyst-item';
-    const dt = item.date || item.reportDate || '';
-    const sym = item.symbol || item.ticker || '';
-    const name = item.company || item.name || '';
-    const eps = item.epsEstimate ? `EPS est. $${item.epsEstimate}` : '';
-    div.innerHTML =
-      `<span class="ci-date">${dt.slice(5)||dt}</span>
-       <span class="ci-sym">${esc(sym)}</span>
-       <div class="ci-info">
-         <div class="ci-name">${esc(name||sym)}</div>
-         ${eps ? `<div class="ci-note">${esc(eps)}</div>` : ''}
-       </div>`;
-    list.appendChild(div);
-  }
-}
-
-function renderCatalystsFromNews() {
-  // Extract earnings mentions from news feed
-  const list = document.getElementById('catalyst-list');
-  const earnNews = _feedItems.filter(i => i.tag === 'earn').slice(0, 12);
-  if (!earnNews.length) {
-    list.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px">No earnings news loaded yet.</div>';
-    return;
-  }
-  list.innerHTML = '';
-  for (const item of earnNews) {
-    const div = document.createElement('div');
-    div.className = 'catalyst-item';
-    // Try to extract ticker from headline
-    const tickerMatch = item.hl.match(/\b([A-Z]{2,5})\b/);
-    const sym = tickerMatch ? tickerMatch[0] : '—';
-    div.innerHTML =
-      `<span class="ci-date">${new Date(item.ts*1000).toLocaleDateString('en',{month:'short',day:'numeric'})}</span>
-       <span class="ci-sym">${esc(sym)}</span>
-       <div class="ci-info"><div class="ci-name">${esc(item.hl.slice(0,80))}</div></div>`;
-    list.appendChild(div);
-  }
-}
-
-// Also pull analysis for mood
-async function pollAnalysis() {
+// ── What to Watch (signals from analysis + earnings news) ──
+let _watchLoaded = false;
+async function pollWatchNext() {
+  if (_watchLoaded) return;
   try {
+    // Pull from analysis signals — forward-looking WHY items
     const r = await fetch('/api/analysis', {cache:'no-store'});
     if (!r.ok) return;
     const raw = await r.json();
     const d = raw.data || raw;
-    if (d.mood) updateMoodBadge(d.mood);
-    if (d.mood) document.getElementById('sb-mood').textContent = d.mood;
-  } catch(e) {}
+
+    const list = document.getElementById('watch-list');
+    list.innerHTML = '';
+
+    const signals = (d.signals || []).filter(s => s?.title);
+    if (!signals.length) {
+      list.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:12px">No signals loaded yet.</div>';
+      return;
+    }
+
+    for (const sig of signals) {
+      const div = document.createElement('div');
+      div.className = 'watch-item';
+      // Determine tag
+      const kind = sig.kind || '';
+      const tagClass = kind === 'vol' ? 'signal' : kind === 'macro' || kind === 'rates' ? 'macro' : 'earn';
+      const tagLabel = kind === 'vol' ? 'VOLATILITY' : kind === 'macro' ? 'MACRO' : kind === 'rates' ? 'RATES' : 'WATCH';
+      div.innerHTML =
+        `<div class="watch-tag ${tagClass}">${tagLabel}</div>
+         <div class="watch-item-title">${esc(sig.title)}</div>
+         <div class="watch-item-why">${esc(sig.simple || sig.expert?.slice(0,120) || '')}</div>`;
+      list.appendChild(div);
+    }
+
+    document.getElementById('watch-meta').textContent = signals.length + ' active';
+    _watchLoaded = true;
+  } catch(e) { console.warn('[watch]', e); }
+}
+
+function setDot(id, on) {
+  const el = document.getElementById('dot-' + id);
+  if (el) el.className = 'sb-dot ' + (on ? 'on' : 'off');
+}
+function fmtTokens(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
+  if (n >= 1000) return (n/1000).toFixed(1)+'K';
+  return String(n);
 }
 
 // ── Boot ──
-pollWarRoom();
-pollNews();
-pollJarvis();
 pollAnalysis();
-pollCatalysts();
+pollJarvis();
+pollOperatives();
+pollWatchNext();
 
-setInterval(pollWarRoom,   5000);
-setInterval(pollNews,     60000);
-setInterval(pollJarvis,   15000);
-setInterval(pollAnalysis, 60000);
-setInterval(pollCatalysts,300000);
+setInterval(pollAnalysis,    60000);
+setInterval(pollJarvis,      15000);
+setInterval(pollOperatives,   5000);
+setInterval(pollWatchNext,   60000);
 </script>
 </body>
 </html>
