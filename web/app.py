@@ -1,10 +1,14 @@
-import os, json, time, asyncio, math
+import os, json, re, time, asyncio, math
 from pathlib import Path
 import requests
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -1842,6 +1846,215 @@ async def api_sports_props(league: str, event_id: str):
         return await asyncio.to_thread(sports_event_props, league.lower(), event_id)
     except Exception as e:
         return JSONResponse({"error": str(e), "props": []}, status_code=500)
+
+
+# ── Picks engine ────────────────────────────────────────────────────────────
+_PICKS_WATCHLIST = [
+    ("AAPL","Apple"),("NVDA","NVIDIA"),("TSLA","Tesla"),("MSFT","Microsoft"),
+    ("META","Meta"),("AMZN","Amazon"),("GOOGL","Alphabet"),("AMD","AMD"),
+    ("SPY","S&P 500 ETF"),("QQQ","Nasdaq ETF"),("NFLX","Netflix"),("PLTR","Palantir"),
+    ("CRM","Salesforce"),("ORCL","Oracle"),("COIN","Coinbase"),("MSTR","MicroStrategy"),
+]
+
+async def _fetch_quote(sym: str, fk: str) -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.get(f"https://finnhub.io/api/v1/quote?symbol={sym}&token={fk}")
+            if r.status_code == 200:
+                q = r.json()
+                return {"symbol": sym, "price": q.get("c"), "change": q.get("d"),
+                        "change_pct": q.get("dp"), "high": q.get("h"), "low": q.get("l")}
+    except Exception:
+        pass
+    return {"symbol": sym}
+
+
+@app.get("/api/picks/today")
+async def api_picks_today():
+    cache_key = "picks_today"
+    now = time.time()
+    if cache_key in _cache and now - _cache_ts.get(cache_key, 0) < 900:
+        return _cache[cache_key]
+    try:
+        fk = _cfg.get("finnhub_api_key", "")
+        tasks = [_fetch_quote(sym, fk) for sym, _ in _PICKS_WATCHLIST]
+        quotes_raw = await asyncio.gather(*tasks)
+        name_map = {sym: name for sym, name in _PICKS_WATCHLIST}
+        quotes = [q for q in quotes_raw if q.get("price")]
+        quotes.sort(key=lambda x: abs(x.get("change_pct") or 0), reverse=True)
+        top = quotes[:8]
+
+        mover_lines = "\n".join(
+            f"- {q['symbol']} ({name_map.get(q['symbol'],'')}): "
+            f"${q.get('price',0):.2f}, {q.get('change_pct',0):+.2f}%"
+            for q in top
+        )
+        prompt = (
+            "You are Jarvis at Conviction Capital. Today's biggest movers:\n\n"
+            f"{mover_lines}\n\n"
+            "For each ticker output a JSON array. Each item:\n"
+            '{"symbol":"X","company_name":"Full Name","action":"BUY|HOLD|AVOID|WATCH",'
+            '"thesis":"2-3 sentences: WHY it\'s moving, what it means, what to do",'
+            '"confidence":"HIGH|MEDIUM|LOW"}\n'
+            "Focus on the WHY, not the what. No markdown, just the JSON array."
+        )
+        raw = claude_call(prompt, max_tokens=1000) or _gemini_call(prompt, max_tokens=1000, label="picks")
+        picks = []
+        if raw:
+            try:
+                m = re.search(r'\[.*\]', raw, re.DOTALL)
+                if m:
+                    parsed = json.loads(m.group())
+                    price_map = {q["symbol"]: q for q in quotes}
+                    for p in parsed:
+                        sym = p.get("symbol", "")
+                        picks.append({**price_map.get(sym, {}), **p})
+            except Exception:
+                picks = top
+        result = {"picks": picks or top, "generated_at": int(now), "has_ai": bool(picks)}
+        _cache[cache_key] = result
+        _cache_ts[cache_key] = now
+        return result
+    except Exception as e:
+        return {"picks": [], "error": str(e), "generated_at": int(time.time())}
+
+
+@app.get("/api/picks/movers")
+async def api_picks_movers():
+    cache_key = "picks_movers"
+    now = time.time()
+    if cache_key in _cache and now - _cache_ts.get(cache_key, 0) < 120:
+        return _cache[cache_key]
+    fk = _cfg.get("finnhub_api_key", "")
+    tasks = [_fetch_quote(sym, fk) for sym, _ in _PICKS_WATCHLIST]
+    quotes_raw = await asyncio.gather(*tasks)
+    name_map = {sym: name for sym, name in _PICKS_WATCHLIST}
+    movers = sorted(
+        [q for q in quotes_raw if q.get("price")],
+        key=lambda x: abs(x.get("change_pct") or 0), reverse=True
+    )
+    for m in movers:
+        m["company"] = name_map.get(m["symbol"], "")
+    result = {"movers": movers, "generated_at": int(now)}
+    _cache[cache_key] = result
+    _cache_ts[cache_key] = now
+    return result
+
+
+@app.get("/api/picks/swings")
+async def api_picks_swings():
+    cache_key = "picks_swings"
+    now = time.time()
+    if cache_key in _cache and now - _cache_ts.get(cache_key, 0) < 1800:
+        return _cache[cache_key]
+    prompt = (
+        "You are Jarvis at Conviction Capital. Identify 6 high-conviction swing trade setups "
+        "for the next 3-7 days based on current market conditions (May 2026).\n\n"
+        "Output a JSON array. Each item:\n"
+        '{"symbol":"X","type":"BUY|SELL|NEUTRAL","timeframe":"3-5 days",'
+        '"reason":"Why this setup is compelling right now (1-2 sentences)",'
+        '"entry_zone":"price or range","stop_loss":"price","target":"price"}\n'
+        "No markdown, just JSON array."
+    )
+    raw = claude_call(prompt, max_tokens=800) or _gemini_call(prompt, max_tokens=800, label="swings")
+    signals = []
+    if raw:
+        try:
+            m = re.search(r'\[.*\]', raw, re.DOTALL)
+            if m:
+                signals = json.loads(m.group())
+        except Exception:
+            pass
+    result = {"signals": signals, "generated_at": int(now)}
+    _cache[cache_key] = result
+    _cache_ts[cache_key] = now
+    return result
+
+
+# ── Screener ─────────────────────────────────────────────────────────────────
+@app.post("/api/screener/run")
+async def api_screener_run(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    query = (body.get("query") or "strong momentum stocks")[:300]
+    prompt = (
+        f'You are a professional equity analyst. Screen for: "{query}"\n\n'
+        "Identify 6-8 specific publicly-traded US stocks that match right now.\n"
+        "Output a JSON array. Each item:\n"
+        '{"symbol":"X","company_name":"Full Name","sector":"Technology|Finance|Energy|etc",'
+        '"why_it_matches":"1-2 sentences explaining conviction",'
+        '"conviction":"HIGH|MEDIUM|LOW"}\n'
+        "No markdown, just JSON array."
+    )
+    raw = claude_call(prompt, max_tokens=700) or _gemini_call(prompt, max_tokens=700, label="screener")
+    results = []
+    if raw:
+        try:
+            m = re.search(r'\[.*\]', raw, re.DOTALL)
+            if m:
+                results = json.loads(m.group())
+        except Exception:
+            pass
+    return {"results": results, "query": query, "generated_at": int(time.time())}
+
+
+# ── Quote endpoint ────────────────────────────────────────────────────────────
+@app.get("/api/quote/{symbol}")
+async def api_quote(symbol: str):
+    sym = symbol.upper().strip()[:10]
+    cache_key = f"quote_{sym}"
+    now = time.time()
+    if cache_key in _cache and now - _cache_ts.get(cache_key, 0) < 30:
+        return _cache[cache_key]
+    q = await _fetch_quote(sym, _cfg.get("finnhub_api_key", ""))
+    _cache[cache_key] = q
+    _cache_ts[cache_key] = now
+    return q
+
+
+# ── Chart AI analysis ─────────────────────────────────────────────────────────
+@app.post("/api/charts/analyze")
+async def api_charts_analyze(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    sym = (body.get("symbol") or "SPY").upper().strip()[:10]
+    interval = body.get("interval", "1W")
+
+    # Get current quote for context
+    q = await _fetch_quote(sym, _cfg.get("finnhub_api_key", ""))
+    price_ctx = (
+        f"Current price: ${q.get('price', 'unknown')}, "
+        f"change: {q.get('change_pct', 0):+.2f}%, "
+        f"high: ${q.get('high', 'unknown')}, low: ${q.get('low', 'unknown')}"
+        if q.get("price") else "Price data unavailable"
+    )
+
+    prompt = (
+        f"You are Jarvis, technical analyst at Conviction Capital. Analyze {sym} on the {interval} timeframe.\n"
+        f"{price_ctx}\n\n"
+        "Provide a structured technical analysis. Output JSON:\n"
+        '{"bias":"BULLISH|BEARISH|NEUTRAL",'
+        '"summary":"1 sentence conviction verdict",'
+        '"technical":"2-3 sentences on price action, trend, momentum",'
+        '"key_levels":[{"label":"Support 1","price":"XXX","type":"support"},'
+        '{"label":"Resistance 1","price":"XXX","type":"resistance"}],'
+        '"catalyst":"Key near-term events or catalysts to watch",'
+        '"trade_idea":"Specific actionable trade idea with entry, stop, target"}\n'
+        "No markdown, just JSON."
+    )
+    raw = claude_call(prompt, max_tokens=600) or _gemini_call(prompt, max_tokens=600, label="chart_analyze")
+    if raw:
+        try:
+            m = re.search(r'\{.*\}', raw, re.DOTALL)
+            if m:
+                return json.loads(m.group())
+        except Exception:
+            pass
+    return {"bias": "NEUTRAL", "summary": "Analysis unavailable — configure API keys.", "technical": raw or ""}
 
 
 _static_dir = Path(__file__).parent / "static"

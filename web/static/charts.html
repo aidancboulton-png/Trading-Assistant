@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Charts · Conviction Capital</title>
+<style>
+:root {
+  --bg:#0c0c0c;--s1:#111;--s2:#161616;--s3:#1c1c1c;--border:#1e1e1e;--border2:#2a2a2a;
+  --text:#e8e8e8;--muted:#666;--muted2:#444;--gold:#c9a44c;--gold2:#f0c75e;
+  --gold-bg:rgba(201,164,76,0.08);--up:#22c55e;--dn:#ef4444;--blue:#3b82f6;--amber:#f59e0b;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;height:100%}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Topbar ── */
+.topbar{height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--border);background:var(--s1);position:sticky;top:0;z-index:50}
+.brand{font-size:11px;font-weight:800;letter-spacing:.18em;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav{display:flex;align-items:center;gap:2px;margin-left:20px}
+.nav a{font-size:11px;font-weight:600;color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:5px;transition:color .15s;letter-spacing:.03em}
+.nav a:hover{color:var(--text)}
+.nav a.here{color:var(--gold);background:var(--gold-bg)}
+.topbar-r{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--muted)}
+#clock{color:var(--text);font-variant-numeric:tabular-nums}
+
+/* ── Layout ── */
+.body-wrap{display:flex;height:calc(100vh - 46px);overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:260px;flex-shrink:0;border-right:1px solid var(--border);background:var(--s1);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-search{padding:14px 14px 10px}
+.search-box{display:flex;gap:8px}
+.sym-input{flex:1;background:var(--s3);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s}
+.sym-input:focus{border-color:var(--gold)}
+.sym-input::placeholder{color:var(--muted2)}
+.btn-go{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;border:0;border-radius:7px;padding:9px 14px;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.04em}
+.watchlist-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--muted2);padding:10px 14px 6px;text-transform:uppercase;border-top:1px solid var(--border)}
+.watchlist{flex:1;overflow-y:auto}
+.watch-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--border)}
+.watch-item:hover{background:var(--s2)}
+.watch-item.active{background:var(--gold-bg);border-left:2px solid var(--gold)}
+.wi-sym{font-size:13px;font-weight:800}
+.wi-name{font-size:10px;color:var(--muted);margin-top:2px}
+.wi-right{text-align:right}
+.wi-price{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.wi-chg{font-size:10px;font-weight:600}
+.chg-up{color:var(--up)}
+.chg-dn{color:var(--dn)}
+
+/* ── Chart area ── */
+.chart-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chart-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.chart-sym{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.chart-name{font-size:12px;color:var(--muted);margin-top:2px}
+.chart-price-row{display:flex;align-items:baseline;gap:10px}
+.chart-price{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.chart-chg{font-size:14px;font-weight:700}
+.interval-bar{display:flex;gap:4px}
+.iv-btn{padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:5px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
+.iv-btn:hover{border-color:var(--gold);color:var(--gold)}
+.iv-btn.active{background:var(--gold-bg);border-color:var(--gold);color:var(--gold)}
+.chart-frame{flex:1;position:relative;overflow:hidden}
+#tv-widget{width:100%;height:100%;border:none}
+.chart-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);flex-direction:column;gap:12px;color:var(--muted)}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite}
+
+/* ── AI panel ── */
+.ai-panel{width:300px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--s1);overflow:hidden}
+.ai-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ai-title{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.ai-pulse{width:6px;height:6px;border-radius:50%;background:var(--up);animation:pulse 2s infinite}
+.ai-body{flex:1;overflow-y:auto;padding:16px}
+.ai-section{margin-bottom:18px}
+.ai-section-title{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.ai-text{font-size:12px;color:var(--muted);line-height:1.7}
+.ai-text strong{color:var(--text)}
+.verdict-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.verdict-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.verdict-val{font-size:16px;font-weight:800;margin-bottom:6px}
+.verdict-bullish{color:var(--up)}
+.verdict-bearish{color:var(--dn)}
+.verdict-neutral{color:var(--amber)}
+.verdict-sub{font-size:11px;color:var(--muted);line-height:1.5}
+.key-levels{display:flex;flex-direction:column;gap:6px}
+.level-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--s2);border-radius:5px;font-size:11px;border:1px solid var(--border)}
+.level-name{color:var(--muted);font-weight:600}
+.level-val{font-weight:700;font-variant-numeric:tabular-nums}
+.btn-analyze{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;border:0;padding:10px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.06em;transition:opacity .15s;margin-top:auto;flex-shrink:0;margin:12px 16px;width:calc(100% - 32px)}
+.btn-analyze:hover{opacity:.85}
+.btn-analyze:disabled{opacity:.4;cursor:not-allowed}
+.ai-loading{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:10px}
+.dots{display:flex;gap:4px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:bounce .8s infinite ease-in-out}
+.dot:nth-child(2){animation-delay:.15s}
+.dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:scale(0.8);opacity:.5}40%{transform:scale(1.2);opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:0">
+    <div class="brand">CONVICTION CAPITAL</div>
+    <nav class="nav">
+      <a href="/mainframe.html">War Room</a>
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/picks.html">Picks</a>
+      <a href="/screener.html">Screener</a>
+      <a href="/charts.html" class="here">Charts</a>
+      <a href="/intel-bot.html">Intel Bot</a>
+      <a href="/predmarket.html">Pred Markets</a>
+      <a href="/newsbrief.html">News</a>
+      <a href="/sports.html">Sports</a>
+    </nav>
+  </div>
+  <div class="topbar-r">
+    <span id="clock">--:--:--</span>
+  </div>
+</div>
+
+<div class="body-wrap">
+  <!-- Sidebar watchlist -->
+  <div class="sidebar">
+    <div class="sidebar-search">
+      <div class="search-box">
+        <input type="text" class="sym-input" id="sym-input" placeholder="Symbol…" />
+        <button class="btn-go" onclick="loadChart()">Go</button>
+      </div>
+    </div>
+    <div class="watchlist-label">Watchlist</div>
+    <div class="watchlist" id="watchlist"></div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-area">
+    <div class="chart-header">
+      <div>
+        <div class="chart-sym" id="hdr-sym">—</div>
+        <div class="chart-name" id="hdr-name"></div>
+      </div>
+      <div>
+        <div class="chart-price-row">
+          <div class="chart-price" id="hdr-price">—</div>
+          <div class="chart-chg" id="hdr-chg"></div>
+        </div>
+      </div>
+      <div class="interval-bar">
+        <button class="iv-btn" data-iv="1D" onclick="setInterval_(this)">1D</button>
+        <button class="iv-btn active" data-iv="1W" onclick="setInterval_(this)">1W</button>
+        <button class="iv-btn" data-iv="1M" onclick="setInterval_(this)">1M</button>
+        <button class="iv-btn" data-iv="3M" onclick="setInterval_(this)">3M</button>
+        <button class="iv-btn" data-iv="1Y" onclick="setInterval_(this)">1Y</button>
+      </div>
+    </div>
+    <div class="chart-frame">
+      <div class="chart-loading" id="chart-loading">
+        <div class="spinner"></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Loading chart</div>
+      </div>
+      <iframe id="tv-widget" allowtransparency="true" frameborder="0" scrolling="no"
+        src="" style="display:none"></iframe>
+    </div>
+  </div>
+
+  <!-- AI Analysis panel -->
+  <div class="ai-panel">
+    <div class="ai-header">
+      <span class="ai-title">AI Analysis</span>
+      <span class="ai-pulse"></span>
+    </div>
+    <div class="ai-body" id="ai-body">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;gap:10px;color:var(--muted);text-align:center">
+        <div style="font-size:28px">📊</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Select a ticker</div>
+        <div style="font-size:12px;line-height:1.5">Pick any stock from the watchlist or search above to get AI-powered technical analysis.</div>
+      </div>
+    </div>
+    <button class="btn-analyze" id="analyze-btn" onclick="analyzeSymbol()" style="display:none">Analyze with Jarvis</button>
+  </div>
+</div>
+
+<script>
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US',{hour12:false});
+}, 1000);
+
+// Default watchlist
+const DEFAULT_WATCHLIST = [
+  {sym:'SPY',  name:'S&P 500 ETF'},
+  {sym:'QQQ',  name:'Nasdaq 100 ETF'},
+  {sym:'NVDA', name:'NVIDIA Corp'},
+  {sym:'AAPL', name:'Apple Inc'},
+  {sym:'TSLA', name:'Tesla Inc'},
+  {sym:'MSFT', name:'Microsoft'},
+  {sym:'META', name:'Meta Platforms'},
+  {sym:'AMZN', name:'Amazon'},
+  {sym:'AMD',  name:'Advanced Micro Devices'},
+  {sym:'GOOGL',name:'Alphabet'},
+  {sym:'BTC',  name:'Bitcoin'},
+  {sym:'GLD',  name:'Gold ETF'},
+];
+
+let activeSym = 'SPY';
+let activeInterval = '1W';
+let priceCache = {};
+
+// Interval → TradingView range map
+const IV_MAP = {
+  '1D': 'D', '1W': 'W', '1M': 'M', '3M': '3M', '1Y': '12M'
+};
+
+function setInterval_(el) {
+  activeInterval = el.dataset.iv;
+  document.querySelectorAll('.iv-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  embedChart(activeSym, activeInterval);
+}
+
+function embedChart(sym, interval) {
+  const frame = document.getElementById('tv-widget');
+  const loading = document.getElementById('chart-loading');
+  loading.style.display = 'flex';
+  frame.style.display = 'none';
+
+  const range = IV_MAP[interval] || 'W';
+  // TradingView embed — free, no API key required
+  const src = `https://s.tradingview.com/widgetembed/?frameElementId=tv-widget&symbol=${encodeURIComponent(sym)}&interval=${range}&hidesidetoolbar=0&hidetoptoolbar=0&symboledit=1&saveimage=0&toolbarbg=0c0c0c&studies=[]&theme=dark&style=1&timezone=exchange&withdateranges=1&showpopupbutton=0&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=conviction-capital`;
+
+  frame.onload = () => {
+    loading.style.display = 'none';
+    frame.style.display = '';
+  };
+  frame.src = src;
+}
+
+async function loadPrice(sym) {
+  try {
+    const r = await fetch(`/api/quote/${sym}`);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function selectSym(sym, name) {
+  activeSym = sym;
+
+  // Update header
+  document.getElementById('hdr-sym').textContent = sym;
+  document.getElementById('hdr-name').textContent = name || '';
+  document.getElementById('hdr-price').textContent = '—';
+  document.getElementById('hdr-chg').textContent = '';
+
+  // Highlight watchlist
+  document.querySelectorAll('.watch-item').forEach(w => {
+    w.classList.toggle('active', w.dataset.sym === sym);
+  });
+
+  // Embed chart
+  embedChart(sym, activeInterval);
+
+  // Show analyze button
+  document.getElementById('analyze-btn').style.display = '';
+
+  // Load price
+  const q = await loadPrice(sym);
+  if (q && q.price) {
+    const p = Number(q.price).toFixed(2);
+    const pct = q.change_pct;
+    const isUp = (pct || 0) >= 0;
+    document.getElementById('hdr-price').textContent = '$' + p;
+    const chgEl = document.getElementById('hdr-chg');
+    chgEl.textContent = pct != null ? (isUp ? '+' : '') + Number(pct).toFixed(2) + '%' : '';
+    chgEl.className = 'chart-chg ' + (isUp ? 'chg-up' : 'chg-dn');
+    priceCache[sym] = q;
+  }
+
+  // Reset AI panel
+  document.getElementById('ai-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:180px;gap:10px;color:var(--muted);text-align:center">
+      <div style="font-size:12px;line-height:1.6">Hit <strong style="color:var(--gold)">Analyze with Jarvis</strong> to get AI technical analysis, key levels, and a conviction verdict for ${sym}.</div>
+    </div>`;
+}
+
+async function analyzeSymbol() {
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+  document.getElementById('ai-body').innerHTML = `
+    <div class="ai-loading">
+      <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      <span>Jarvis is analyzing ${activeSym}…</span>
+    </div>`;
+
+  try {
+    const r = await fetch('/api/charts/analyze', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({symbol: activeSym, interval: activeInterval})
+    });
+    const d = await r.json();
+    renderAnalysis(d);
+  } catch(e) {
+    document.getElementById('ai-body').innerHTML = `<div style="padding:16px;font-size:12px;color:var(--dn)">Analysis failed: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Re-analyze';
+  }
+}
+
+function renderAnalysis(d) {
+  const bias = (d.bias || 'NEUTRAL').toUpperCase();
+  const biasClass = bias === 'BULLISH' ? 'verdict-bullish' : bias === 'BEARISH' ? 'verdict-bearish' : 'verdict-neutral';
+
+  const levels = d.key_levels || [];
+  const levelsHtml = levels.length ? `
+    <div class="ai-section">
+      <div class="ai-section-title">Key Levels</div>
+      <div class="key-levels">
+        ${levels.map(l => `
+          <div class="level-row">
+            <span class="level-name">${l.label || l.name || '—'}</span>
+            <span class="level-val" style="color:${(l.type||'').toLowerCase().includes('support') ? 'var(--up)' : (l.type||'').toLowerCase().includes('resist') ? 'var(--dn)' : 'var(--text)'}">${l.price ? '$'+l.price : l.value || '—'}</span>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  document.getElementById('ai-body').innerHTML = `
+    <div class="verdict-card">
+      <div class="verdict-label">Bias</div>
+      <div class="verdict-val ${biasClass}">${bias}</div>
+      <div class="verdict-sub">${d.summary || ''}</div>
+    </div>
+    ${d.technical ? `<div class="ai-section">
+      <div class="ai-section-title">Technical Setup</div>
+      <div class="ai-text">${d.technical}</div>
+    </div>` : ''}
+    ${levelsHtml}
+    ${d.catalyst ? `<div class="ai-section">
+      <div class="ai-section-title">Catalysts to Watch</div>
+      <div class="ai-text">${d.catalyst}</div>
+    </div>` : ''}
+    ${d.trade_idea ? `<div class="ai-section">
+      <div class="ai-section-title">Trade Idea</div>
+      <div class="ai-text">${d.trade_idea}</div>
+    </div>` : ''}`;
+}
+
+function loadChart() {
+  const sym = document.getElementById('sym-input').value.trim().toUpperCase();
+  if (!sym) return;
+  selectSym(sym, '');
+}
+
+document.getElementById('sym-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadChart();
+});
+
+// Render watchlist
+function renderWatchlist() {
+  const wl = document.getElementById('watchlist');
+  wl.innerHTML = DEFAULT_WATCHLIST.map(w => `
+    <div class="watch-item${w.sym === activeSym ? ' active' : ''}" data-sym="${w.sym}" onclick="selectSym('${w.sym}','${w.name}')">
+      <div>
+        <div class="wi-sym">${w.sym}</div>
+        <div class="wi-name">${w.name}</div>
+      </div>
+      <div class="wi-right" id="wp-${w.sym}">
+        <div class="wi-price">—</div>
+        <div class="wi-chg">—</div>
+      </div>
+    </div>`).join('');
+}
+
+// Load prices for watchlist items
+async function refreshWatchlistPrices() {
+  for (const w of DEFAULT_WATCHLIST) {
+    const q = await loadPrice(w.sym);
+    if (q && q.price) {
+      const el = document.getElementById('wp-' + w.sym);
+      if (el) {
+        const pct = q.change_pct;
+        const isUp = (pct || 0) >= 0;
+        el.innerHTML = `
+          <div class="wi-price">$${Number(q.price).toFixed(2)}</div>
+          <div class="wi-chg ${isUp ? 'chg-up' : 'chg-dn'}">${pct != null ? (isUp?'+':'') + Number(pct).toFixed(2) + '%' : '—'}</div>`;
+      }
+    }
+  }
+}
+
+// Init
+renderWatchlist();
+selectSym('SPY', 'S&P 500 ETF');
+refreshWatchlistPrices();
+setInterval(refreshWatchlistPrices, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Screener · Conviction Capital</title>
+<style>
+:root {
+  --bg:#0c0c0c;--s1:#111;--s2:#161616;--s3:#1c1c1c;--border:#1e1e1e;--border2:#2a2a2a;
+  --text:#e8e8e8;--muted:#666;--muted2:#444;--gold:#c9a44c;--gold2:#f0c75e;
+  --gold-bg:rgba(201,164,76,0.08);--up:#22c55e;--dn:#ef4444;--blue:#3b82f6;--amber:#f59e0b;--purple:#a855f7;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+.topbar{height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--border);background:var(--s1);position:sticky;top:0;z-index:50}
+.brand{font-size:11px;font-weight:800;letter-spacing:.18em;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav{display:flex;align-items:center;gap:2px;margin-left:20px}
+.nav a{font-size:11px;font-weight:600;color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:5px;transition:color .15s;letter-spacing:.03em}
+.nav a:hover{color:var(--text)}
+.nav a.here{color:var(--gold);background:var(--gold-bg)}
+.topbar-r{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--muted)}
+#clock{color:var(--text);font-variant-numeric:tabular-nums}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Hero ── */
+.hero{padding:32px 28px 24px;max-width:1360px;margin:0 auto}
+.hero h1{font-size:28px;font-weight:800;letter-spacing:-.5px;line-height:1.15}
+.hero h1 .accent{background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--muted);font-size:13px;margin-top:6px;max-width:560px;line-height:1.6}
+
+/* ── Search box ── */
+.search-wrap{max-width:1360px;margin:0 auto;padding:0 28px 28px}
+.search-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:24px 28px}
+.search-title{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:14px}
+.search-row{display:flex;gap:12px;align-items:flex-end}
+.query-wrap{flex:1}
+.query-input{width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;font-size:14px;color:var(--text);font-family:inherit;resize:none;outline:none;transition:border-color .15s;height:52px}
+.query-input:focus{border-color:var(--gold)}
+.query-input::placeholder{color:var(--muted2)}
+.btn-run{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;border:0;padding:14px 24px;border-radius:8px;font-size:12px;font-weight:800;letter-spacing:.06em;cursor:pointer;white-space:nowrap;height:52px;transition:opacity .15s}
+.btn-run:hover{opacity:.85}
+.btn-run:disabled{opacity:.4;cursor:not-allowed}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.preset{padding:6px 14px;background:var(--s3);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
+.preset:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ── Results ── */
+.main{max-width:1360px;margin:0 auto;padding:0 28px 40px}
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.results-header h2{font-size:16px;font-weight:800}
+.result-count{font-size:12px;color:var(--muted)}
+.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.result-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;transition:border-color .15s}
+.result-card:hover{border-color:var(--border2)}
+.result-card.HIGH{border-left:3px solid var(--up)}
+.result-card.MEDIUM{border-left:3px solid var(--amber)}
+.result-card.LOW{border-left:3px solid var(--muted)}
+.rc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.rc-sym{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.rc-name{font-size:11px;color:var(--muted);margin-top:3px}
+.rc-badge{padding:4px 10px;border-radius:4px;font-size:10px;font-weight:800;letter-spacing:.08em}
+.badge-HIGH{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:var(--up)}
+.badge-MEDIUM{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--amber)}
+.badge-LOW{background:rgba(102,102,102,.1);border:1px solid rgba(102,102,102,.2);color:var(--muted)}
+.rc-match{font-size:12px;color:var(--muted);line-height:1.6}
+.rc-sector{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:3px 10px;background:var(--s3);border-radius:12px;font-size:10px;font-weight:600;color:var(--muted);border:1px solid var(--border)}
+
+/* ── State ── */
+.state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--muted)}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite}
+.state .big{font-size:15px;font-weight:700;color:var(--text)}
+.state .sub{font-size:12px;color:var(--muted);text-align:center;max-width:340px;line-height:1.55}
+
+/* ── Sector filters ── */
+.filter-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.filter-chip{padding:5px 12px;background:var(--s3);border:1px solid var(--border);border-radius:4px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.filter-chip:hover{border-color:var(--gold);color:var(--gold)}
+.filter-chip.active{background:var(--gold-bg);border-color:var(--gold);color:var(--gold)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:0">
+    <div class="brand">CONVICTION CAPITAL</div>
+    <nav class="nav">
+      <a href="/mainframe.html">War Room</a>
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/picks.html">Picks</a>
+      <a href="/screener.html" class="here">Screener</a>
+      <a href="/charts.html">Charts</a>
+      <a href="/intel-bot.html">Intel Bot</a>
+      <a href="/predmarket.html">Pred Markets</a>
+      <a href="/newsbrief.html">News</a>
+      <a href="/sports.html">Sports</a>
+    </nav>
+  </div>
+  <div class="topbar-r">
+    <span id="clock">--:--:--</span>
+  </div>
+</div>
+
+<div class="hero">
+  <h1>AI <span class="accent">Screener</span></h1>
+  <p>Describe what you're looking for in plain English. Jarvis identifies matching stocks and explains exactly why each one qualifies — no criteria forms, no noise.</p>
+</div>
+
+<div class="search-wrap">
+  <div class="search-card">
+    <div class="search-title">What are you looking for?</div>
+    <div class="search-row">
+      <div class="query-wrap">
+        <input type="text" class="query-input" id="query-input" placeholder="e.g. high momentum tech stocks breaking out, undervalued financials with strong earnings, AI infrastructure plays with tailwinds…" />
+      </div>
+      <button class="btn-run" id="run-btn" onclick="runScreen()">Run Screen</button>
+    </div>
+    <div class="presets">
+      <div class="preset" onclick="setPreset(this)">AI &amp; Data Centers</div>
+      <div class="preset" onclick="setPreset(this)">Beaten-down value plays</div>
+      <div class="preset" onclick="setPreset(this)">Earnings momentum</div>
+      <div class="preset" onclick="setPreset(this)">Defensive in risk-off</div>
+      <div class="preset" onclick="setPreset(this)">Energy infrastructure</div>
+      <div class="preset" onclick="setPreset(this)">Short squeeze candidates</div>
+      <div class="preset" onclick="setPreset(this)">Small cap breakouts</div>
+      <div class="preset" onclick="setPreset(this)">Fed rate sensitivity</div>
+      <div class="preset" onclick="setPreset(this)">Consumer spending plays</div>
+    </div>
+  </div>
+</div>
+
+<div class="main" id="results-wrap" style="display:none">
+  <div class="results-header">
+    <h2 id="results-title">Results</h2>
+    <span class="result-count" id="result-count"></span>
+  </div>
+  <div class="filter-row" id="sector-filters"></div>
+  <div id="results-container" class="results-grid"></div>
+</div>
+
+<div class="main" id="initial-state">
+  <div class="state">
+    <div style="font-size:36px">🔍</div>
+    <div class="big">Describe your thesis above</div>
+    <div class="sub">Type what you're looking for or pick a preset. Jarvis will find matching stocks and explain the conviction case for each.</div>
+  </div>
+</div>
+
+<script>
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US',{hour12:false});
+}, 1000);
+
+function setPreset(el) {
+  document.getElementById('query-input').value = el.textContent.trim();
+  document.querySelectorAll('.preset').forEach(p => p.style.fontWeight = '600');
+  el.style.fontWeight = '800';
+  document.getElementById('query-input').focus();
+}
+
+document.getElementById('query-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runScreen();
+});
+
+let allResults = [];
+
+async function runScreen() {
+  const query = document.getElementById('query-input').value.trim();
+  if (!query) return;
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = 'Screening…';
+  document.getElementById('initial-state').style.display = 'none';
+  document.getElementById('results-wrap').style.display = '';
+  document.getElementById('results-title').textContent = `Screening for: "${query}"`;
+  document.getElementById('result-count').textContent = '';
+  document.getElementById('sector-filters').innerHTML = '';
+  document.getElementById('results-container').innerHTML = `
+    <div class="state" style="grid-column:1/-1">
+      <div class="spinner"></div>
+      <div class="big">Jarvis is screening markets</div>
+      <div class="sub">Analyzing stocks against your criteria…</div>
+    </div>`;
+
+  try {
+    const r = await fetch('/api/screener/run', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({query})
+    });
+    const d = await r.json();
+    allResults = d.results || [];
+    renderResults(allResults);
+  } catch(e) {
+    document.getElementById('results-container').innerHTML = `
+      <div class="state" style="grid-column:1/-1">
+        <div class="big">Screen failed</div>
+        <div class="sub">${e.message}</div>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Screen';
+  }
+}
+
+function renderResults(results) {
+  document.getElementById('result-count').textContent = `${results.length} matches`;
+
+  // Build sector filters
+  const sectors = [...new Set(results.map(r => r.sector).filter(Boolean))];
+  const filterRow = document.getElementById('sector-filters');
+  filterRow.innerHTML = '';
+  if (sectors.length > 1) {
+    const all = document.createElement('div');
+    all.className = 'filter-chip active';
+    all.textContent = 'All';
+    all.onclick = () => { filterBy(null, all); };
+    filterRow.appendChild(all);
+    sectors.forEach(s => {
+      const chip = document.createElement('div');
+      chip.className = 'filter-chip';
+      chip.textContent = s;
+      chip.onclick = () => filterBy(s, chip);
+      filterRow.appendChild(chip);
+    });
+  }
+
+  if (!results.length) {
+    document.getElementById('results-container').innerHTML = `
+      <div class="state" style="grid-column:1/-1">
+        <div class="big">No matches found</div>
+        <div class="sub">Try broadening your criteria or using a different description.</div>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('results-container').innerHTML = results.map(r => {
+    const conv = r.conviction || 'MEDIUM';
+    return `
+      <div class="result-card ${conv}">
+        <div class="rc-top">
+          <div>
+            <div class="rc-sym">${r.symbol || '—'}</div>
+            <div class="rc-name">${r.company_name || r.company || ''}</div>
+          </div>
+          <div class="rc-badge badge-${conv}">${conv}</div>
+        </div>
+        <div class="rc-match">${r.why_it_matches || r.thesis || 'Matches your criteria.'}</div>
+        ${r.sector ? `<div class="rc-sector">${r.sector}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function filterBy(sector, clickedEl) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  clickedEl.classList.add('active');
+  if (!sector) {
+    renderResultsOnly(allResults);
+  } else {
+    renderResultsOnly(allResults.filter(r => r.sector === sector));
+  }
+}
+
+function renderResultsOnly(results) {
+  document.getElementById('results-container').innerHTML = results.map(r => {
+    const conv = r.conviction || 'MEDIUM';
+    return `
+      <div class="result-card ${conv}">
+        <div class="rc-top">
+          <div>
+            <div class="rc-sym">${r.symbol || '—'}</div>
+            <div class="rc-name">${r.company_name || r.company || ''}</div>
+          </div>
+          <div class="rc-badge badge-${conv}">${conv}</div>
+        </div>
+        <div class="rc-match">${r.why_it_matches || r.thesis || 'Matches your criteria.'}</div>
+        ${r.sector ? `<div class="rc-sector">${r.sector}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
