@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }} · {{ BUSINESS_NAME }}{% endblock %}
+{% block content %}
+<a href="/clients" class="text-sm text-slate-500 hover:text-brand-700">← All clients</a>
+<div class="flex items-baseline justify-between mt-2 mb-6">
+  <h1 class="text-2xl font-semibold">{{ client.name }}</h1>
+  <div class="flex gap-2 text-sm">
+    <a href="/clients/{{ client.id }}/edit" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">Edit</a>
+    <a href="/jobs/new?client_id={{ client.id }}" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">+ Job</a>
+    <a href="/quotes/new?client_id={{ client.id }}" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">+ Quote</a>
+    <a href="/invoices/new?client_id={{ client.id }}" class="px-3 py-1.5 rounded-md bg-brand-600 text-white hover:bg-brand-700">+ Invoice</a>
+  </div>
+</div>
+
+<div class="grid md:grid-cols-3 gap-4 mb-6">
+  <div class="bg-white border border-slate-200 rounded-xl p-4 md:col-span-1">
+    <h2 class="font-semibold mb-3">Contact</h2>
+    <dl class="text-sm space-y-2">
+      {% if client.phone %}<div><dt class="text-slate-500 text-xs">Phone</dt><dd>{{ client.phone }}</dd></div>{% endif %}
+      {% if client.email %}<div><dt class="text-slate-500 text-xs">Email</dt><dd><a href="mailto:{{ client.email }}" class="text-brand-700 hover:underline">{{ client.email }}</a></dd></div>{% endif %}
+      {% if client.address %}<div><dt class="text-slate-500 text-xs">Address</dt><dd>{{ client.address }}</dd></div>{% endif %}
+      {% if client.property_type %}<div><dt class="text-slate-500 text-xs">Property type</dt><dd>{{ client.property_type }}</dd></div>{% endif %}
+    </dl>
+    {% if client.notes %}
+    <div class="mt-4 pt-4 border-t border-slate-200">
+      <dt class="text-slate-500 text-xs mb-1">Notes</dt>
+      <dd class="text-sm whitespace-pre-wrap">{{ client.notes }}</dd>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="md:col-span-2 space-y-4">
+    <section class="bg-white border border-slate-200 rounded-xl">
+      <header class="px-4 py-3 border-b border-slate-200"><h2 class="font-semibold">Jobs</h2></header>
+      {% if jobs %}
+        <ul class="divide-y divide-slate-100">
+        {% for j in jobs %}
+          <li class="px-4 py-3 flex items-center gap-3">
+            <a href="/jobs/{{ j.id }}" class="flex-1 font-medium hover:text-brand-700">{{ j.title }}</a>
+            <span class="text-xs text-slate-500">{{ j.scheduled_for|fmt_date or '—' }}</span>
+            <span class="badge badge-{{ j.status }}">{{ j.status|fmt_status }}</span>
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}<p class="px-4 py-6 text-sm text-slate-500">No jobs yet.</p>{% endif %}
+    </section>
+
+    <section class="bg-white border border-slate-200 rounded-xl">
+      <header class="px-4 py-3 border-b border-slate-200"><h2 class="font-semibold">Quotes</h2></header>
+      {% if quotes %}
+        <ul class="divide-y divide-slate-100">
+        {% for q in quotes %}
+          <li class="px-4 py-3 flex items-center gap-3">
+            <a href="/quotes/{{ q.id }}" class="flex-1 font-medium hover:text-brand-700">{{ q.number }}</a>
+            <span class="text-sm">{{ q.total|money }}</span>
+            <span class="badge badge-{{ q.status }}">{{ q.status|fmt_status }}</span>
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}<p class="px-4 py-6 text-sm text-slate-500">No quotes yet.</p>{% endif %}
+    </section>
+
+    <section class="bg-white border border-slate-200 rounded-xl">
+      <header class="px-4 py-3 border-b border-slate-200"><h2 class="font-semibold">Invoices</h2></header>
+      {% if invoices %}
+        <ul class="divide-y divide-slate-100">
+        {% for i in invoices %}
+          <li class="px-4 py-3 flex items-center gap-3">
+            <a href="/invoices/{{ i.id }}" class="flex-1 font-medium hover:text-brand-700">{{ i.number }}</a>
+            <span class="text-sm">{{ i.total|money }}</span>
+            <span class="badge badge-{{ i.status }}">{{ i.status|fmt_status }}</span>
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}<p class="px-4 py-6 text-sm text-slate-500">No invoices yet.</p>{% endif %}
+    </section>
+  </div>
+</div>
+
+<form method="post" action="/clients/{{ client.id }}/delete" onsubmit="return confirm('Delete this client and all their jobs, quotes, and invoices?')" class="mt-8">
+  <button class="text-sm text-red-600 hover:text-red-800">Delete client</button>
+</form>
+{% endblock %}

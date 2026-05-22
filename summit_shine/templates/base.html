@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ BUSINESS_NAME }}{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfeff', 100: '#cffafe', 200: '#a5f3fc', 300: '#67e8f9',
+              400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2', 700: '#0e7490',
+              800: '#155e75', 900: '#164e63'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .logo-orb {
+      background:
+        radial-gradient(circle at 30% 30%, #a5f3fc 0%, #22d3ee 35%, #0891b2 80%);
+      box-shadow: 0 0 0 2px #0f172a, 0 4px 20px rgba(34,211,238,.35);
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+      .print-card { box-shadow: none !important; border: none !important; }
+    }
+    .badge { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+    .badge-scheduled  { background: #e0f2fe; color: #0369a1; }
+    .badge-in_progress{ background: #fef3c7; color: #92400e; }
+    .badge-done       { background: #d1fae5; color: #065f46; }
+    .badge-cancelled  { background: #fee2e2; color: #991b1b; }
+    .badge-draft      { background: #f1f5f9; color: #334155; }
+    .badge-sent       { background: #dbeafe; color: #1e40af; }
+    .badge-accepted   { background: #d1fae5; color: #065f46; }
+    .badge-declined   { background: #fee2e2; color: #991b1b; }
+    .badge-paid       { background: #d1fae5; color: #065f46; }
+    .badge-overdue    { background: #fee2e2; color: #991b1b; }
+    .badge-new        { background: #cffafe; color: #155e75; }
+    .badge-contacted  { background: #fef3c7; color: #92400e; }
+    .badge-quoted     { background: #dbeafe; color: #1e40af; }
+    .badge-converted  { background: #d1fae5; color: #065f46; }
+    .badge-dismissed  { background: #f1f5f9; color: #475569; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+{% if user %}
+<nav class="no-print bg-white border-b border-slate-200 sticky top-0 z-10">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4 flex-wrap">
+    <a href="/" class="flex items-center gap-2 mr-2">
+      <span class="inline-block w-8 h-8 rounded-full logo-orb"></span>
+      <span class="font-semibold tracking-wider text-sm">{{ BUSINESS_NAME|upper }}</span>
+    </a>
+    <div class="flex items-center gap-0.5 text-sm">
+      {% set nav_items = [
+        ('/', 'dashboard', 'Dashboard'),
+        ('/clients', 'clients', 'Clients'),
+        ('/jobs', 'jobs', 'Jobs'),
+        ('/quotes', 'quotes', 'Quotes'),
+        ('/invoices', 'invoices', 'Invoices'),
+        ('/requests', 'requests', 'Requests'),
+      ] %}
+      {% for href, key, label in nav_items %}
+        <a href="{{ href }}"
+           class="px-3 py-1.5 rounded-md hover:bg-slate-100 {% if active == key %}bg-brand-50 text-brand-700 font-medium{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+    <div class="ml-auto flex items-center gap-3 text-sm text-slate-500">
+      <a href="/quote-request" target="_blank" class="hover:text-brand-700">Public form ↗</a>
+      <form method="post" action="/logout" class="inline">
+        <button class="hover:text-brand-700">Sign out</button>
+      </form>
+    </div>
+  </div>
+</nav>
+{% endif %}
+<main class="max-w-6xl mx-auto px-4 py-8">
+  {% if request.query_params.get('msg') %}
+  <div class="no-print mb-4 p-3 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
+    {{ request.query_params.get('msg') }}
+  </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>
