@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ BUSINESS_NAME }}{% endblock %}
+{% block content %}
+<div class="flex items-baseline justify-between mb-6">
+  <h1 class="text-2xl font-semibold">Dashboard</h1>
+  <div class="flex gap-2 text-sm">
+    <a href="/clients/new" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">+ Client</a>
+    <a href="/jobs/new" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">+ Job</a>
+    <a href="/quotes/new" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">+ Quote</a>
+    <a href="/invoices/new" class="px-3 py-1.5 rounded-md bg-brand-600 text-white hover:bg-brand-700">+ Invoice</a>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white border border-slate-200 rounded-xl p-4">
+    <div class="text-xs uppercase tracking-wider text-slate-500">Outstanding</div>
+    <div class="text-2xl font-semibold mt-1">{{ outstanding|money }}</div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-xl p-4">
+    <div class="text-xs uppercase tracking-wider text-slate-500">Paid this month</div>
+    <div class="text-2xl font-semibold mt-1">{{ paid_this_month|money }}</div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-xl p-4">
+    <div class="text-xs uppercase tracking-wider text-slate-500">Clients</div>
+    <div class="text-2xl font-semibold mt-1">{{ client_count }}</div>
+  </div>
+  <a href="/requests?status=new" class="bg-white border border-slate-200 rounded-xl p-4 hover:border-brand-400 transition">
+    <div class="text-xs uppercase tracking-wider text-slate-500">New requests</div>
+    <div class="text-2xl font-semibold mt-1 {% if new_request_count %}text-brand-700{% endif %}">{{ new_request_count }}</div>
+  </a>
+</div>
+
+<div class="grid md:grid-cols-2 gap-6">
+  <section class="bg-white border border-slate-200 rounded-xl">
+    <header class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="font-semibold">Upcoming jobs</h2>
+      <a href="/jobs" class="text-sm text-brand-700 hover:underline">All jobs →</a>
+    </header>
+    <div>
+      {% if upcoming %}
+        <ul class="divide-y divide-slate-100">
+        {% for j in upcoming %}
+          <li class="px-4 py-3 flex items-center gap-3">
+            <div class="flex-1 min-w-0">
+              <a href="/jobs/{{ j.id }}" class="font-medium hover:text-brand-700">{{ j.title }}</a>
+              <div class="text-xs text-slate-500 truncate">
+                {{ j.client_name }}{% if j.assigned_to %} · {{ j.assigned_to }}{% endif %}
+              </div>
+            </div>
+            <div class="text-xs text-slate-500 whitespace-nowrap">
+              {% if j.scheduled_for %}{{ j.scheduled_for|fmt_date }}{% else %}—{% endif %}
+            </div>
+            <span class="badge badge-{{ j.status }}">{{ j.status|fmt_status }}</span>
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}
+        <p class="px-4 py-8 text-sm text-slate-500 text-center">No upcoming jobs. <a href="/jobs/new" class="text-brand-700 hover:underline">Schedule one →</a></p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="bg-white border border-slate-200 rounded-xl">
+    <header class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="font-semibold">New quote requests</h2>
+      <a href="/requests" class="text-sm text-brand-700 hover:underline">All requests →</a>
+    </header>
+    <div>
+      {% if new_requests %}
+        <ul class="divide-y divide-slate-100">
+        {% for r in new_requests %}
+          <li class="px-4 py-3">
+            <div class="flex items-center justify-between">
+              <a href="/requests/{{ r.id }}" class="font-medium hover:text-brand-700">{{ r.name }}</a>
+              <span class="text-xs text-slate-500">{{ r.created_at|fmt_date }}</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5">
+              {{ r.service_type or 'Cleaning' }}{% if r.frequency %} · {{ r.frequency }}{% endif %}{% if r.address %} · {{ r.address }}{% endif %}
+            </div>
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}
+        <p class="px-4 py-8 text-sm text-slate-500 text-center">
+          No new requests. Share your public form: <a href="/quote-request" target="_blank" class="text-brand-700 hover:underline">/quote-request</a>
+        </p>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Invoices · {{ BUSINESS_NAME }}{% endblock %}
+{% block content %}
+<div class="flex items-baseline justify-between mb-6">
+  <h1 class="text-2xl font-semibold">Invoices</h1>
+  <a href="/invoices/new" class="px-3 py-1.5 rounded-md bg-brand-600 text-white hover:bg-brand-700 text-sm">+ New invoice</a>
+</div>
+
+<div class="flex gap-1 text-sm mb-4">
+  <a href="/invoices" class="px-3 py-1.5 rounded-md {% if not status %}bg-brand-50 text-brand-700 font-medium{% else %}hover:bg-slate-100{% endif %}">All</a>
+  {% for s in INVOICE_STATUSES %}
+    <a href="/invoices?status={{ s }}" class="px-3 py-1.5 rounded-md {% if status == s %}bg-brand-50 text-brand-700 font-medium{% else %}hover:bg-slate-100{% endif %}">{{ s|fmt_status }}</a>
+  {% endfor %}
+</div>
+
+<div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+  {% if invoices %}
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
+      <tr>
+        <th class="px-4 py-3">Number</th><th class="px-4 py-3">Client</th>
+        <th class="px-4 py-3">Due</th><th class="px-4 py-3">Total</th><th class="px-4 py-3">Status</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+    {% for i in invoices %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3"><a href="/invoices/{{ i.id }}" class="font-medium hover:text-brand-700">{{ i.number }}</a></td>
+        <td class="px-4 py-3 text-slate-600">{{ i.client_name }}</td>
+        <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ i.due_date|fmt_date or '—' }}</td>
+        <td class="px-4 py-3">{{ i.total|money }}</td>
+        <td class="px-4 py-3"><span class="badge badge-{{ i.status }}">{{ i.status|fmt_status }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="px-4 py-12 text-center text-slate-500 text-sm">No invoices yet. <a href="/invoices/new" class="text-brand-700 hover:underline">Create one →</a></p>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Invoice {{ invoice.number }} · {{ BUSINESS_NAME }}{% endblock %}
+{% block content %}
+<div class="no-print">
+  <a href="/invoices" class="text-sm text-slate-500 hover:text-brand-700">← All invoices</a>
+  <div class="flex items-baseline justify-between mt-2 mb-4">
+    <div>
+      <h1 class="text-2xl font-semibold">Invoice {{ invoice.number }}</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        <a href="/clients/{{ invoice.client_id }}" class="hover:text-brand-700">{{ invoice.client_name }}</a>
+         · created {{ invoice.created_at|fmt_date }}
+        {% if invoice.due_date %} · due {{ invoice.due_date|fmt_date }}{% endif %}
+      </p>
+    </div>
+    <div class="flex gap-2 text-sm items-center">
+      <span class="badge badge-{{ invoice.status }}">{{ invoice.status|fmt_status }}</span>
+      <a href="/invoices/{{ invoice.id }}/edit" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">Edit</a>
+      <button onclick="window.print()" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">Print / PDF</button>
+    </div>
+  </div>
+
+  <div class="mb-4 flex flex-wrap gap-2 text-sm">
+    <form method="post" action="/invoices/{{ invoice.id }}/status" class="inline">
+      <input type="hidden" name="status" value="sent">
+      <button class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">Mark sent</button>
+    </form>
+    <form method="post" action="/invoices/{{ invoice.id }}/status" class="inline">
+      <input type="hidden" name="status" value="paid">
+      <button class="px-3 py-1.5 rounded-md border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100">Mark paid</button>
+    </form>
+    <form method="post" action="/invoices/{{ invoice.id }}/status" class="inline">
+      <input type="hidden" name="status" value="overdue">
+      <button class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50">Mark overdue</button>
+    </form>
+  </div>
+</div>
+
+<article class="print-card bg-white border border-slate-200 rounded-xl p-8 max-w-3xl mx-auto">
+  <header class="flex items-start justify-between mb-8 pb-6 border-b border-slate-200">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        {{ logo(40) }}
+        <div>
+          <div class="font-display font-semibold tracking-wide text-brand-800">{{ BUSINESS_NAME|upper }}</div>
+          <div class="text-xs text-slate-500">
+            {% if BUSINESS_EMAIL %}{{ BUSINESS_EMAIL }}{% endif %}
+            {% if BUSINESS_EMAIL and BUSINESS_PHONE %} · {% endif %}
+            {% if BUSINESS_PHONE %}{{ BUSINESS_PHONE }}{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="text-right">
+      <div class="text-xs uppercase tracking-wider text-slate-500">Invoice</div>
+      <div class="text-xl font-semibold">{{ invoice.number }}</div>
+      <div class="text-xs text-slate-500 mt-1">{{ invoice.created_at|fmt_date }}</div>
+      {% if invoice.due_date %}<div class="text-xs text-slate-500">Due {{ invoice.due_date|fmt_date }}</div>{% endif %}
+      {% if invoice.paid_at %}<div class="text-xs text-emerald-700 font-medium mt-1">PAID {{ invoice.paid_at|fmt_date }}</div>{% endif %}
+    </div>
+  </header>
+
+  <div class="mb-6">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">Bill to</div>
+    <div class="font-medium">{{ invoice.client_name }}</div>
+    {% if invoice.client_address %}<div class="text-sm text-slate-600">{{ invoice.client_address }}</div>{% endif %}
+    {% if invoice.client_email %}<div class="text-sm text-slate-600">{{ invoice.client_email }}</div>{% endif %}
+    {% if invoice.client_phone %}<div class="text-sm text-slate-600">{{ invoice.client_phone }}</div>{% endif %}
+  </div>
+
+  <table class="w-full text-sm mb-6">
+    <thead class="text-left text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
+      <tr><th class="py-2">Description</th><th class="py-2 text-right w-20">Qty</th><th class="py-2 text-right w-28">Unit price</th><th class="py-2 text-right w-28">Amount</th></tr>
+    </thead>
+    <tbody>
+    {% for it in items %}
+      <tr class="border-b border-slate-100">
+        <td class="py-3">{{ it.description }}</td>
+        <td class="py-3 text-right">{{ '%g'|format(it.quantity) }}</td>
+        <td class="py-3 text-right">{{ it.unit_price|money }}</td>
+        <td class="py-3 text-right">{{ (it.quantity * it.unit_price)|money }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="flex justify-end">
+    <dl class="text-sm w-64 space-y-1">
+      <div class="flex justify-between"><dt class="text-slate-500">Subtotal</dt><dd>{{ invoice.subtotal|money }}</dd></div>
+      {% if invoice.tax_rate %}
+      <div class="flex justify-between"><dt class="text-slate-500">Tax ({{ (invoice.tax_rate*100)|round(2) }}%)</dt><dd>{{ invoice.tax|money }}</dd></div>
+      {% endif %}
+      <div class="flex justify-between pt-2 border-t border-slate-200 font-semibold text-base"><dt>Total</dt><dd>{{ invoice.total|money }}</dd></div>
+    </dl>
+  </div>
+
+  {% if invoice.notes %}
+  <div class="mt-8 pt-6 border-t border-slate-200">
+    <div class="text-xs uppercase tracking-wider text-slate-500 mb-2">Payment & notes</div>
+    <div class="text-sm whitespace-pre-wrap text-slate-700">{{ invoice.notes }}</div>
+  </div>
+  {% endif %}
+</article>
+
+<form method="post" action="/invoices/{{ invoice.id }}/delete" onsubmit="return confirm('Delete this invoice?')" class="no-print mt-8 max-w-3xl mx-auto">
+  <button class="text-sm text-red-600 hover:text-red-800">Delete invoice</button>
+</form>
+{% endblock %}

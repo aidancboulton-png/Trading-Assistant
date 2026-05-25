@@ -1,0 +1,15 @@
+{
+  "name": "summit_shine",
+  "version": "1.0.0",
+  "description": "A self-hosted, free job-tracking app for a small cleaning business. Like Jobber, but no monthly fee — runs on your own free-tier hosting.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
