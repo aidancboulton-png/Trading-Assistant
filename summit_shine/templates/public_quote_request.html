@@ -4,27 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Request a quote · {{ BUSINESS_NAME }}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { theme: { extend: {
-      colors: {
-        brand: { 50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d' },
-        sage: { 500:'#84cc16' },
-        bone: '#f5f3ee'
-      },
-      fontFamily: {
-        display: ['"Fraunces"', 'ui-serif', 'Georgia', 'serif'],
-        sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif']
-      }
-    }}}
-  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-    .font-display { font-family: 'Fraunces', ui-serif, Georgia, serif; }
-  </style>
+  <link rel="stylesheet" href="/static/tailwind.css">
 </head>
 <body class="{% if embed %}bg-transparent{% else %}bg-gradient-to-b from-bone via-white to-brand-50{% endif %} text-slate-900 min-h-screen">
 <div class="max-w-2xl mx-auto px-4 py-{% if embed %}6{% else %}12{% endif %}">

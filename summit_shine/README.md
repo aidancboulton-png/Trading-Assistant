@@ -21,12 +21,17 @@ A self-hosted, free job-tracking app for a small cleaning business. Like Jobber,
 ## Run locally
 
 ```bash
+# Python deps
 pip install -r summit_shine/requirements.txt
-cd ..  # be at the repo root, so `summit_shine` is importable as a package
+# Build the bundled Tailwind CSS (only needed once, or when you change templates / tailwind.src.css)
+cd summit_shine && npm install && npx tailwindcss -i ./tailwind.src.css -o ./static/tailwind.css --minify && cd ..
+# Run
 SUMMIT_PASSWORD=test SUMMIT_SECRET=dev uvicorn summit_shine.app:app --reload
 ```
 
 Open http://localhost:8000 and sign in with `test`.
+
+The built CSS (`summit_shine/static/tailwind.css`) is checked into the repo, so on a deploy host you only need Python — the Tailwind build is just for local iteration.
 
 ## Environment variables
 
