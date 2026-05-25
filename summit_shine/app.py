@@ -11,6 +11,7 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from . import auth, db
@@ -23,6 +24,8 @@ TAX_RATE = float(os.environ.get("SUMMIT_TAX_RATE", "0") or 0)
 BUSINESS_NAME = os.environ.get("SUMMIT_BUSINESS_NAME", "Summit Shine")
 BUSINESS_EMAIL = os.environ.get("SUMMIT_BUSINESS_EMAIL", "")
 BUSINESS_PHONE = os.environ.get("SUMMIT_BUSINESS_PHONE", "")
+BUSINESS_TAGLINE = os.environ.get("SUMMIT_TAGLINE", "Naturally spotless.")
+SERVICE_AREA = os.environ.get("SUMMIT_SERVICE_AREA", "")
 TEAM = [t.strip() for t in os.environ.get("SUMMIT_TEAM", "Aidan,Partner").split(",") if t.strip()]
 
 JOB_STATUSES = ["scheduled", "in_progress", "done", "cancelled"]
@@ -31,17 +34,17 @@ INVOICE_STATUSES = ["draft", "sent", "paid", "overdue"]
 REQUEST_STATUSES = ["new", "contacted", "quoted", "converted", "dismissed"]
 
 SERVICE_TYPES = [
-    "Standard clean",
+    "Standard / regular clean",
     "Deep clean",
+    "Move-in / move-out clean",
     "End-of-lease clean",
-    "Move-in clean",
     "Office / commercial clean",
-    "Window cleaning",
-    "Carpet cleaning",
-    "Other",
+    "Retail / storefront clean",
+    "Airbnb / short-term turnover",
+    "One-off / special occasion clean",
 ]
 FREQUENCIES = ["One-off", "Weekly", "Fortnightly", "Monthly"]
-PROPERTY_TYPES = ["Residential", "Commercial", "Office", "Retail", "Other"]
+PROPERTY_TYPES = ["House", "Apartment / condo", "Townhouse", "Office", "Retail / storefront", "Other"]
 
 
 def money(value) -> str:
@@ -65,6 +68,27 @@ def fmt_status(value: str) -> str:
     return (value or "").replace("_", " ").title()
 
 
+def logo(size: int = 40, ring: bool = True) -> Markup:
+    """Render the Summit Shine mountain-and-leaf logo as inline SVG."""
+    ring_svg = (
+        f'<circle cx="50" cy="50" r="48" fill="#f5f3ee" stroke="#15803d" stroke-width="2.5"/>'
+        if ring else ''
+    )
+    return Markup(
+        f'<svg viewBox="0 0 100 100" width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg" '
+        f'aria-label="{BUSINESS_NAME} logo" role="img">'
+        f'{ring_svg}'
+        # back range (light sage)
+        '<path d="M12 78 L36 38 L50 56 L62 42 L88 78 Z" fill="#84cc16" opacity="0.5"/>'
+        # front mountain (forest)
+        '<path d="M8 82 L32 42 L46 62 L54 52 L74 82 Z" fill="#15803d"/>'
+        # leaf cresting the highest peak
+        '<path d="M32 42 C28 30 36 18 46 18 C46 28 40 38 32 42 Z" fill="#84cc16"/>'
+        '<path d="M34 40 L42 24" stroke="#15803d" stroke-width="1.2" stroke-linecap="round" fill="none"/>'
+        '</svg>'
+    )
+
+
 TEMPLATES.env.filters["money"] = money
 TEMPLATES.env.filters["fmt_date"] = fmt_date
 TEMPLATES.env.filters["fmt_status"] = fmt_status
@@ -72,6 +96,8 @@ TEMPLATES.env.globals.update(
     BUSINESS_NAME=BUSINESS_NAME,
     BUSINESS_EMAIL=BUSINESS_EMAIL,
     BUSINESS_PHONE=BUSINESS_PHONE,
+    BUSINESS_TAGLINE=BUSINESS_TAGLINE,
+    SERVICE_AREA=SERVICE_AREA,
     CURRENCY=CURRENCY,
     TAX_RATE=TAX_RATE,
     TEAM=TEAM,
@@ -83,6 +109,7 @@ TEMPLATES.env.globals.update(
     FREQUENCIES=FREQUENCIES,
     PROPERTY_TYPES=PROPERTY_TYPES,
     today=lambda: date.today().isoformat(),
+    logo=logo,
 )
 
 
@@ -99,7 +126,7 @@ STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-PUBLIC_PATHS = ("/login", "/logout", "/quote-request", "/health", "/static", "/favicon.ico")
+PUBLIC_PATHS = ("/", "/login", "/logout", "/quote-request", "/health", "/static", "/favicon.ico")
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -170,7 +197,10 @@ async def logout():
 # ============================================================
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def root(request: Request):
+    """Root: marketing landing for visitors, dashboard for the team."""
+    if not auth.is_authenticated(request):
+        return render("public_landing.html", request)
     today = date.today().isoformat()
     upcoming = db.query(
         """SELECT j.*, c.name AS client_name

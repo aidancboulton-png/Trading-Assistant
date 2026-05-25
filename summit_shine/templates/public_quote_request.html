@@ -6,39 +6,50 @@
   <title>Request a quote · {{ BUSINESS_NAME }}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = { theme: { extend: { colors: { brand: {
-      50:'#ecfeff',100:'#cffafe',200:'#a5f3fc',300:'#67e8f9',400:'#22d3ee',
-      500:'#06b6d4',600:'#0891b2',700:'#0e7490',800:'#155e75',900:'#164e63'
-    }}}}}
+    tailwind.config = { theme: { extend: {
+      colors: {
+        brand: { 50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d' },
+        sage: { 500:'#84cc16' },
+        bone: '#f5f3ee'
+      },
+      fontFamily: {
+        display: ['"Fraunces"', 'ui-serif', 'Georgia', 'serif'],
+        sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif']
+      }
+    }}}
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    .logo-orb {
-      background: radial-gradient(circle at 30% 30%, #a5f3fc 0%, #22d3ee 35%, #0891b2 80%);
-      box-shadow: 0 0 0 2px #0f172a, 0 4px 30px rgba(34,211,238,.45);
-    }
+    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+    .font-display { font-family: 'Fraunces', ui-serif, Georgia, serif; }
   </style>
 </head>
-<body class="{% if embed %}bg-transparent{% else %}bg-gradient-to-b from-slate-50 to-brand-50{% endif %} text-slate-900 min-h-screen">
+<body class="{% if embed %}bg-transparent{% else %}bg-gradient-to-b from-bone via-white to-brand-50{% endif %} text-slate-900 min-h-screen">
 <div class="max-w-2xl mx-auto px-4 py-{% if embed %}6{% else %}12{% endif %}">
   {% if not embed %}
   <div class="flex flex-col items-center mb-8">
-    <span class="inline-block w-20 h-20 rounded-full logo-orb mb-4"></span>
-    <h1 class="text-3xl font-semibold tracking-wider">{{ BUSINESS_NAME|upper }}</h1>
-    <p class="text-slate-500 mt-2">Request a free cleaning quote</p>
+    {{ logo(72) }}
+    <h1 class="font-display text-3xl font-semibold tracking-wide text-brand-800 mt-4">{{ BUSINESS_NAME|upper }}</h1>
+    <p class="text-slate-600 mt-2">Request a free cleaning quote</p>
+    <p class="text-xs text-slate-500 mt-1">Plant-based · Non-toxic · Kid &amp; pet safe</p>
   </div>
   {% endif %}
 
   {% if submitted %}
-    <div class="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">
-      <div class="text-4xl mb-3">✨</div>
-      <h2 class="text-xl font-semibold mb-2">Thanks — we've got your request</h2>
-      <p class="text-slate-600">We'll be in touch shortly with a quote.</p>
+    <div class="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
+      <div class="inline-flex w-16 h-16 rounded-full bg-brand-100 items-center justify-center mb-4">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2 class="font-display text-2xl font-semibold mb-2">Thanks — we've got it</h2>
+      <p class="text-slate-600">We'll be back to you with a quote shortly{% if BUSINESS_PHONE %} — usually the same day{% endif %}.</p>
       {% if not embed %}
-      <a href="/quote-request" class="inline-block mt-6 text-sm text-brand-700 hover:underline">Submit another request</a>
+      <a href="/" class="inline-block mt-6 text-sm text-brand-700 hover:underline">← Back to homepage</a>
       {% endif %}
     </div>
   {% else %}
-    <form method="post" action="/quote-request" class="bg-white border border-slate-200 rounded-xl p-6 md:p-8 shadow-sm">
+    <form method="post" action="/quote-request" class="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
       {% if embed %}<input type="hidden" name="embed" value="1">{% endif %}
       {% if error %}
       <div class="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">{{ error }}</div>
@@ -83,13 +94,14 @@
         </label>
         <label class="block md:col-span-2">
           <span class="text-sm font-medium text-slate-700">Tell us about the job</span>
-          <textarea name="details" rows="4" placeholder="Rooms, bathrooms, any specific areas, access notes…"
+          <textarea name="details" rows="4" placeholder="Rooms, bathrooms, any specific areas, access notes, allergies we should know about…"
                     class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-brand-400 focus:border-brand-400 outline-none"></textarea>
         </label>
       </div>
-      <button class="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-3 rounded-md transition">
+      <button class="mt-6 w-full bg-brand-700 hover:bg-brand-800 text-white font-medium py-3 rounded-md transition">
         Send my request
       </button>
+      <p class="mt-4 text-xs text-center text-slate-500">We'll never share your details. No spam, ever.</p>
     </form>
   {% endif %}
 </div>

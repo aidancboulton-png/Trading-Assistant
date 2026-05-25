@@ -39,9 +39,9 @@
   <header class="flex items-start justify-between mb-8 pb-6 border-b border-slate-200">
     <div>
       <div class="flex items-center gap-3 mb-2">
-        <span class="inline-block w-10 h-10 rounded-full logo-orb"></span>
+        {{ logo(40) }}
         <div>
-          <div class="font-semibold tracking-wider">{{ BUSINESS_NAME|upper }}</div>
+          <div class="font-display font-semibold tracking-wide text-brand-800">{{ BUSINESS_NAME|upper }}</div>
           <div class="text-xs text-slate-500">
             {% if BUSINESS_EMAIL %}{{ BUSINESS_EMAIL }}{% endif %}
             {% if BUSINESS_EMAIL and BUSINESS_PHONE %} · {% endif %}

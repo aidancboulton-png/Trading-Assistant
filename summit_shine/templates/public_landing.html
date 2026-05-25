@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ BUSINESS_NAME }} — {{ BUSINESS_TAGLINE }}</title>
+  <meta name="description" content="Non-toxic, plant-based cleaning for homes and businesses. Safe for kids, pets, staff, and the planet.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          brand: { 50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d' },
+          sage: { 400:'#a3e635', 500:'#84cc16', 600:'#65a30d' },
+          bone: '#f5f3ee'
+        },
+        fontFamily: {
+          display: ['"Fraunces"', 'ui-serif', 'Georgia', 'serif'],
+          sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif']
+        }
+      }}
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+    .font-display { font-family: 'Fraunces', ui-serif, Georgia, serif; }
+    .hero-gradient {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, #dcfce7 0%, transparent 70%),
+        linear-gradient(180deg, #f5f3ee 0%, #ffffff 100%);
+    }
+  </style>
+</head>
+<body class="bg-white text-slate-900">
+
+<header class="absolute top-0 left-0 right-0 z-10">
+  <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2.5">
+      {{ logo(40, ring=False) }}
+      <span class="font-display text-lg font-semibold tracking-wide text-brand-800">{{ BUSINESS_NAME|upper }}</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-sm text-slate-600">
+      <a href="#services" class="hover:text-brand-700">Services</a>
+      <a href="#why" class="hover:text-brand-700">Why us</a>
+      <a href="#how" class="hover:text-brand-700">How it works</a>
+      <a href="/quote-request" class="px-4 py-2 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-medium">Get a free quote</a>
+    </nav>
+    <a href="/quote-request" class="md:hidden px-3 py-1.5 rounded-full bg-brand-700 text-white text-sm font-medium">Get a quote</a>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero-gradient pt-32 pb-20 md:pt-40 md:pb-28">
+  <div class="max-w-4xl mx-auto px-6 text-center">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-xs font-medium mb-6">
+      <span class="w-1.5 h-1.5 rounded-full bg-sage-500"></span>
+      Plant-based · Non-toxic · Kid &amp; pet safe
+    </div>
+    <h1 class="font-display text-5xl md:text-7xl font-semibold tracking-tight text-slate-900 mb-6">
+      {{ BUSINESS_TAGLINE }}
+    </h1>
+    <p class="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-10">
+      Non-toxic, plant-based cleaning for homes and businesses.
+      Safe for kids, pets, staff, and the planet — without cutting corners on clean.
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="/quote-request" class="w-full sm:w-auto px-7 py-3.5 rounded-full bg-brand-700 hover:bg-brand-800 text-white font-medium shadow-lg shadow-brand-700/20 transition">
+        Get a free quote
+      </a>
+      <a href="#how" class="w-full sm:w-auto px-7 py-3.5 rounded-full bg-white hover:bg-bone border border-slate-200 text-slate-700 font-medium transition">
+        How it works
+      </a>
+    </div>
+    {% if BUSINESS_PHONE %}
+    <p class="mt-8 text-sm text-slate-500">
+      Or call us directly: <a href="tel:{{ BUSINESS_PHONE }}" class="text-brand-700 font-medium hover:underline">{{ BUSINESS_PHONE }}</a>
+    </p>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ============ SERVICES ============ -->
+<section id="services" class="py-20 bg-white">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="text-sm font-medium text-brand-700 tracking-wider uppercase mb-2">What we clean</p>
+      <h2 class="font-display text-4xl md:text-5xl font-semibold text-slate-900">Homes &amp; businesses</h2>
+      <p class="mt-4 text-slate-600 max-w-2xl mx-auto">From a single deep clean to weekly office service — we'll match the right plan to your space.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <!-- Residential card -->
+      <div class="bg-bone rounded-2xl p-8 border border-slate-100">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="w-10 h-10 rounded-full bg-brand-700 text-white flex items-center justify-center font-display font-semibold">H</span>
+          <h3 class="font-display text-2xl font-semibold">For homes</h3>
+        </div>
+        <ul class="space-y-3 text-slate-700">
+          <li class="flex gap-3"><span class="text-brand-700">✓</span><div><strong>Regular cleans</strong> — weekly, fortnightly, monthly</div></li>
+          <li class="flex gap-3"><span class="text-brand-700">✓</span><div><strong>Deep cleans</strong> — full top-to-bottom reset</div></li>
+          <li class="flex gap-3"><span class="text-brand-700">✓</span><div><strong>Move-in / move-out</strong> — for renters, agents, new owners</div></li>
+          <li class="flex gap-3"><span class="text-brand-700">✓</span><div><strong>One-off cleans</strong> — before guests, after parties, when life happens</div></li>
+        </ul>
+      </div>
+      <!-- Commercial card -->
+      <div class="bg-bone rounded-2xl p-8 border border-slate-100">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="w-10 h-10 rounded-full bg-sage-500 text-white flex items-center justify-center font-display font-semibold">C</span>
+          <h3 class="font-display text-2xl font-semibold">For businesses</h3>
+        </div>
+        <ul class="space-y-3 text-slate-700">
+          <li class="flex gap-3"><span class="text-brand-700">✓</span><div><strong>Office cleaning</strong> — daily, weekly, after-hours</div></li>
+          <li class="flex gap-3"><span class="text-brand-700">✓</span><div><strong>Retail &amp; storefronts</strong> — keep first impressions spotless</div></li>
+          <li class="flex gap-3"><span class="text-brand-700">✓</span><div><strong>Airbnb &amp; short-stay turnover</strong> — between-guest resets</div></li>
+          <li class="flex gap-3"><span class="text-brand-700">✓</span><div><strong>Special &amp; one-off jobs</strong> — events, end-of-build, seasonal</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHY US ============ -->
+<section id="why" class="py-20 bg-bone">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="text-sm font-medium text-brand-700 tracking-wider uppercase mb-2">Why {{ BUSINESS_NAME }}</p>
+      <h2 class="font-display text-4xl md:text-5xl font-semibold text-slate-900">Clean homes,<br>clean conscience.</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+        </div>
+        <h3 class="font-display text-xl font-semibold mb-2">Plant-based &amp; non-toxic</h3>
+        <p class="text-slate-600 text-sm">No harsh chemicals, no lingering fumes. Safe for kids, pets, allergy-sensitive households, and the team cleaning your space.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <h3 class="font-display text-xl font-semibold mb-2">Vetted &amp; insured</h3>
+        <p class="text-slate-600 text-sm">Reliable, background-checked team. Fully insured for your peace of mind. We treat every property like it's our own.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-7 border border-slate-100">
+        <div class="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3 class="font-display text-xl font-semibold mb-2">On time, every time</h3>
+        <p class="text-slate-600 text-sm">Show-up windows you can count on. Easy rescheduling. Clear quotes — no surprise charges on the invoice.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section id="how" class="py-20 bg-white">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="text-sm font-medium text-brand-700 tracking-wider uppercase mb-2">How it works</p>
+      <h2 class="font-display text-4xl md:text-5xl font-semibold text-slate-900">Three simple steps</h2>
+    </div>
+    <div class="space-y-6">
+      <div class="flex gap-5 items-start">
+        <span class="flex-shrink-0 w-10 h-10 rounded-full bg-brand-700 text-white flex items-center justify-center font-display font-semibold">1</span>
+        <div>
+          <h3 class="font-display text-xl font-semibold mb-1">Tell us about your space</h3>
+          <p class="text-slate-600">Fill in the 60-second quote form — what needs cleaning, how often, when works best.</p>
+        </div>
+      </div>
+      <div class="flex gap-5 items-start">
+        <span class="flex-shrink-0 w-10 h-10 rounded-full bg-brand-700 text-white flex items-center justify-center font-display font-semibold">2</span>
+        <div>
+          <h3 class="font-display text-xl font-semibold mb-1">Get a free quote</h3>
+          <p class="text-slate-600">We'll send a clear, no-surprise quote — usually within the same day.</p>
+        </div>
+      </div>
+      <div class="flex gap-5 items-start">
+        <span class="flex-shrink-0 w-10 h-10 rounded-full bg-brand-700 text-white flex items-center justify-center font-display font-semibold">3</span>
+        <div>
+          <h3 class="font-display text-xl font-semibold mb-1">We clean, you relax</h3>
+          <p class="text-slate-600">Book a slot and we'll handle the rest. Walk into a naturally spotless space.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="py-20 bg-brand-800 text-white">
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <h2 class="font-display text-4xl md:text-5xl font-semibold mb-5">Ready for a naturally spotless space?</h2>
+    <p class="text-brand-100 text-lg mb-8">Free quote. No obligation. Usually back to you the same day.</p>
+    <a href="/quote-request" class="inline-block px-8 py-4 rounded-full bg-white text-brand-800 font-semibold hover:bg-bone transition">
+      Get a free quote
+    </a>
+    {% if BUSINESS_PHONE %}
+    <p class="mt-6 text-sm text-brand-200">Prefer to chat? Call <a href="tel:{{ BUSINESS_PHONE }}" class="underline hover:text-white">{{ BUSINESS_PHONE }}</a></p>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="py-10 bg-slate-900 text-slate-400 text-sm">
+  <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      {{ logo(28, ring=False) }}
+      <span class="font-display font-semibold text-white">{{ BUSINESS_NAME }}</span>
+      {% if SERVICE_AREA %}<span class="ml-2 text-slate-500">· Serving {{ SERVICE_AREA }}</span>{% endif %}
+    </div>
+    <div class="flex items-center gap-5">
+      {% if BUSINESS_EMAIL %}<a href="mailto:{{ BUSINESS_EMAIL }}" class="hover:text-white">{{ BUSINESS_EMAIL }}</a>{% endif %}
+      {% if BUSINESS_PHONE %}<a href="tel:{{ BUSINESS_PHONE }}" class="hover:text-white">{{ BUSINESS_PHONE }}</a>{% endif %}
+      <a href="/login" class="text-slate-500 hover:text-slate-300 text-xs">Team sign-in</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
