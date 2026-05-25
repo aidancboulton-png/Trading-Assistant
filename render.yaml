@@ -1,3 +1,8 @@
+# Render blueprint for Summit Shine.
+# Free tier: works for a demo / showing-it-to-your-buddy URL. SQLite DB lives
+# in /tmp and resets on every cold start. When you're ready for real production
+# data, upgrade the service to "starter" ($7/mo), uncomment the disk: block at
+# the bottom, and change SUMMIT_DB back to /data/summit_shine.db.
 services:
   - type: web
     name: summit-shine
@@ -28,10 +33,10 @@ services:
       - key: SUMMIT_TEAM
         value: "Aidan,Partner"
       - key: SUMMIT_DB
-        value: /data/summit_shine.db
+        value: /tmp/summit_shine.db
       - key: PYTHON_VERSION
         value: 3.11.9
-    disk:
-      name: summit-data
-      mountPath: /data
-      sizeGB: 1
+    # disk:                  # uncomment after upgrading from free to starter
+    #   name: summit-data
+    #   mountPath: /data
+    #   sizeGB: 1
