@@ -48,21 +48,33 @@ See `.env.example`. The important ones:
 | `SUMMIT_TEAM` | Comma-separated names for the "assigned to" dropdown (default: `Aidan,Partner`) |
 | `SUMMIT_DB` | Path to the SQLite file (default: `summit_shine.db`) |
 
-## Deploy (free options)
+## Deploy
 
-**Railway** — easiest if you're already using it. Create a new service for this directory:
-- Root directory: `summit_shine`
-- Start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
-- Add a persistent volume mounted at the working directory (so `summit_shine.db` survives restarts), and point `SUMMIT_DB` at a path on that volume, e.g. `/data/summit_shine.db`.
-- Set the env vars above.
+### One-click on Render (recommended)
 
-**Fly.io** — `fly launch`, attach a volume, set the SUMMIT_DB path to live on that volume.
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/aidancboulton-png/Trading-Assistant)
 
-**Render** — free web service works but sleeps; pair with `render-disk` for SQLite persistence.
+`render.yaml` at the repo root prefills service config, persistent disk for the SQLite DB, and most env vars. After clicking the button:
+1. Sign in to Render with GitHub
+2. Approve the blueprint
+3. Fill in the four `sync: false` vars (`SUMMIT_PASSWORD`, `SUMMIT_BUSINESS_EMAIL`, `SUMMIT_BUSINESS_PHONE`, `SUMMIT_SERVICE_AREA`)
+4. Click **Apply** — Render builds and gives you a `*.onrender.com` URL
 
-**Self-host on a $5 VPS** — `pip install -r requirements.txt && uvicorn summit_shine.app:app --host 0.0.0.0 --port 80` behind nginx with TLS via certbot.
+### Railway
 
-⚠️ **SQLite + free serverless platforms don't mix** — the DB file gets wiped on every cold start. Always deploy with a persistent disk/volume.
+- New project → "Deploy from GitHub" → pick this repo
+- Settings → Root Directory: `summit_shine`
+- Settings → Custom Start: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+- Variables: paste from `.env.example`
+- Storage → New Volume → mount at `/data`, set `SUMMIT_DB=/data/summit_shine.db`
+- Networking → Generate Domain → done
+
+### Fly.io / self-host
+
+- Fly: `fly launch` from `summit_shine/`, attach a volume, point `SUMMIT_DB` at it
+- VPS: `pip install -r requirements.txt && uvicorn app:app --host 0.0.0.0 --port 80` behind nginx + certbot
+
+⚠️ **SQLite + free serverless platforms don't mix** — without a persistent disk/volume, the DB file gets wiped on every cold start.
 
 ## Attaching the quote form to your existing website
 

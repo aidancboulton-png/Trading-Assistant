@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: summit-shine
+    runtime: python
+    plan: free
+    rootDir: summit_shine
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: SUMMIT_PASSWORD
+        sync: false
+      - key: SUMMIT_SECRET
+        generateValue: true
+      - key: SUMMIT_BUSINESS_NAME
+        value: Summit Shine
+      - key: SUMMIT_TAGLINE
+        value: Naturally spotless.
+      - key: SUMMIT_BUSINESS_EMAIL
+        sync: false
+      - key: SUMMIT_BUSINESS_PHONE
+        sync: false
+      - key: SUMMIT_SERVICE_AREA
+        sync: false
+      - key: SUMMIT_CURRENCY
+        value: "$"
+      - key: SUMMIT_TAX_RATE
+        value: "0"
+      - key: SUMMIT_TEAM
+        value: "Aidan,Partner"
+      - key: SUMMIT_DB
+        value: /data/summit_shine.db
+      - key: PYTHON_VERSION
+        value: 3.11.9
+    disk:
+      name: summit-data
+      mountPath: /data
+      sizeGB: 1
